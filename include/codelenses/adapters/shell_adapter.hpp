@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class ShellAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     explicit ShellAdapter(Language lang = Language::shell);
     ~ShellAdapter() override = default;
 

@@ -26,7 +26,12 @@ enum class NodeKind {
     method,
     variable,
     module,
-    package
+    package,
+    macro,
+    enum_,
+    type_alias,
+    field,
+    enum_member
 };
 
 [[nodiscard]] std::string_view to_string(NodeKind value) noexcept;

@@ -641,10 +641,19 @@ HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64
             if (parser.set_language(grammar).has_value()) {
                 auto tree_res = parser.parse_string(captured->as_string_view());
                 if (tree_res.has_value()) {
-                    adapters::ReferenceAdapter ref_adapter;
-                    auto res = ref_adapter.highlight(captured->as_string_view(), *tree_res);
-                    if (res.has_value()) {
-                        tokens = std::move(*res);
+                    auto* adapter = adapters::default_adapter_registry().get_adapter(*lang_res);
+                    if (adapter != nullptr) {
+                        auto res = adapter->highlight(captured->as_string_view(), *tree_res);
+                        if (res.has_value() && !res->empty()) {
+                            tokens = std::move(*res);
+                        }
+                    }
+                    if (tokens.empty()) {
+                        adapters::ReferenceAdapter ref_adapter;
+                        auto res = ref_adapter.highlight(captured->as_string_view(), *tree_res);
+                        if (res.has_value()) {
+                            tokens = std::move(*res);
+                        }
                     }
                 }
             }
@@ -654,8 +663,14 @@ HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64
     if (tokens.empty()) {
         auto syms = db_.symbols().list_by_file(file_id);
         for (const auto& s : syms) {
-            uint32_t type_idx = legend.token_type_index(s.kind).value_or(
-                legend.token_type_index("variable").value_or(0));
+            std::string_view kind_for_legend = s.kind;
+            if (s.kind == "type_alias") {
+                kind_for_legend = "type";
+            } else if (s.kind == "field") {
+                kind_for_legend = "property";
+            }
+            uint32_t type_idx = legend.token_type_index(kind_for_legend)
+                                    .value_or(legend.token_type_index("variable").value_or(0));
             uint32_t modifiers = s.is_definition ? legend.encode_modifiers({"definition"})
                                                  : legend.encode_modifiers({"declaration"});
             uint32_t len = static_cast<uint32_t>(s.name.size());
@@ -1219,8 +1234,10 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     };
 }
 
-std::vector<DiagnosticDto> ApiService::get_workspace_diagnostics(
-    int64_t workspace_id, const std::optional<std::string>& severity, int64_t limit, int64_t offset) {
+std::vector<DiagnosticDto>
+ApiService::get_workspace_diagnostics(int64_t workspace_id,
+                                      const std::optional<std::string>& severity, int64_t limit,
+                                      int64_t offset) {
     require_workspace(workspace_id);
     auto raw_diags = db_.diagnostics().list_by_workspace(workspace_id, severity, limit, offset);
     std::vector<DiagnosticDto> result;

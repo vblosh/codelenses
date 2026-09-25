@@ -12,6 +12,7 @@ set(UNIT_TEST_SOURCES
     unit/test_indexing_pipeline.cpp
     unit/test_resolver.cpp
     unit/test_http_api.cpp
+    unit/test_c_adapter.cpp
 )
 
 add_executable(codelenses_unit_tests
@@ -22,6 +23,10 @@ target_link_libraries(codelenses_unit_tests PRIVATE
     codelenses_core
     Catch2::Catch2WithMain
     codelenses_grammar_c
+)
+
+target_compile_definitions(codelenses_unit_tests PRIVATE
+    CODELENSES_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
 
 codelenses_set_compiler_warnings(codelenses_unit_tests)

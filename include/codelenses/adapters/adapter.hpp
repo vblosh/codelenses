@@ -10,6 +10,7 @@
 #include "codelenses/diagnostic.hpp"
 #include "codelenses/language.hpp"
 #include "codelenses/model.hpp"
+#include "codelenses/parser/highlight.hpp"
 #include "codelenses/range.hpp"
 #include "codelenses/result.hpp"
 #include "codelenses/treesitter/parser.hpp"
@@ -120,6 +121,58 @@ struct ParseDiagnostic {
     friend bool operator==(const ParseDiagnostic&, const ParseDiagnostic&) = default;
 };
 
+struct CompileCommandContext {
+    std::filesystem::path directory{};
+    std::filesystem::path file{};
+    std::optional<std::filesystem::path> output{std::nullopt};
+    std::vector<std::string> arguments{};
+    std::vector<std::filesystem::path> include_dirs{};
+    std::vector<std::string> defines{};
+    std::optional<std::string> language_standard{std::nullopt};
+    bool parsed_from_arguments{false};
+
+    friend bool operator==(const CompileCommandContext&, const CompileCommandContext&) = default;
+
+    [[nodiscard]] bool has_define(std::string_view name) const {
+        for (auto it = defines.rbegin(); it != defines.rend(); ++it) {
+            if (it->starts_with("-U")) {
+                if (it->substr(2) == name) {
+                    return false;
+                }
+            } else {
+                auto eq = it->find('=');
+                std::string_view def_name =
+                    (eq != std::string::npos) ? it->substr(0, eq) : std::string_view(*it);
+                if (def_name == name) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    [[nodiscard]] std::optional<std::string> get_define_value(std::string_view name) const {
+        for (auto it = defines.rbegin(); it != defines.rend(); ++it) {
+            if (it->starts_with("-U")) {
+                if (it->substr(2) == name) {
+                    return std::nullopt;
+                }
+            } else {
+                auto eq = it->find('=');
+                std::string_view def_name =
+                    (eq != std::string::npos) ? it->substr(0, eq) : std::string_view(*it);
+                if (def_name == name) {
+                    if (eq != std::string::npos) {
+                        return it->substr(eq + 1);
+                    }
+                    return "1";
+                }
+            }
+        }
+        return std::nullopt;
+    }
+};
+
 struct AdapterResult {
     Language language{Language::unknown};
     worker::CompletionStatus status{worker::CompletionStatus::complete};
@@ -127,6 +180,7 @@ struct AdapterResult {
     std::vector<DeclarationFact> declarations;
     std::vector<OccurrenceFact> occurrences;
     std::vector<ParseDiagnostic> diagnostics;
+    std::optional<CompileCommandContext> compile_command{std::nullopt};
 
     [[nodiscard]] bool has_errors() const noexcept {
         for (const auto& d : diagnostics) {
@@ -151,6 +205,24 @@ public:
     [[nodiscard]] virtual Result<AdapterResult> parse(std::string_view source,
                                                       const std::filesystem::path& file_path = {},
                                                       const std::stop_token& stop_token = {}) = 0;
+
+    // Parses the given source buffer with optional compile-command context.
+    // Default implementation delegates to parse(source, file_path, stop_token).
+    [[nodiscard]] virtual Result<AdapterResult> parse(std::string_view source,
+                                                      const std::filesystem::path& file_path,
+                                                      const CompileCommandContext& context,
+                                                      const std::stop_token& stop_token = {}) {
+        (void)context;
+        return parse(source, file_path, stop_token);
+    }
+
+    // Highlights the source buffer given a parsed tree. Default implementation returns empty.
+    [[nodiscard]] virtual Result<std::vector<HighlightToken>>
+    highlight(std::string_view source, const treesitter::Tree& tree) {
+        (void)source;
+        (void)tree;
+        return std::vector<HighlightToken>{};
+    }
 };
 
 // Traverses a Tree-sitter CST and collects all syntax error or missing nodes.

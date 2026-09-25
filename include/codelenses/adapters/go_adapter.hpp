@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class GoAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     GoAdapter();
     ~GoAdapter() override = default;
 

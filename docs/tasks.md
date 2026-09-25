@@ -136,19 +136,19 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H1 C adapter
 
-- [ ] H1-01 Add grammar registration and file extensions.
-- [ ] H1-02 Extract functions, variables, structs, enums, typedefs, macros, includes.
-- [ ] H1-03 Extract declarations and calls.
-- [ ] H1-04 Add highlighting queries.
-- [ ] H1-05 Add fixtures for headers, pointers, macros, and declarations.
+- [x] H1-01 Add grammar registration and file extensions.
+- [x] H1-02 Extract functions, variables, structs, enums, typedefs, macros, includes.
+- [x] H1-03 Extract declarations and calls.
+- [x] H1-04 Add highlighting queries.
+- [x] H1-05 Add fixtures for headers, pointers, macros, and declarations.
+- [x] H1-06 Support optional compile-command context.
 
 ### H2 C++ adapter
 
 - [ ] H2-01 Extract namespaces, classes, structs, enums, aliases, templates, functions, methods.
 - [ ] H2-02 Extract inheritance, using declarations, includes, and calls.
 - [ ] H2-03 Add qualified-name and overload metadata where syntactically available.
-- [ ] H2-04 Support optional compile-command context.
-- [ ] H2-05 Add fixtures for templates, overloads, namespaces, and header/source pairs.
+- [ ] H2-04 Add fixtures for templates, overloads, namespaces, and header/source pairs.
 
 ### H3 C# adapter
 

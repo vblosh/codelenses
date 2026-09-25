@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class PythonAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     PythonAdapter();
     ~PythonAdapter() override = default;
 

@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class CppAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     CppAdapter();
     ~CppAdapter() override = default;
 

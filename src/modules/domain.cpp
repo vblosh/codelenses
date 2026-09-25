@@ -64,6 +64,8 @@ Language language_from_extension(std::string_view extension) {
         return Language::c;
     if (normalized == ".h")
         return Language::c;
+    if (normalized == ".i")
+        return Language::c;
     if (normalized == ".cc" || normalized == ".cpp" || normalized == ".cxx" ||
         normalized == ".hpp" || normalized == ".hh" || normalized == ".hxx") {
         return Language::cpp;
@@ -333,6 +335,16 @@ std::string_view to_string(NodeKind value) noexcept {
         return "module";
     case NodeKind::package:
         return "package";
+    case NodeKind::macro:
+        return "macro";
+    case NodeKind::enum_:
+        return "enum";
+    case NodeKind::type_alias:
+        return "type_alias";
+    case NodeKind::field:
+        return "field";
+    case NodeKind::enum_member:
+        return "enum_member";
     }
     return "unknown";
 }

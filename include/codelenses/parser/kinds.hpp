@@ -185,6 +185,16 @@ enum class SymbolKind {
         return SymbolKind::module;
     case NodeKind::package:
         return SymbolKind::package;
+    case NodeKind::macro:
+        return SymbolKind::macro;
+    case NodeKind::enum_:
+        return SymbolKind::enum_;
+    case NodeKind::type_alias:
+        return SymbolKind::type_alias;
+    case NodeKind::field:
+        return SymbolKind::field;
+    case NodeKind::enum_member:
+        return SymbolKind::enum_member;
     }
     return SymbolKind::unknown;
 }

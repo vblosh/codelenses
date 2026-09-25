@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class CSharpAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     CSharpAdapter();
     ~CSharpAdapter() override = default;
 

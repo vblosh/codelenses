@@ -6,22 +6,12 @@
 #include <string_view>
 #include <vector>
 
+#include "codelenses/adapters/adapter.hpp"
 #include "codelenses/result.hpp"
 
 namespace codelenses::resolver {
 
-struct CompileCommand {
-    std::filesystem::path directory;
-    std::filesystem::path file;
-    std::optional<std::filesystem::path> output{std::nullopt};
-    std::vector<std::string> arguments;
-    std::vector<std::filesystem::path> include_dirs;
-    std::vector<std::string> defines;
-    std::optional<std::string> language_standard{std::nullopt};
-    bool parsed_from_arguments{false};
-
-    friend bool operator==(const CompileCommand&, const CompileCommand&) = default;
-};
+using CompileCommand = adapters::CompileCommandContext;
 
 class CompilationDatabase {
 public:

@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class TypeScriptAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     explicit TypeScriptAdapter(Language lang = Language::typescript);
     ~TypeScriptAdapter() override = default;
 

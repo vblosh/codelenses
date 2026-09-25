@@ -538,3 +538,82 @@ TEST_CASE("BOM offset is included in persisted byte ranges (Finding 6)", "[index
     REQUIRE(syms[0].range.start_byte == 7);
     REQUIRE(syms[0].range.start_byte == no_bom_syms[0].range.start_byte + 3);
 }
+
+TEST_CASE("H1-06: Indexing pipeline integrates compile_commands.json context",
+          "[index][pipeline][compile_commands]") {
+    PipelineTestWorkspace env;
+
+    env.write_file("include/mylib.h", "int helper(void);\n");
+    env.write_file("src/main.c", R"C(
+#include "mylib.h"
+
+int main() {
+    int v = BUILD_VERSION;
+    return v;
+}
+)C");
+
+    // Create compile_commands.json in workspace root
+    std::string cdb_json = R"json([
+  {
+    "directory": ".",
+    "file": "src/main.c",
+    "arguments": [
+      "gcc",
+      "-Iinclude",
+      "-DBUILD_VERSION=42",
+      "-std=c11",
+      "-c",
+      "src/main.c"
+    ]
+  }
+])json";
+    env.write_file("compile_commands.json", cdb_json);
+
+    int64_t ws_id = env.create_workspace("CDB Workspace");
+    REQUIRE(ws_id > 0);
+
+    IndexingPipeline pipeline(*env.db);
+    auto res = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res.has_value());
+    REQUIRE(res->status == "completed");
+    REQUIRE(res->files_processed == 3);
+
+    // 1. Verify BUILD_VERSION macro symbol was extracted and persisted
+    auto syms = env.db->symbols().list_by_workspace(ws_id);
+    bool found_macro = false;
+    int64_t macro_sym_id = 0;
+    for (const auto& s : syms) {
+        if (s.name == "BUILD_VERSION") {
+            found_macro = true;
+            macro_sym_id = s.id;
+            CHECK(s.kind == "macro");
+            CHECK(s.is_definition);
+        }
+    }
+    REQUIRE(found_macro);
+    REQUIRE(macro_sym_id > 0);
+
+    // 2. Verify file dependency on mylib.h was resolved
+    auto deps = env.db->dependencies().list_by_workspace(ws_id);
+    bool found_resolved_dep = false;
+    for (const auto& dep : deps) {
+        if (dep.raw_name == "mylib.h") {
+            found_resolved_dep = true;
+            CHECK(dep.resolution == "resolved");
+            CHECK(dep.target_file_id.has_value());
+        }
+    }
+    REQUIRE(found_resolved_dep);
+
+    // 3. Verify reference to BUILD_VERSION links to the macro symbol
+    auto refs = env.db->references().list_by_workspace(ws_id);
+    bool found_macro_ref = false;
+    for (const auto& r : refs) {
+        if (r.name == "BUILD_VERSION") {
+            found_macro_ref = true;
+            CHECK(r.target_symbol_id == macro_sym_id);
+        }
+    }
+    REQUIRE(found_macro_ref);
+}

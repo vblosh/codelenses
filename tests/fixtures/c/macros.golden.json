@@ -1,0 +1,291 @@
+{
+  "declarations": [
+    {
+      "end_byte": 16,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "MAX_SIZE",
+      "start_byte": 8,
+      "symbol_name": "MAX_SIZE"
+    },
+    {
+      "end_byte": 32,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "PI",
+      "start_byte": 30,
+      "symbol_name": "PI"
+    },
+    {
+      "end_byte": 61,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "DEFAULT_NAME",
+      "start_byte": 49,
+      "symbol_name": "DEFAULT_NAME"
+    },
+    {
+      "end_byte": 87,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "MAX",
+      "start_byte": 84,
+      "symbol_name": "MAX"
+    },
+    {
+      "end_byte": 132,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "SQUARE",
+      "start_byte": 126,
+      "symbol_name": "SQUARE"
+    },
+    {
+      "end_byte": 159,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "buffer",
+      "start_byte": 153,
+      "symbol_name": "buffer"
+    },
+    {
+      "end_byte": 181,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "larger",
+      "start_byte": 175,
+      "symbol_name": "larger"
+    },
+    {
+      "end_byte": 208,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "squared",
+      "start_byte": 201,
+      "symbol_name": "squared"
+    },
+    {
+      "end_byte": 236,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "calculate",
+      "start_byte": 227,
+      "symbol_name": "calculate"
+    },
+    {
+      "enclosing_scope": "calculate",
+      "end_byte": 257,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "calculate::m",
+      "start_byte": 256,
+      "symbol_name": "m"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "MAX"
+      ],
+      "end_byte": 187,
+      "kind": "call",
+      "start_byte": 184,
+      "written_name": "MAX"
+    },
+    {
+      "candidate_targets": [
+        "SQUARE"
+      ],
+      "end_byte": 217,
+      "kind": "call",
+      "start_byte": 211,
+      "written_name": "SQUARE"
+    },
+    {
+      "candidate_targets": [
+        "MAX"
+      ],
+      "enclosing_scope": "calculate",
+      "end_byte": 263,
+      "kind": "call",
+      "start_byte": 260,
+      "written_name": "MAX"
+    },
+    {
+      "candidate_targets": [
+        "val"
+      ],
+      "enclosing_scope": "calculate",
+      "end_byte": 267,
+      "kind": "reference",
+      "start_byte": 264,
+      "written_name": "val"
+    },
+    {
+      "candidate_targets": [
+        "MAX_SIZE"
+      ],
+      "enclosing_scope": "calculate",
+      "end_byte": 277,
+      "kind": "reference",
+      "start_byte": 269,
+      "written_name": "MAX_SIZE"
+    },
+    {
+      "candidate_targets": [
+        "SQUARE"
+      ],
+      "enclosing_scope": "calculate",
+      "end_byte": 297,
+      "kind": "call",
+      "start_byte": 291,
+      "written_name": "SQUARE"
+    },
+    {
+      "candidate_targets": [
+        "m"
+      ],
+      "enclosing_scope": "calculate",
+      "end_byte": 299,
+      "kind": "reference",
+      "start_byte": 298,
+      "written_name": "m"
+    },
+    {
+      "candidate_targets": [
+        "larger"
+      ],
+      "enclosing_scope": "calculate",
+      "end_byte": 309,
+      "kind": "reference",
+      "start_byte": 303,
+      "written_name": "larger"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 16,
+      "end_column": 17,
+      "end_line": 1,
+      "kind": "macro",
+      "name": "MAX_SIZE",
+      "qualified_name": "MAX_SIZE",
+      "signature": "#define MAX_SIZE 1024",
+      "start_byte": 8,
+      "start_column": 9,
+      "start_line": 1
+    },
+    {
+      "end_byte": 32,
+      "end_column": 11,
+      "end_line": 2,
+      "kind": "macro",
+      "name": "PI",
+      "qualified_name": "PI",
+      "signature": "#define PI 3.14159",
+      "start_byte": 30,
+      "start_column": 9,
+      "start_line": 2
+    },
+    {
+      "end_byte": 61,
+      "end_column": 21,
+      "end_line": 3,
+      "kind": "macro",
+      "name": "DEFAULT_NAME",
+      "qualified_name": "DEFAULT_NAME",
+      "signature": "#define DEFAULT_NAME \"codelenses\"",
+      "start_byte": 49,
+      "start_column": 9,
+      "start_line": 3
+    },
+    {
+      "end_byte": 87,
+      "end_column": 12,
+      "end_line": 5,
+      "kind": "macro",
+      "name": "MAX",
+      "qualified_name": "MAX",
+      "signature": "#define MAX(a, b) ((a) > (b) ? (a) : (b))",
+      "start_byte": 84,
+      "start_column": 9,
+      "start_line": 5
+    },
+    {
+      "end_byte": 132,
+      "end_column": 15,
+      "end_line": 6,
+      "kind": "macro",
+      "name": "SQUARE",
+      "qualified_name": "SQUARE",
+      "signature": "#define SQUARE(x) ((x) * (x))",
+      "start_byte": 126,
+      "start_column": 9,
+      "start_line": 6
+    },
+    {
+      "end_byte": 159,
+      "end_column": 11,
+      "end_line": 8,
+      "kind": "variable",
+      "name": "buffer",
+      "qualified_name": "buffer",
+      "signature": "int buffer[MAX_SIZE]",
+      "start_byte": 153,
+      "start_column": 5,
+      "start_line": 8
+    },
+    {
+      "end_byte": 181,
+      "end_column": 11,
+      "end_line": 9,
+      "kind": "variable",
+      "name": "larger",
+      "qualified_name": "larger",
+      "signature": "int larger",
+      "start_byte": 175,
+      "start_column": 5,
+      "start_line": 9
+    },
+    {
+      "end_byte": 208,
+      "end_column": 12,
+      "end_line": 10,
+      "kind": "variable",
+      "name": "squared",
+      "qualified_name": "squared",
+      "signature": "int squared",
+      "start_byte": 201,
+      "start_column": 5,
+      "start_line": 10
+    },
+    {
+      "end_byte": 236,
+      "end_column": 14,
+      "end_line": 12,
+      "kind": "function",
+      "name": "calculate",
+      "qualified_name": "calculate",
+      "signature": "int calculate(int val)",
+      "start_byte": 227,
+      "start_column": 5,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "calculate",
+      "end_byte": 257,
+      "end_column": 10,
+      "end_line": 13,
+      "kind": "variable",
+      "name": "m",
+      "qualified_name": "calculate::m",
+      "signature": "int m",
+      "start_byte": 256,
+      "start_column": 9,
+      "start_line": 13
+    }
+  ]
+}

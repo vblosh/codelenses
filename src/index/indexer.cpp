@@ -13,6 +13,7 @@
 #include "codelenses/index/bounded_queue.hpp"
 #include "codelenses/index/incremental_planner.hpp"
 #include "codelenses/index/thread_pool.hpp"
+#include "codelenses/resolver/compile_commands.hpp"
 #include "codelenses/resolver/resolver.hpp"
 #include "codelenses/resolver/symbol_key.hpp"
 
@@ -61,7 +62,8 @@ std::string fact_kind_to_occurrence_kind(worker::FactKind kind) {
 ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const PlannedFile& planned,
                               adapters::AdapterRegistry& registry, std::size_t max_file_size,
                               const std::stop_token& stop_token,
-                              const std::filesystem::path& workspace_root) {
+                              const std::filesystem::path& workspace_root,
+                              const resolver::CompilationDatabase* cdb = nullptr) {
     ExtractionResult result;
     result.planned = planned;
 
@@ -112,7 +114,22 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
         return result;
     }
 
-    auto parse_res = adapter->parse(captured.as_string_view(), planned.absolute_path, stop_token);
+    Result<adapters::AdapterResult> parse_res;
+    const resolver::CompileCommand* cmd = nullptr;
+    if (cdb != nullptr) {
+        cmd = cdb->find_for_file(planned.relative_path);
+        if (!cmd) {
+            cmd = cdb->find_for_file(planned.absolute_path);
+        }
+    }
+
+    if (cmd != nullptr) {
+        parse_res =
+            adapter->parse(captured.as_string_view(), planned.absolute_path, *cmd, stop_token);
+    } else {
+        parse_res = adapter->parse(captured.as_string_view(), planned.absolute_path, stop_token);
+    }
+
     if (!parse_res) {
         result.errors++;
         Diagnostic diag{
@@ -513,6 +530,36 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         };
     }
 
+    // Load compilation database if configured or present in workspace
+    std::shared_ptr<const resolver::CompilationDatabase> comp_db;
+    std::filesystem::path cdb_path;
+    if (ws->compile_commands_path.has_value() && !ws->compile_commands_path->empty()) {
+        cdb_path = *ws->compile_commands_path;
+        if (cdb_path.is_relative()) {
+            cdb_path = canonical_root / cdb_path;
+        }
+    } else {
+        std::vector<std::filesystem::path> candidates = {
+            canonical_root / "compile_commands.json",
+            canonical_root / "build" / "compile_commands.json",
+        };
+        for (const auto& c : candidates) {
+            if (std::filesystem::exists(c)) {
+                cdb_path = c;
+                break;
+            }
+        }
+    }
+
+    if (!cdb_path.empty() && std::filesystem::exists(cdb_path)) {
+        auto loaded = resolver::CompilationDatabase::load_file(cdb_path, canonical_root);
+        if (loaded) {
+            comp_db = std::make_shared<const resolver::CompilationDatabase>(std::move(*loaded));
+        }
+    }
+
+    const auto* raw_cdb = comp_db.get();
+
     // Parallel parsing via ThreadPool and bounded batches
     ThreadPool pool(options_.worker_threads);
 
@@ -544,10 +591,11 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
 
         for (std::size_t i = 0; i < current_batch; ++i) {
             const auto& planned = plan.files_to_process[idx + i];
-            futures.push_back(
-                pool.submit([this, workspace_id, job_id, planned, job_stop, canonical_root] {
+            futures.push_back(pool.submit(
+                [this, workspace_id, job_id, planned, job_stop, canonical_root, raw_cdb] {
                     return extract_file(workspace_id, job_id, planned, registry_,
-                                        options_.max_file_size_bytes, job_stop, canonical_root);
+                                        options_.max_file_size_bytes, job_stop, canonical_root,
+                                        raw_cdb);
                 }));
         }
 

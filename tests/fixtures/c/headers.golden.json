@@ -1,0 +1,384 @@
+{
+  "declarations": [
+    {
+      "end_byte": 53,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "FIXTURES_HEADERS_H",
+      "start_byte": 35,
+      "symbol_name": "FIXTURES_HEADERS_H"
+    },
+    {
+      "end_byte": 119,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "BUFFER_CAPACITY",
+      "start_byte": 104,
+      "symbol_name": "BUFFER_CAPACITY"
+    },
+    {
+      "end_byte": 138,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "CLAMP",
+      "start_byte": 133,
+      "symbol_name": "CLAMP"
+    },
+    {
+      "end_byte": 234,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "item_id_t",
+      "start_byte": 225,
+      "symbol_name": "item_id_t"
+    },
+    {
+      "end_byte": 266,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "Context",
+      "start_byte": 259,
+      "symbol_name": "Context"
+    },
+    {
+      "end_byte": 281,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "Point",
+      "start_byte": 276,
+      "symbol_name": "Point"
+    },
+    {
+      "enclosing_scope": "Point",
+      "end_byte": 293,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Point::x",
+      "start_byte": 292,
+      "symbol_name": "x"
+    },
+    {
+      "enclosing_scope": "Point",
+      "end_byte": 304,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Point::y",
+      "start_byte": 303,
+      "symbol_name": "y"
+    },
+    {
+      "end_byte": 337,
+      "is_definition": true,
+      "kind": "enum",
+      "qualified_name": "Status",
+      "start_byte": 331,
+      "symbol_name": "Status"
+    },
+    {
+      "enclosing_scope": "Status",
+      "end_byte": 349,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "Status::STATUS_OK",
+      "start_byte": 340,
+      "symbol_name": "STATUS_OK"
+    },
+    {
+      "enclosing_scope": "Status",
+      "end_byte": 367,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "Status::STATUS_ERROR",
+      "start_byte": 355,
+      "symbol_name": "STATUS_ERROR"
+    },
+    {
+      "enclosing_scope": "Status",
+      "end_byte": 387,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "Status::STATUS_PENDING",
+      "start_byte": 373,
+      "symbol_name": "STATUS_PENDING"
+    },
+    {
+      "end_byte": 421,
+      "is_definition": false,
+      "kind": "variable",
+      "qualified_name": "g_header_errno",
+      "start_byte": 407,
+      "symbol_name": "g_header_errno"
+    },
+    {
+      "end_byte": 438,
+      "is_definition": false,
+      "kind": "function",
+      "qualified_name": "init_point",
+      "start_byte": 428,
+      "symbol_name": "init_point"
+    },
+    {
+      "end_byte": 492,
+      "is_definition": false,
+      "kind": "function",
+      "qualified_name": "destroy_context",
+      "start_byte": 477,
+      "symbol_name": "destroy_context"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "FIXTURES_HEADERS_H"
+      ],
+      "end_byte": 26,
+      "kind": "reference",
+      "start_byte": 8,
+      "written_name": "FIXTURES_HEADERS_H"
+    },
+    {
+      "candidate_targets": [
+        "common.h"
+      ],
+      "end_byte": 74,
+      "kind": "include",
+      "start_byte": 64,
+      "written_name": "common.h"
+    },
+    {
+      "candidate_targets": [
+        "stddef.h"
+      ],
+      "end_byte": 94,
+      "kind": "include",
+      "start_byte": 84,
+      "written_name": "stddef.h"
+    },
+    {
+      "candidate_targets": [
+        "Context"
+      ],
+      "end_byte": 258,
+      "kind": "reference",
+      "start_byte": 251,
+      "written_name": "Context"
+    },
+    {
+      "candidate_targets": [
+        "Opaque"
+      ],
+      "end_byte": 323,
+      "kind": "reference",
+      "start_byte": 317,
+      "written_name": "Opaque"
+    },
+    {
+      "candidate_targets": [
+        "Point"
+      ],
+      "end_byte": 451,
+      "kind": "reference",
+      "start_byte": 446,
+      "written_name": "Point"
+    },
+    {
+      "candidate_targets": [
+        "Context"
+      ],
+      "end_byte": 500,
+      "kind": "reference",
+      "start_byte": 493,
+      "written_name": "Context"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 53,
+      "end_column": 27,
+      "end_line": 2,
+      "kind": "macro",
+      "name": "FIXTURES_HEADERS_H",
+      "qualified_name": "FIXTURES_HEADERS_H",
+      "signature": "#define FIXTURES_HEADERS_H",
+      "start_byte": 35,
+      "start_column": 9,
+      "start_line": 2
+    },
+    {
+      "end_byte": 119,
+      "end_column": 24,
+      "end_line": 7,
+      "kind": "macro",
+      "name": "BUFFER_CAPACITY",
+      "qualified_name": "BUFFER_CAPACITY",
+      "signature": "#define BUFFER_CAPACITY 2048",
+      "start_byte": 104,
+      "start_column": 9,
+      "start_line": 7
+    },
+    {
+      "end_byte": 138,
+      "end_column": 14,
+      "end_line": 8,
+      "kind": "macro",
+      "name": "CLAMP",
+      "qualified_name": "CLAMP",
+      "signature": "#define CLAMP(x, lo, hi) (((x) < (lo)) ? (lo) : (((x) > (hi)) ? (hi) : (x)))",
+      "start_byte": 133,
+      "start_column": 9,
+      "start_line": 8
+    },
+    {
+      "end_byte": 234,
+      "end_column": 32,
+      "end_line": 10,
+      "kind": "type_alias",
+      "name": "item_id_t",
+      "qualified_name": "item_id_t",
+      "signature": "typedef unsigned long item_id_t;",
+      "start_byte": 225,
+      "start_column": 23,
+      "start_line": 10
+    },
+    {
+      "end_byte": 266,
+      "end_column": 31,
+      "end_line": 11,
+      "kind": "type_alias",
+      "name": "Context",
+      "qualified_name": "Context",
+      "signature": "typedef struct Context Context;",
+      "start_byte": 259,
+      "start_column": 24,
+      "start_line": 11
+    },
+    {
+      "end_byte": 281,
+      "end_column": 13,
+      "end_line": 13,
+      "kind": "struct",
+      "name": "Point",
+      "qualified_name": "Point",
+      "signature": "struct Point",
+      "start_byte": 276,
+      "start_column": 8,
+      "start_line": 13
+    },
+    {
+      "enclosing_scope": "Point",
+      "end_byte": 293,
+      "end_column": 10,
+      "end_line": 14,
+      "kind": "field",
+      "name": "x",
+      "qualified_name": "Point::x",
+      "signature": "int x",
+      "start_byte": 292,
+      "start_column": 9,
+      "start_line": 14
+    },
+    {
+      "enclosing_scope": "Point",
+      "end_byte": 304,
+      "end_column": 10,
+      "end_line": 15,
+      "kind": "field",
+      "name": "y",
+      "qualified_name": "Point::y",
+      "signature": "int y",
+      "start_byte": 303,
+      "start_column": 9,
+      "start_line": 15
+    },
+    {
+      "end_byte": 337,
+      "end_column": 12,
+      "end_line": 20,
+      "kind": "enum",
+      "name": "Status",
+      "qualified_name": "Status",
+      "signature": "enum Status",
+      "start_byte": 331,
+      "start_column": 6,
+      "start_line": 20
+    },
+    {
+      "enclosing_scope": "Status",
+      "end_byte": 349,
+      "end_column": 24,
+      "end_line": 20,
+      "kind": "enum_member",
+      "name": "STATUS_OK",
+      "qualified_name": "Status::STATUS_OK",
+      "signature": "STATUS_OK",
+      "start_byte": 340,
+      "start_column": 15,
+      "start_line": 20
+    },
+    {
+      "enclosing_scope": "Status",
+      "end_byte": 367,
+      "end_column": 42,
+      "end_line": 20,
+      "kind": "enum_member",
+      "name": "STATUS_ERROR",
+      "qualified_name": "Status::STATUS_ERROR",
+      "signature": "STATUS_ERROR",
+      "start_byte": 355,
+      "start_column": 30,
+      "start_line": 20
+    },
+    {
+      "enclosing_scope": "Status",
+      "end_byte": 387,
+      "end_column": 62,
+      "end_line": 20,
+      "kind": "enum_member",
+      "name": "STATUS_PENDING",
+      "qualified_name": "Status::STATUS_PENDING",
+      "signature": "STATUS_PENDING",
+      "start_byte": 373,
+      "start_column": 48,
+      "start_line": 20
+    },
+    {
+      "end_byte": 421,
+      "end_column": 26,
+      "end_line": 22,
+      "kind": "variable",
+      "name": "g_header_errno",
+      "qualified_name": "g_header_errno",
+      "signature": "extern int g_header_errno",
+      "start_byte": 407,
+      "start_column": 12,
+      "start_line": 22
+    },
+    {
+      "end_byte": 438,
+      "end_column": 15,
+      "end_line": 24,
+      "kind": "function",
+      "name": "init_point",
+      "qualified_name": "init_point",
+      "signature": "int init_point(struct Point* pt, int x, int y)",
+      "start_byte": 428,
+      "start_column": 5,
+      "start_line": 24
+    },
+    {
+      "end_byte": 492,
+      "end_column": 21,
+      "end_line": 25,
+      "kind": "function",
+      "name": "destroy_context",
+      "qualified_name": "destroy_context",
+      "signature": "void destroy_context(Context* ctx)",
+      "start_byte": 477,
+      "start_column": 6,
+      "start_line": 25
+    }
+  ]
+}

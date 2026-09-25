@@ -12,6 +12,8 @@ namespace codelenses::adapters {
 
 class ReferenceAdapter : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     ReferenceAdapter();
 
     [[nodiscard]] Language language() const noexcept override { return Language::c; }
@@ -25,8 +27,8 @@ public:
     parse(std::string_view source, const std::filesystem::path& file_path = {},
           const std::stop_token& stop_token = std::stop_token{}) override;
 
-    [[nodiscard]] Result<std::vector<HighlightToken>> highlight(std::string_view source,
-                                                                const treesitter::Tree& tree);
+    [[nodiscard]] Result<std::vector<HighlightToken>>
+    highlight(std::string_view source, const treesitter::Tree& tree) override;
 
 private:
     LanguageCapabilities capabilities_{};

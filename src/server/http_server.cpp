@@ -342,23 +342,21 @@ void HttpServer::register_routes() {
                              });
              });
 
-    svr_.Get(R"(/api/v1/workspaces/(\d+)/diagnostics)",
-             [this](const httplib::Request& req, httplib::Response& res) {
-                 handle_json(req, res,
-                             [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-                                 int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
-                                 auto severity = get_str_query_param(r, "severity");
-                                 int64_t limit = get_int_query_param(r, "limit").value_or(100);
-                                 int64_t offset = get_int_query_param(r, "offset").value_or(0);
-                                 auto diags =
-                                     service_.get_workspace_diagnostics(ws_id, severity, limit, offset);
-                                 return nlohmann::json{
-                                     {"workspaceId", ws_id},
-                                     {"diagnostics", diags},
-                                     {"total", diags.size()},
-                                 };
-                             });
-             });
+    svr_.Get(R"(/api/v1/workspaces/(\d+)/diagnostics)", [this](const httplib::Request& req,
+                                                               httplib::Response& res) {
+        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
+            int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
+            auto severity = get_str_query_param(r, "severity");
+            int64_t limit = get_int_query_param(r, "limit").value_or(100);
+            int64_t offset = get_int_query_param(r, "offset").value_or(0);
+            auto diags = service_.get_workspace_diagnostics(ws_id, severity, limit, offset);
+            return nlohmann::json{
+                {"workspaceId", ws_id},
+                {"diagnostics", diags},
+                {"total", diags.size()},
+            };
+        });
+    });
 
     svr_.Get(R"(/api/v1/workspaces/(\d+)/files/(\d+)/diagnostics)",
              [this](const httplib::Request& req, httplib::Response& res) {

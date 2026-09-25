@@ -115,6 +115,7 @@ TEST_CASE("Normalized symbol kinds and relation kinds", "[adapters][sdk]") {
     REQUIRE(symbol_kind_from_node_kind(NodeKind::function) == SymbolKind::function);
     REQUIRE(symbol_kind_from_node_kind(NodeKind::class_) == SymbolKind::class_);
     REQUIRE(symbol_kind_from_node_kind(NodeKind::struct_) == SymbolKind::struct_);
+    REQUIRE(symbol_kind_from_node_kind(NodeKind::enum_member) == SymbolKind::enum_member);
 
     // RelationKind round-trip
     REQUIRE(to_string(RelationKind::calls) == "calls");

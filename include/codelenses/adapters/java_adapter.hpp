@@ -6,6 +6,8 @@ namespace codelenses::adapters {
 
 class JavaAdapter final : public LanguageAdapter {
 public:
+    using LanguageAdapter::parse;
+
     JavaAdapter();
     ~JavaAdapter() override = default;
 
