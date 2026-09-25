@@ -1,0 +1,506 @@
+import type {
+  FileMetadataDto,
+  FileContentDto,
+  HighlightResponseDto,
+  DiagnosticItem,
+  OccurrenceDto,
+} from "../types";
+import type { StateStore } from "../state";
+import { api } from "../api";
+import { highlightSource } from "../rendering/highlight";
+import { renderSourceLines } from "../rendering/source-lines";
+import { formatByteSize } from "../rendering/ranges";
+
+export interface CodeWindowCallbacks {
+  onSymbolClick?: (symbolId: number, line: number) => void;
+}
+
+export class CodeWindowComponent {
+  private element: HTMLElement;
+  private store: StateStore;
+  private callbacks: CodeWindowCallbacks;
+
+  private pathElem!: HTMLElement;
+  private langBadge!: HTMLElement;
+  private navControls!: HTMLElement;
+  private viewerContainer!: HTMLElement;
+  private bannerContainer!: HTMLElement;
+  private tabsBar!: HTMLElement;
+
+  private currentFile: FileMetadataDto | null = null;
+  private currentContent: FileContentDto | null = null;
+  private currentHighlights: HighlightResponseDto | null = null;
+  private currentOccurrences: OccurrenceDto[] = [];
+  private currentDiagnostics: DiagnosticItem[] = [];
+
+  // In-memory cache of loaded files for quick tab switching
+  private fileCache = new Map<number, {
+    file: FileMetadataDto;
+    content: FileContentDto;
+    highlights: HighlightResponseDto | null;
+    occurrences: OccurrenceDto[];
+  }>();
+
+  // Range pagination for large files (> 5MB or > 5000 lines)
+  private isRangePaged: boolean = false;
+  private currentStartLine: number = 0; // 0-based for backend
+  private pageSize: number = 1000;
+  private loadRequestId: number = 0;
+
+  constructor(store: StateStore, callbacks: CodeWindowCallbacks = {}) {
+    this.store = store;
+    this.callbacks = callbacks;
+    this.element = document.createElement("div");
+    this.element.className = "pane code-window";
+    this.element.id = "pane-code";
+    this.render();
+    this.initEvents();
+  }
+
+  getElement(): HTMLElement {
+    return this.element;
+  }
+
+  private render(): void {
+    this.element.innerHTML = `
+      <div class="code-tabs-bar" role="tablist" style="display: none;"></div>
+      <div class="code-toolbar">
+        <div class="code-path">
+          <span class="file-path-text">No file open</span>
+          <span class="badge lang-badge" style="display: none;"></span>
+        </div>
+        <div class="code-nav">
+          <span class="file-size-text"></span>
+          <span class="line-count-text"></span>
+        </div>
+      </div>
+      <div class="range-banner-area"></div>
+      <div class="code-viewer-container">
+        <div class="empty-state">
+          <div class="empty-state-title">No file selected</div>
+          <div class="empty-state-desc">Select a file from the explorer to view its contents.</div>
+        </div>
+      </div>
+    `;
+
+    this.tabsBar = this.element.querySelector(".code-tabs-bar")!;
+    this.pathElem = this.element.querySelector(".file-path-text")!;
+    this.langBadge = this.element.querySelector(".lang-badge")!;
+    this.navControls = this.element.querySelector(".code-nav")!;
+    this.bannerContainer = this.element.querySelector(".range-banner-area")!;
+    this.viewerContainer = this.element.querySelector(".code-viewer-container")!;
+  }
+
+  private initEvents(): void {
+    this.store.subscribe((state, changedKeys) => {
+      if (changedKeys.includes("openTabs") || changedKeys.includes("selectedFileId")) {
+        this.renderTabs();
+      }
+      if (changedKeys.includes("selectedFileId")) {
+        this.loadFile(state.selectedFileId);
+      }
+      if (changedKeys.includes("selectedLine") && state.selectedLine !== null) {
+        this.scrollToLine(state.selectedLine);
+      }
+      if (changedKeys.includes("workspaceId")) {
+        this.fileCache.clear();
+      }
+    });
+  }
+
+  setDiagnostics(diagnostics: DiagnosticItem[]): void {
+    this.currentDiagnostics = diagnostics;
+    if (this.currentContent) {
+      this.renderCodeLines();
+    }
+  }
+
+  async loadFile(fileId: number | null, pageStartLine: number = 0): Promise<void> {
+    const wsId = this.store.getState().workspaceId;
+    if (!wsId || !fileId) {
+      this.clearFile();
+      return;
+    }
+
+    const requestId = ++this.loadRequestId;
+
+    // Check in-memory cache for fast tab switching
+    const cached = this.fileCache.get(fileId);
+    if (
+      cached &&
+      pageStartLine === 0 &&
+      !cached.file.isBinary &&
+      cached.content.totalSizeBytes <= 5 * 1024 * 1024
+    ) {
+      this.currentFile = cached.file;
+      this.currentContent = cached.content;
+      this.currentHighlights = cached.highlights;
+      this.currentOccurrences = cached.occurrences;
+      this.isRangePaged = false;
+      this.currentStartLine = 0;
+
+      this.pathElem.textContent = cached.file.relativePath || cached.file.path;
+      this.langBadge.textContent = cached.file.language || "text";
+      this.langBadge.style.display = "inline-block";
+
+      this.store.ensureTabOpen({
+        fileId: cached.file.id,
+        relativePath: cached.file.relativePath || cached.file.path,
+        name: cached.file.name || cached.file.relativePath || `File #${cached.file.id}`,
+      });
+
+      this.updateToolbarMeta();
+      this.renderRangeBanner();
+      this.renderCodeLines();
+      this.renderTabs();
+
+      const selLine = this.store.getState().selectedLine;
+      if (selLine !== null) {
+        this.scrollToLine(selLine);
+      }
+      return;
+    }
+
+    try {
+      this.viewerContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">Loading file...</div>
+        </div>
+      `;
+
+      // 1. Fetch File Metadata
+      const meta = await api.getFileMetadata(wsId, fileId);
+
+      // Discard stale response if selection changed
+      if (
+        requestId !== this.loadRequestId ||
+        (this.store.getState().selectedFileId !== null &&
+          this.store.getState().selectedFileId !== fileId) ||
+        this.store.getState().workspaceId !== wsId
+      ) {
+        return;
+      }
+
+      this.currentFile = meta;
+      this.pathElem.textContent = meta.relativePath || meta.path;
+      this.langBadge.textContent = meta.language || "text";
+      this.langBadge.style.display = "inline-block";
+
+      // Ensure tab is open with metadata
+      this.store.ensureTabOpen({
+        fileId: meta.id,
+        relativePath: meta.relativePath || meta.path,
+        name: meta.name || meta.relativePath || `File #${meta.id}`,
+      });
+      this.renderTabs();
+
+      // 2. Binary file state check
+      if (meta.isBinary) {
+        this.currentContent = null;
+        this.bannerContainer.innerHTML = "";
+        this.viewerContainer.innerHTML = `
+          <div class="empty-state">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <circle cx="12" cy="14" r="2"></circle>
+            </svg>
+            <div class="empty-state-title">Binary file</div>
+            <div class="empty-state-desc">
+              Binary files cannot be displayed in the source viewer.<br>
+              Size: ${formatByteSize(meta.sizeBytes)}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 3. Determine if range loading is needed (files > 5MB)
+      const isLargeFile = meta.sizeBytes > 5 * 1024 * 1024;
+      this.isRangePaged = isLargeFile;
+      this.currentStartLine = pageStartLine;
+
+      // 4. Concurrently fetch Content, Tree-sitter Highlights, and Occurrences
+      const contentPromise = isLargeFile
+        ? api.getFileContent(
+            wsId,
+            fileId,
+            this.currentStartLine,
+            this.currentStartLine + this.pageSize - 1
+          )
+        : api.getFileContent(wsId, fileId);
+
+      const highlightsPromise = api.getFileHighlights(wsId, fileId).catch(() => null);
+      const occurrencesPromise = api.getFileOccurrences(wsId, fileId).catch(() => null);
+
+      const [contentRes, highlightsRes, occurrencesRes] = await Promise.all([
+        contentPromise,
+        highlightsPromise,
+        occurrencesPromise,
+      ]);
+
+      // Discard stale response if another file was selected while requests were in flight
+      if (
+        requestId !== this.loadRequestId ||
+        (this.store.getState().selectedFileId !== null &&
+          this.store.getState().selectedFileId !== fileId) ||
+        this.store.getState().workspaceId !== wsId
+      ) {
+        return;
+      }
+
+      this.currentContent = contentRes;
+      this.currentHighlights = highlightsRes;
+      this.currentOccurrences = occurrencesRes?.occurrences || [];
+
+      // Save to cache for quick tab switching
+      if (!isLargeFile && !meta.isBinary) {
+        this.fileCache.set(fileId, {
+          file: meta,
+          content: contentRes,
+          highlights: highlightsRes,
+          occurrences: occurrencesRes?.occurrences || [],
+        });
+      }
+
+      // Update Toolbar line/size info
+      this.updateToolbarMeta();
+
+      // Render Range Banner if large file
+      this.renderRangeBanner();
+
+      // Render Code Lines
+      this.renderCodeLines();
+
+      // Scroll to selected line if set
+      const selLine = this.store.getState().selectedLine;
+      if (selLine !== null) {
+        this.scrollToLine(selLine);
+      }
+    } catch (err: any) {
+      if (requestId === this.loadRequestId) {
+        this.viewerContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-title" style="color: var(--error);">Error loading file</div>
+            <div class="empty-state-desc">${err.message}</div>
+          </div>
+        `;
+      }
+    }
+  }
+
+  private updateToolbarMeta(): void {
+    if (!this.currentFile || !this.currentContent) return;
+
+    const sizeStr = formatByteSize(this.currentFile.sizeBytes);
+    const linesStr = `${this.currentContent.totalLines} lines`;
+    this.navControls.innerHTML = `
+      <span class="file-size-text">${sizeStr}</span>
+      <span>•</span>
+      <span class="line-count-text">${linesStr}</span>
+    `;
+  }
+
+  private renderRangeBanner(): void {
+    if (!this.isRangePaged || !this.currentContent) {
+      this.bannerContainer.innerHTML = "";
+      return;
+    }
+
+    const start = this.currentStartLine + 1; // 1-based display
+    const end = Math.min(
+      this.currentContent.totalLines,
+      this.currentStartLine + this.pageSize
+    );
+    const total = this.currentContent.totalLines;
+
+    this.bannerContainer.innerHTML = `
+      <div class="range-loading-banner">
+        <span>Large file: Showing lines ${start}–${end} of ${total}</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-icon prev-range-btn" ${this.currentStartLine <= 0 ? "disabled" : ""}>◀ Prev</button>
+          <button class="btn-icon next-range-btn" ${end >= total ? "disabled" : ""}>Next ▶</button>
+        </div>
+      </div>
+    `;
+
+    const prevBtn = this.bannerContainer.querySelector(".prev-range-btn") as HTMLButtonElement;
+    const nextBtn = this.bannerContainer.querySelector(".next-range-btn") as HTMLButtonElement;
+
+    prevBtn?.addEventListener("click", () => {
+      const nextStart = Math.max(0, this.currentStartLine - this.pageSize);
+      this.loadFile(this.currentFile!.id, nextStart);
+    });
+
+    nextBtn?.addEventListener("click", () => {
+      const nextStart = this.currentStartLine + this.pageSize;
+      this.loadFile(this.currentFile!.id, nextStart);
+    });
+  }
+
+  private renderCodeLines(): void {
+    if (!this.currentContent) return;
+
+    const viewer = document.createElement("div");
+    viewer.className = "code-viewer";
+
+    const highlightedLines = highlightSource(
+      this.currentContent.content,
+      this.currentFile?.language,
+      this.currentHighlights,
+      this.currentContent.startLine ?? 0
+    );
+
+    renderSourceLines(viewer, {
+      highlightedLines,
+      startLineNumber: (this.currentContent.startLine ?? 0) + 1,
+      selectedLine: this.store.getState().selectedLine,
+      diagnostics: this.currentDiagnostics,
+      occurrences: this.currentOccurrences,
+      onLineClick: (lineNum) => {
+        this.store.selectLine(lineNum);
+      },
+    });
+
+    this.viewerContainer.innerHTML = "";
+    this.viewerContainer.appendChild(viewer);
+
+    // Attach click events on occurrences inside code lines
+    this.attachOccurrenceClicks(viewer);
+  }
+
+  private attachOccurrenceClicks(viewer: HTMLElement): void {
+    if (!this.currentOccurrences || this.currentOccurrences.length === 0) return;
+
+    // Build map from line number (1-based) to occurrences on that line
+    const occByLine = new Map<number, OccurrenceDto[]>();
+    for (const occ of this.currentOccurrences) {
+      const line = occ.range.start.line + 1; // 1-based for matching DOM data-line
+      const list = occByLine.get(line) || [];
+      list.push(occ);
+      occByLine.set(line, list);
+    }
+
+    const lines = viewer.querySelectorAll<HTMLElement>(".code-line");
+    lines.forEach((lineElem) => {
+      const lineNum = parseInt(lineElem.dataset.line || "0", 10);
+      const occs = occByLine.get(lineNum);
+      if (!occs || occs.length === 0) return;
+
+      // When user clicks a token span in a line with occurrences
+      lineElem.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains("tok") || target.tagName === "SPAN") {
+          const clickedText = target.textContent?.trim();
+          if (clickedText) {
+            const matchedOcc = occs.find((o) => o.name === clickedText);
+            if (matchedOcc && matchedOcc.symbolId) {
+              e.stopPropagation();
+              this.store.selectSymbol(matchedOcc.symbolId, lineNum);
+              if (this.callbacks.onSymbolClick) {
+                this.callbacks.onSymbolClick(matchedOcc.symbolId, lineNum);
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
+  scrollToLine(lineNumber: number): void {
+    const zeroBasedLine = lineNumber - 1;
+    // If line is outside current page in large file, reload page
+    if (
+      this.isRangePaged &&
+      this.currentContent &&
+      (zeroBasedLine < this.currentStartLine ||
+        zeroBasedLine >= this.currentStartLine + this.pageSize)
+    ) {
+      const newStart = Math.max(0, Math.floor(zeroBasedLine / this.pageSize) * this.pageSize);
+      this.loadFile(this.currentFile!.id, newStart).then(() => {
+        this.scrollToLine(lineNumber);
+      });
+      return;
+    }
+
+    // Find line element
+    const lineElem = this.viewerContainer.querySelector<HTMLElement>(
+      `.code-line[data-line="${lineNumber}"]`
+    );
+
+    if (lineElem) {
+      // Remove selected class from previously selected lines
+      this.viewerContainer.querySelectorAll(".code-line.selected").forEach((el) => {
+        el.classList.remove("selected");
+      });
+      lineElem.classList.add("selected");
+      lineElem.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  private clearFile(): void {
+    ++this.loadRequestId;
+    this.currentFile = null;
+    this.currentContent = null;
+    this.currentHighlights = null;
+    this.currentOccurrences = [];
+    this.pathElem.textContent = "No file open";
+    this.langBadge.style.display = "none";
+    this.navControls.innerHTML = "";
+    this.bannerContainer.innerHTML = "";
+    this.renderTabs();
+    this.viewerContainer.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-title">No file selected</div>
+        <div class="empty-state-desc">Select a file from the explorer to view its contents.</div>
+      </div>
+    `;
+  }
+
+  private renderTabs(): void {
+    const { openTabs, selectedFileId } = this.store.getState();
+    if (!openTabs || openTabs.length === 0) {
+      this.tabsBar.innerHTML = "";
+      this.tabsBar.style.display = "none";
+      return;
+    }
+
+    this.tabsBar.style.display = "flex";
+    this.tabsBar.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+
+    for (const tab of openTabs) {
+      const tabDiv = document.createElement("div");
+      tabDiv.className = `code-tab${tab.fileId === selectedFileId ? " active" : ""}`;
+      tabDiv.dataset.fileId = String(tab.fileId);
+      tabDiv.title = tab.relativePath || tab.name;
+
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "code-tab-title";
+      titleSpan.textContent = tab.name || tab.relativePath || `File #${tab.fileId}`;
+      tabDiv.appendChild(titleSpan);
+
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "code-tab-close";
+      closeBtn.title = "Close tab";
+      closeBtn.textContent = "✕";
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.store.closeTab(tab.fileId);
+      });
+      tabDiv.appendChild(closeBtn);
+
+      tabDiv.addEventListener("click", () => {
+        this.store.selectFile(tab.fileId);
+      });
+
+      fragment.appendChild(tabDiv);
+    }
+
+    this.tabsBar.appendChild(fragment);
+
+    // Scroll active tab into view
+    const activeTabElem = this.tabsBar.querySelector<HTMLElement>(".code-tab.active");
+    activeTabElem?.scrollIntoView?.({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }
+}

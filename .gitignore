@@ -3,6 +3,8 @@ build/
 build-*/
 cmake-build-*/
 out/
+dist/
+node_modules/
 
 # vcpkg
 vcpkg_installed/

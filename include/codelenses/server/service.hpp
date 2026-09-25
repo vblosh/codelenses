@@ -85,6 +85,12 @@ public:
                                                           const std::string& query,
                                                           int64_t limit = 50, int64_t offset = 0);
 
+    // Diagnostics
+    std::vector<DiagnosticDto> get_workspace_diagnostics(
+        int64_t workspace_id, const std::optional<std::string>& severity = std::nullopt,
+        int64_t limit = 100, int64_t offset = 0);
+    std::vector<DiagnosticDto> get_file_diagnostics(int64_t workspace_id, int64_t file_id);
+
     // Graceful Shutdown & Cancellation (F-13)
     void shutdown();
 

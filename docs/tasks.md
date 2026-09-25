@@ -114,19 +114,19 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 **Dependencies:** F-01 contract; backend may be mocked initially
 
-- [ ] G-01 Create frontend build and development configuration.
-- [ ] G-02 Implement three-pane layout: explorer, source editor, symbol/references panel.
-- [ ] G-03 Implement lazy folder tree loading.
-- [ ] G-04 Implement file opening, tabs, loading, and error states.
-- [ ] G-05 Integrate Monaco or an equivalent editor.
-- [ ] G-06 Implement syntax-token and semantic-token application.
-- [ ] G-07 Implement file outline and symbol selection.
-- [ ] G-08 Implement referencer list with file/range previews.
-- [ ] G-09 Implement click-to-navigate from reference to source range.
-- [ ] G-10 Implement symbol search and source search.
-- [ ] G-11 Implement indexing progress and diagnostics display.
-- [ ] G-12 Add loading, empty, unresolved, ambiguous, and binary-file states.
-- [ ] G-13 Add frontend component and API integration tests.
+- [x] G-01 Create frontend build and development configuration.
+- [x] G-02 Implement three-pane layout: explorer, source editor, symbol/references panel.
+- [x] G-03 Implement lazy folder tree loading.
+- [x] G-04 Implement file opening, tabs, loading, and error states.
+- [x] G-05 Integrate Monaco or an equivalent editor.
+- [x] G-06 Implement syntax-token and semantic-token application.
+- [x] G-07 Implement file outline and symbol selection.
+- [x] G-08 Implement referencer list with file/range previews.
+- [x] G-09 Implement click-to-navigate from reference to source range.
+- [x] G-10 Implement symbol search and source search.
+- [x] G-11 Implement indexing progress and diagnostics display.
+- [x] G-12 Add loading, empty, unresolved, ambiguous, and binary-file states.
+- [x] G-13 Add frontend component and API integration tests.
 
 **Done when:** a user can browse, open a file, select a symbol, view referencers, and navigate to a result.
 

@@ -256,6 +256,64 @@ inline void to_json(nlohmann::json& j, const DiagnosticCountsDto& c) {
     };
 }
 
+struct DiagnosticDto {
+    int64_t id{0};
+    int64_t workspace_id{0};
+    std::optional<int64_t> file_id{std::nullopt};
+    std::optional<std::string> relative_path{std::nullopt};
+    std::string severity{"error"};
+    std::string source;
+    std::string code;
+    std::string message;
+    std::optional<int64_t> line{std::nullopt};
+    std::optional<int64_t> column{std::nullopt};
+    std::optional<int64_t> end_line{std::nullopt};
+    std::optional<int64_t> end_column{std::nullopt};
+    std::string created_at;
+};
+
+inline void to_json(nlohmann::json& j, const DiagnosticDto& d) {
+    j = nlohmann::json{
+        {"id", d.id},
+        {"workspaceId", d.workspace_id},
+        {"severity", d.severity},
+        {"source", d.source},
+        {"code", d.code},
+        {"message", d.message},
+        {"createdAt", d.created_at},
+    };
+    if (d.file_id.has_value()) {
+        j["fileId"] = *d.file_id;
+    } else {
+        j["fileId"] = nullptr;
+    }
+    if (d.relative_path.has_value()) {
+        j["relativePath"] = *d.relative_path;
+    } else {
+        j["relativePath"] = nullptr;
+    }
+    if (d.line.has_value()) {
+        j["line"] = *d.line;
+    } else {
+        j["line"] = nullptr;
+    }
+    if (d.column.has_value()) {
+        j["column"] = *d.column;
+    } else {
+        j["column"] = nullptr;
+    }
+    if (d.end_line.has_value()) {
+        j["endLine"] = *d.end_line;
+    } else {
+        j["endLine"] = nullptr;
+    }
+    if (d.end_column.has_value()) {
+        j["endColumn"] = *d.end_column;
+    } else {
+        j["endColumn"] = nullptr;
+    }
+}
+
 struct WorkspaceStatusDto {
     int64_t workspace_id{0};
     std::string status{"idle"};

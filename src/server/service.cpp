@@ -1219,4 +1219,71 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     };
 }
 
+std::vector<DiagnosticDto> ApiService::get_workspace_diagnostics(
+    int64_t workspace_id, const std::optional<std::string>& severity, int64_t limit, int64_t offset) {
+    require_workspace(workspace_id);
+    auto raw_diags = db_.diagnostics().list_by_workspace(workspace_id, severity, limit, offset);
+    std::vector<DiagnosticDto> result;
+    result.reserve(raw_diags.size());
+
+    std::unordered_map<int64_t, std::string> file_paths;
+    for (const auto& d : raw_diags) {
+        std::optional<std::string> rel_path = std::nullopt;
+        if (d.file_id.has_value()) {
+            auto it = file_paths.find(*d.file_id);
+            if (it != file_paths.end()) {
+                rel_path = it->second;
+            } else {
+                auto f = db_.files().get_by_id(*d.file_id);
+                if (f) {
+                    file_paths[*d.file_id] = f->relative_path;
+                    rel_path = f->relative_path;
+                }
+            }
+        }
+        result.push_back(DiagnosticDto{
+            .id = d.id,
+            .workspace_id = d.workspace_id,
+            .file_id = d.file_id,
+            .relative_path = std::move(rel_path),
+            .severity = d.severity,
+            .source = d.source,
+            .code = d.code,
+            .message = d.message,
+            .line = d.start_line,
+            .column = d.start_column,
+            .end_line = d.end_line,
+            .end_column = d.end_column,
+            .created_at = d.created_at,
+        });
+    }
+    return result;
+}
+
+std::vector<DiagnosticDto> ApiService::get_file_diagnostics(int64_t workspace_id, int64_t file_id) {
+    auto f = require_file(workspace_id, file_id);
+    auto raw_diags = db_.diagnostics().list_by_file(file_id);
+    std::vector<DiagnosticDto> result;
+    result.reserve(raw_diags.size());
+
+    for (const auto& d : raw_diags) {
+        result.push_back(DiagnosticDto{
+            .id = d.id,
+            .workspace_id = d.workspace_id,
+            .file_id = d.file_id,
+            .relative_path = f.relative_path,
+            .severity = d.severity,
+            .source = d.source,
+            .code = d.code,
+            .message = d.message,
+            .line = d.start_line,
+            .column = d.start_column,
+            .end_line = d.end_line,
+            .end_column = d.end_column,
+            .created_at = d.created_at,
+        });
+    }
+    return result;
+}
+
 } // namespace codelenses::server
