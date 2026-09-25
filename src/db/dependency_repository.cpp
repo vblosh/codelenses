@@ -98,6 +98,37 @@ std::vector<FileDependency> DependencyRepository::list_by_target_file(int64_t fi
     return results;
 }
 
+std::vector<FileDependency> DependencyRepository::list_by_workspace(int64_t workspace_id) {
+    std::string sql = "SELECT " + std::string(kDependencySelectFields) +
+                      " FROM file_dependency WHERE workspace_id = ? ORDER BY source_file_id;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, workspace_id);
+
+    std::vector<FileDependency> results;
+    while (stmt.step()) {
+        results.push_back(read_dependency_row(stmt));
+    }
+    return results;
+}
+
+bool DependencyRepository::update_resolution(int64_t id, std::optional<int64_t> target_file_id,
+                                             const std::optional<std::string>& resolved_path,
+                                             const std::string& resolution) {
+    Statement stmt(conn_.handle(), R"SQL(
+        UPDATE file_dependency
+        SET target_file_id = ?,
+            resolved_path = ?,
+            resolution = ?
+        WHERE id = ?;
+    )SQL");
+    stmt.bind_optional_int64(1, target_file_id);
+    stmt.bind_optional_text(2, resolved_path);
+    stmt.bind_text(3, resolution);
+    stmt.bind_int64(4, id);
+    stmt.execute();
+    return conn_.changes() > 0;
+}
+
 bool DependencyRepository::delete_by_file(int64_t file_id) {
     Statement stmt(conn_.handle(), "DELETE FROM file_dependency WHERE source_file_id = ?;");
     stmt.bind_int64(1, file_id);

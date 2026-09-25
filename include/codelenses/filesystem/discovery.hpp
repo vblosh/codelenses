@@ -33,15 +33,8 @@ struct DiscoveryOptions {
     std::vector<std::string> include_patterns{}; // if empty, include all
     std::vector<std::string> exclude_patterns{};
     std::vector<std::string> default_ignores{
-        ".git",
-        "node_modules",
-        "build",
-        "dist",
-        "target",
-        "vendor",
-        ".codelens",
-        ".codelenses",
-        ".cache",
+        ".git",   "node_modules", "build",       "dist",   "target",
+        "vendor", ".codelens",    ".codelenses", ".cache",
     };
     std::unordered_map<std::string, Language> extension_overrides{};
     std::unordered_map<std::string, Language> path_overrides{};
@@ -66,7 +59,8 @@ public:
     // Parses a shebang line (e.g., "#!/bin/bash" or "#!/usr/bin/env python3")
     [[nodiscard]] static std::optional<Language> parse_shebang_line(std::string_view line);
 
-    // Checks whether the first line of an extensionless or unknown file contains a supported shebang
+    // Checks whether the first line of an extensionless or unknown file contains a supported
+    // shebang
     [[nodiscard]] static std::optional<Language>
     detect_shebang_language(const std::filesystem::path& file_path);
 

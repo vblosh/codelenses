@@ -13,6 +13,8 @@
 #include "codelenses/index/bounded_queue.hpp"
 #include "codelenses/index/incremental_planner.hpp"
 #include "codelenses/index/thread_pool.hpp"
+#include "codelenses/resolver/resolver.hpp"
+#include "codelenses/resolver/symbol_key.hpp"
 
 namespace codelenses::index {
 namespace {
@@ -28,18 +30,8 @@ struct ExtractionResult {
 
 std::string make_symbol_key(std::string_view rel_path, NodeKind kind, std::string_view name,
                             std::string_view signature, int64_t start_byte) {
-    std::string key(rel_path);
-    key += "#";
-    key += to_string(kind);
-    key += "#";
-    key += name;
-    if (!signature.empty()) {
-        key += "#";
-        key += signature;
-    }
-    key += "@";
-    key += std::to_string(start_byte);
-    return key;
+    return resolver::generate_symbol_key("unknown", rel_path, to_string(kind), name, signature,
+                                         start_byte);
 }
 
 std::string fact_kind_to_occurrence_kind(worker::FactKind kind) {
@@ -78,7 +70,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
         return result;
     }
 
-    auto capture_res = filesystem::capture_file(planned.absolute_path, max_file_size, workspace_root);
+    auto capture_res =
+        filesystem::capture_file(planned.absolute_path, max_file_size, workspace_root);
     if (!capture_res) {
         result.success = false;
         result.errors++;
@@ -149,8 +142,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                                           s.qualified_name.empty() ? s.name : s.qualified_name,
                                           s.signature, sym_start),
             .name = s.name,
-            .qualified_name = s.qualified_name.empty() ? std::nullopt
-                                                       : std::make_optional(s.qualified_name),
+            .qualified_name =
+                s.qualified_name.empty() ? std::nullopt : std::make_optional(s.qualified_name),
             .kind = std::string(to_string(s.kind)),
             .language = result.index_data.language,
             .signature = s.signature.empty() ? std::nullopt : std::make_optional(s.signature),
@@ -211,6 +204,34 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                 .resolution = db_occ.resolution,
                 .confidence = 1.0,
             };
+
+            // Link source_symbol_id if occurrence has enclosing_scope
+            if (occ.enclosing_scope.has_value() && !occ.enclosing_scope->empty()) {
+                for (const auto& sym : result.index_data.symbols) {
+                    if (sym.name == *occ.enclosing_scope ||
+                        (sym.qualified_name.has_value() &&
+                         *sym.qualified_name == *occ.enclosing_scope)) {
+                        ref.source_symbol_id = sym.id;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback to geometric containment if not matched by scope
+            if (!ref.source_symbol_id.has_value()) {
+                int64_t smallest_len = std::numeric_limits<int64_t>::max();
+                for (const auto& sym : result.index_data.symbols) {
+                    if (sym.range.start_byte <= db_occ.range.start_byte &&
+                        db_occ.range.end_byte <= sym.range.end_byte) {
+                        int64_t len = sym.range.end_byte - sym.range.start_byte;
+                        if (len < smallest_len) {
+                            smallest_len = len;
+                            ref.source_symbol_id = sym.id;
+                        }
+                    }
+                }
+            }
+
             result.index_data.references.push_back(std::move(ref));
         }
 
@@ -310,12 +331,12 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                                                    const std::string& job_type, bool force_full,
                                                    std::stop_token stop) {
     if (options_.queue_capacity == 0) {
-        return unexpected_result<IndexResult>(
-            ErrorCode::invalid_argument, "queue_capacity must be greater than zero");
+        return unexpected_result<IndexResult>(ErrorCode::invalid_argument,
+                                              "queue_capacity must be greater than zero");
     }
     if (options_.queue_max_bytes == 0) {
-        return unexpected_result<IndexResult>(
-            ErrorCode::invalid_argument, "queue_max_bytes must be greater than zero");
+        return unexpected_result<IndexResult>(ErrorCode::invalid_argument,
+                                              "queue_max_bytes must be greater than zero");
     }
 
     auto ws = db_.workspaces().get_by_id(workspace_id);
@@ -342,9 +363,7 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     std::unique_lock<std::mutex> coord_lock(coord->mutex);
 
     std::stop_callback coord_stop_cb(job_stop, [&]() { coord->cv.notify_all(); });
-    coord->cv.wait(coord_lock, [&] {
-        return !coord->job_running || job_stop.stop_requested();
-    });
+    coord->cv.wait(coord_lock, [&] { return !coord->job_running || job_stop.stop_requested(); });
 
     if (job_stop.stop_requested()) {
         std::lock_guard lock(jobs_mutex_);
@@ -424,8 +443,8 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
 
     // Incremental planning
     auto db_states = db_.files().get_file_states(workspace_id);
-    auto plan = plan_indexing(workspace_id, discovered, db_states,
-                              force_full || (job_type == "full"));
+    auto plan =
+        plan_indexing(workspace_id, discovered, db_states, force_full || (job_type == "full"));
 
     int64_t files_total =
         static_cast<int64_t>(plan.files_to_process.size() + plan.files_to_skip.size());
@@ -486,16 +505,16 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
             current_batch_bytes += planned.file_size;
             current_batch++;
         }
-
         std::vector<std::future<ExtractionResult>> futures;
         futures.reserve(current_batch);
 
         for (std::size_t i = 0; i < current_batch; ++i) {
             const auto& planned = plan.files_to_process[idx + i];
-            futures.push_back(pool.submit([this, workspace_id, job_id, planned, job_stop, canonical_root] {
-                return extract_file(workspace_id, job_id, planned, registry_,
-                                    options_.max_file_size_bytes, job_stop, canonical_root);
-            }));
+            futures.push_back(
+                pool.submit([this, workspace_id, job_id, planned, job_stop, canonical_root] {
+                    return extract_file(workspace_id, job_id, planned, registry_,
+                                        options_.max_file_size_bytes, job_stop, canonical_root);
+                }));
         }
 
         for (auto& fut : futures) {
@@ -602,6 +621,27 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     // Cleanup stale records for deleted files (D-10)
     db_.files().mark_missing_as_deleted(workspace_id, plan.keep_file_ids);
     db_.files().cleanup_deleted_files_derived_data(workspace_id);
+
+    // Workspace resolution and relationship builder pass (Section E)
+    resolver::WorkspaceResolver workspace_resolver(db_);
+    auto resolve_res = workspace_resolver.resolve_workspace(workspace_id, job_stop);
+    if (!resolve_res && resolve_res.error().code == ErrorCode::cancelled) {
+        db_.jobs().finish_job(job_id, "cancelled", std::nullopt,
+                              "Indexing job was cancelled during resolution");
+        ws->status = WorkspaceStatus::idle;
+        db_.workspaces().update(*ws);
+        return IndexResult{
+            .job_id = job_id,
+            .status = "cancelled",
+            .files_total = files_total,
+            .files_processed = files_processed,
+            .files_skipped = files_skipped,
+            .error_count = error_count,
+            .warning_count = warning_count,
+            .workspace_revision = std::nullopt,
+            .error_message = "Indexing job was cancelled during resolution",
+        };
+    }
 
     // Job completion and revision increment (D-06)
     int64_t new_revision = db_.workspaces().increment_revision(workspace_id);

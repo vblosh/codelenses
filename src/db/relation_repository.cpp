@@ -113,6 +113,27 @@ RelationRepository::find_by_target_symbol(int64_t target_symbol_id,
     return results;
 }
 
+std::vector<SymbolRelation> RelationRepository::list_by_workspace(int64_t workspace_id) {
+    std::string sql = "SELECT " + std::string(kRelationSelectFields) +
+                      " FROM symbol_relation WHERE workspace_id = ? ORDER BY relation_kind, "
+                      "source_symbol_id;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, workspace_id);
+
+    std::vector<SymbolRelation> results;
+    while (stmt.step()) {
+        results.push_back(read_relation_row(stmt));
+    }
+    return results;
+}
+
+bool RelationRepository::delete_by_workspace(int64_t workspace_id) {
+    Statement stmt(conn_.handle(), "DELETE FROM symbol_relation WHERE workspace_id = ?;");
+    stmt.bind_int64(1, workspace_id);
+    stmt.execute();
+    return conn_.changes() > 0;
+}
+
 bool RelationRepository::delete_by_file(int64_t file_id) {
     Statement stmt(conn_.handle(), R"SQL(
         DELETE FROM symbol_relation

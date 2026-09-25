@@ -23,6 +23,8 @@ public:
     [[nodiscard]] std::vector<SymbolRelation>
     find_by_target_symbol(int64_t target_symbol_id,
                           const std::optional<std::string>& relation_kind = std::nullopt);
+    [[nodiscard]] std::vector<SymbolRelation> list_by_workspace(int64_t workspace_id);
+    bool delete_by_workspace(int64_t workspace_id);
     bool delete_by_file(int64_t file_id);
 
 private:

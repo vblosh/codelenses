@@ -1,16 +1,16 @@
 #include <atomic>
-#include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <future>
 #include <string>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 #include "codelenses/db/database.hpp"
 #include "codelenses/index/indexer.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace codelenses;
@@ -257,9 +257,9 @@ TEST_CASE("Incremental indexing with unchanged, modified, renamed, and deleted f
 TEST_CASE("Pipeline cancellation and safe shutdown (D-11)", "[index][pipeline][cancellation]") {
     PipelineTestWorkspace env;
     for (int i = 0; i < 20; ++i) {
-        env.write_file("src/file_" + std::to_string(i) + ".c",
-                       "int func_" + std::to_string(i) + "() { return " + std::to_string(i) +
-                           "; }\n");
+        env.write_file("src/file_" + std::to_string(i) + ".c", "int func_" + std::to_string(i) +
+                                                                   "() { return " +
+                                                                   std::to_string(i) + "; }\n");
     }
 
     int64_t ws_id = env.create_workspace();
@@ -330,9 +330,9 @@ TEST_CASE("Concurrency tests for one writer and multiple readers (D-14)",
           "[index][pipeline][concurrency]") {
     PipelineTestWorkspace env;
     for (int i = 0; i < 30; ++i) {
-        env.write_file("src/module_" + std::to_string(i) + ".c",
-                       "int calc_" + std::to_string(i) + "() { return " + std::to_string(i) +
-                           "; }\n");
+        env.write_file("src/module_" + std::to_string(i) + ".c", "int calc_" + std::to_string(i) +
+                                                                     "() { return " +
+                                                                     std::to_string(i) + "; }\n");
     }
 
     int64_t ws_id = env.create_workspace();
@@ -389,10 +389,12 @@ TEST_CASE("Serialized indexing jobs sharing same database connection (Finding 1)
           "[index][pipeline][concurrency]") {
     PipelineTestWorkspace env;
     for (int i = 0; i < 10; ++i) {
-        env.write_file("ws1/file_" + std::to_string(i) + ".c",
-                       "int func_ws1_" + std::to_string(i) + "() { return " + std::to_string(i) + "; }\n");
-        env.write_file("ws2/file_" + std::to_string(i) + ".c",
-                       "int func_ws2_" + std::to_string(i) + "() { return " + std::to_string(i) + "; }\n");
+        env.write_file("ws1/file_" + std::to_string(i) + ".c", "int func_ws1_" + std::to_string(i) +
+                                                                   "() { return " +
+                                                                   std::to_string(i) + "; }\n");
+        env.write_file("ws2/file_" + std::to_string(i) + ".c", "int func_ws2_" + std::to_string(i) +
+                                                                   "() { return " +
+                                                                   std::to_string(i) + "; }\n");
     }
 
     Workspace ws1{.root_path = (env.root / "ws1").string(), .name = "WS 1"};
@@ -403,12 +405,10 @@ TEST_CASE("Serialized indexing jobs sharing same database connection (Finding 1)
     IndexingPipeline pipeline(*env.db);
 
     // Run both indexing jobs concurrently on the same Database connection
-    auto fut1 = std::async(std::launch::async, [&] {
-        return pipeline.run_indexing(ws1_id, "full", true);
-    });
-    auto fut2 = std::async(std::launch::async, [&] {
-        return pipeline.run_indexing(ws2_id, "full", true);
-    });
+    auto fut1 =
+        std::async(std::launch::async, [&] { return pipeline.run_indexing(ws1_id, "full", true); });
+    auto fut2 =
+        std::async(std::launch::async, [&] { return pipeline.run_indexing(ws2_id, "full", true); });
 
     auto res1 = fut1.get();
     auto res2 = fut2.get();
@@ -502,11 +502,11 @@ TEST_CASE("Reject zero queue capacity and zero queue max bytes (Findings 5, 8)",
     }
 }
 
-TEST_CASE("BOM offset is included in persisted byte ranges (Finding 6)",
-          "[index][pipeline][bom]") {
+TEST_CASE("BOM offset is included in persisted byte ranges (Finding 6)", "[index][pipeline][bom]") {
     PipelineTestWorkspace env;
     // UTF-8 BOM (\xef\xbb\xbf) followed by C code
-    std::string bom_content = "\xef\xbb\xbf" "int hello() { return 1; }\n";
+    std::string bom_content = "\xef\xbb\xbf"
+                              "int hello() { return 1; }\n";
     env.write_file("src/bom.c", bom_content);
 
     int64_t ws_id = env.create_workspace();

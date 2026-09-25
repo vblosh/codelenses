@@ -23,13 +23,11 @@ public:
     ThreadPool& operator=(ThreadPool&&) = delete;
 
     template <typename F, typename... Args>
-    auto submit(F&& f, Args&&... args)
-        -> std::future<typename std::invoke_result_t<F, Args...>> {
+    auto submit(F&& f, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>> {
         using return_type = typename std::invoke_result_t<F, Args...>;
 
         auto task = std::make_shared<std::packaged_task<return_type()>>(
-            [func = std::forward<F>(f),
-             ... captured_args = std::forward<Args>(args)]() mutable {
+            [func = std::forward<F>(f), ... captured_args = std::forward<Args>(args)]() mutable {
                 return std::invoke(func, std::forward<Args>(captured_args)...);
             });
 

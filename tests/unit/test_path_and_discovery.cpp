@@ -1,13 +1,13 @@
-#include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <unistd.h>
 #include <vector>
 
 #include "codelenses/filesystem/discovery.hpp"
 #include "codelenses/filesystem/file_capture.hpp"
 #include "codelenses/filesystem/path.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace codelenses;
@@ -317,7 +317,8 @@ TEST_CASE("Content hashing and file capture (D-05)", "[filesystem][capture]") {
     }
 }
 
-TEST_CASE("Incomplete directory scan and depth limits are treated as errors", "[filesystem][discovery]") {
+TEST_CASE("Incomplete directory scan and depth limits are treated as errors",
+          "[filesystem][discovery]") {
     TempWorkspace ws;
     ws.write_file("sub/nested/file.txt", "content");
 

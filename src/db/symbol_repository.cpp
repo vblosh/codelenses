@@ -190,6 +190,34 @@ std::vector<Symbol> SymbolRepository::find_by_name(int64_t workspace_id, const s
     return results;
 }
 
+std::vector<Symbol> SymbolRepository::find_by_qualified_name(int64_t workspace_id,
+                                                             const std::string& qualified_name) {
+    std::string sql = "SELECT " + std::string(kSymbolSelectFields) +
+                      " FROM symbol WHERE workspace_id = ? AND qualified_name = ? ORDER BY name;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_text(2, qualified_name);
+
+    std::vector<Symbol> results;
+    while (stmt.step()) {
+        results.push_back(read_symbol_row(stmt));
+    }
+    return results;
+}
+
+std::vector<Symbol> SymbolRepository::list_by_workspace(int64_t workspace_id) {
+    std::string sql = "SELECT " + std::string(kSymbolSelectFields) +
+                      " FROM symbol WHERE workspace_id = ? ORDER BY file_id, start_byte;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, workspace_id);
+
+    std::vector<Symbol> results;
+    while (stmt.step()) {
+        results.push_back(read_symbol_row(stmt));
+    }
+    return results;
+}
+
 bool SymbolRepository::delete_by_file(int64_t file_id) {
     Statement stmt(conn_.handle(), "DELETE FROM symbol WHERE file_id = ?;");
     stmt.bind_int64(1, file_id);

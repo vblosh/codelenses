@@ -87,6 +87,12 @@ set(CODELENSES_CORE_SOURCES
     src/index/thread_pool.cpp
     src/index/incremental_planner.cpp
     src/index/indexer.cpp
+    src/resolver/symbol_key.cpp
+    src/resolver/compile_commands.cpp
+    src/resolver/dependency_resolver.cpp
+    src/resolver/symbol_resolver.cpp
+    src/resolver/relationship_builder.cpp
+    src/resolver/resolver.cpp
 )
 
 add_library(codelenses_core STATIC

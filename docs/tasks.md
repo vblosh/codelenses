@@ -76,17 +76,17 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 **Dependencies:** B, C, D
 
-- [ ] E-01 Define scope and symbol-candidate lookup interfaces.
-- [ ] E-02 Implement deterministic symbol-key generation.
-- [ ] E-03 Implement same-file lexical/scope resolution.
-- [ ] E-04 Implement dependency path resolution.
-- [ ] E-05 Implement cross-file name resolution baseline.
-- [ ] E-06 Implement confidence and ambiguity handling.
-- [ ] E-07 Build `contains`, `imports`, and `includes` relations.
-- [ ] E-08 Build `calls`, `inherits`, `implements`, and `overrides` where adapter data supports them.
-- [ ] E-09 Add optional C/C++ compile-command configuration model.
-- [ ] E-10 Add resolver fixture tests for resolved, unresolved, ambiguous, and external cases.
-- [ ] E-11 Add referencer, caller, callee, and inheritance query tests.
+- [x] E-01 Define scope and symbol-candidate lookup interfaces.
+- [x] E-02 Implement deterministic symbol-key generation.
+- [x] E-03 Implement same-file lexical/scope resolution.
+- [x] E-04 Implement dependency path resolution.
+- [x] E-05 Implement cross-file name resolution baseline.
+- [x] E-06 Implement confidence and ambiguity handling.
+- [x] E-07 Build `contains`, `imports`, and `includes` relations.
+- [x] E-08 Build `calls`, `inherits`, `implements`, and `overrides` where adapter data supports them.
+- [x] E-09 Add optional C/C++ compile-command configuration model.
+- [x] E-10 Add resolver fixture tests for resolved, unresolved, ambiguous, and external cases.
+- [x] E-11 Add referencer, caller, callee, and inheritance query tests.
 
 **Done when:** the selected-symbol query returns complete, labeled results and never hides unresolved references.
 

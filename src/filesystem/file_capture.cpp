@@ -1,9 +1,4 @@
 #include "codelenses/filesystem/file_capture.hpp"
-#include "codelenses/filesystem/path.hpp"
-
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <array>
@@ -13,7 +8,11 @@
 #include <cstring>
 #include <limits>
 
+#include "codelenses/filesystem/path.hpp"
 #include "codelenses/utf8.hpp"
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace codelenses::filesystem {
 namespace {
@@ -21,17 +20,16 @@ namespace {
 using Word = std::uint32_t;
 
 constexpr std::array<Word, 64> kRoundConstants{
-    0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U, 0x3956c25bU, 0x59f111f1U,
-    0x923f82a4U, 0xab1c5ed5U, 0xd807aa98U, 0x12835b01U, 0x243185beU, 0x550c7dc3U,
-    0x72be5d74U, 0x80deb1feU, 0x9bdc06a7U, 0xc19bf174U, 0xe49b69c1U, 0xefbe4786U,
-    0x0fc19dc6U, 0x240ca1ccU, 0x2de92c6fU, 0x4a7484aaU, 0x5cb0a9dcU, 0x76f988daU,
-    0x983e5152U, 0xa831c66dU, 0xb00327c8U, 0xbf597fc7U, 0xc6e00bf3U, 0xd5a79147U,
-    0x06ca6351U, 0x14292967U, 0x27b70a85U, 0x2e1b2138U, 0x4d2c6dfcU, 0x53380d13U,
-    0x650a7354U, 0x766a0abbU, 0x81c2c92eU, 0x92722c85U, 0xa2bfe8a1U, 0xa81a664bU,
-    0xc24b8b70U, 0xc76c51a3U, 0xd192e819U, 0xd6990624U, 0xf40e3585U, 0x106aa070U,
-    0x19a4c116U, 0x1e376c08U, 0x2748774cU, 0x34b0bcb5U, 0x391c0cb3U, 0x4ed8aa4aU,
-    0x5b9cca4fU, 0x682e6ff3U, 0x748f82eeU, 0x78a5636fU, 0x84c87814U, 0x8cc70208U,
-    0x90befffaU, 0xa4506cebU, 0xbef9a3f7U, 0xc67178f2U};
+    0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U, 0x3956c25bU, 0x59f111f1U, 0x923f82a4U,
+    0xab1c5ed5U, 0xd807aa98U, 0x12835b01U, 0x243185beU, 0x550c7dc3U, 0x72be5d74U, 0x80deb1feU,
+    0x9bdc06a7U, 0xc19bf174U, 0xe49b69c1U, 0xefbe4786U, 0x0fc19dc6U, 0x240ca1ccU, 0x2de92c6fU,
+    0x4a7484aaU, 0x5cb0a9dcU, 0x76f988daU, 0x983e5152U, 0xa831c66dU, 0xb00327c8U, 0xbf597fc7U,
+    0xc6e00bf3U, 0xd5a79147U, 0x06ca6351U, 0x14292967U, 0x27b70a85U, 0x2e1b2138U, 0x4d2c6dfcU,
+    0x53380d13U, 0x650a7354U, 0x766a0abbU, 0x81c2c92eU, 0x92722c85U, 0xa2bfe8a1U, 0xa81a664bU,
+    0xc24b8b70U, 0xc76c51a3U, 0xd192e819U, 0xd6990624U, 0xf40e3585U, 0x106aa070U, 0x19a4c116U,
+    0x1e376c08U, 0x2748774cU, 0x34b0bcb5U, 0x391c0cb3U, 0x4ed8aa4aU, 0x5b9cca4fU, 0x682e6ff3U,
+    0x748f82eeU, 0x78a5636fU, 0x84c87814U, 0x8cc70208U, 0x90befffaU, 0xa4506cebU, 0xbef9a3f7U,
+    0xc67178f2U};
 
 [[nodiscard]] bool same_timestamp(const timespec& left, const timespec& right) noexcept {
     return left.tv_sec == right.tv_sec && left.tv_nsec == right.tv_nsec;
@@ -44,8 +42,7 @@ constexpr std::array<Word, 64> kRoundConstants{
            same_timestamp(before.st_ctim, after.st_ctim);
 }
 
-void compress_block(std::array<Word, 8>& state,
-                    std::span<const std::byte, 64> block) noexcept {
+void compress_block(std::array<Word, 8>& state, std::span<const std::byte, 64> block) noexcept {
     std::array<Word, 64> words{};
     for (std::size_t index = 0; index < 16; ++index) {
         const auto offset = index * 4U;
@@ -55,11 +52,9 @@ void compress_block(std::array<Word, 8>& state,
                        std::to_integer<Word>(block[offset + 3U]);
     }
     for (std::size_t index = 16; index < words.size(); ++index) {
-        const Word s0 = std::rotr(words[index - 15U], 7) ^
-                        std::rotr(words[index - 15U], 18) ^
+        const Word s0 = std::rotr(words[index - 15U], 7) ^ std::rotr(words[index - 15U], 18) ^
                         (words[index - 15U] >> 3U);
-        const Word s1 = std::rotr(words[index - 2U], 17) ^
-                        std::rotr(words[index - 2U], 19) ^
+        const Word s1 = std::rotr(words[index - 2U], 17) ^ std::rotr(words[index - 2U], 19) ^
                         (words[index - 2U] >> 10U);
         words[index] = words[index - 16U] + s0 + words[index - 7U] + s1;
     }
@@ -109,8 +104,7 @@ Hash32 sha256(std::span<const std::byte> bytes) noexcept {
     const std::size_t tail_size = remaining < 56U ? 64U : 128U;
     const auto bit_length = static_cast<std::uint64_t>(bytes.size()) * 8U;
     for (std::size_t index = 0; index < 8; ++index) {
-        tail[tail_size - 1U - index] =
-            static_cast<std::byte>((bit_length >> (index * 8U)) & 0xffU);
+        tail[tail_size - 1U - index] = static_cast<std::byte>((bit_length >> (index * 8U)) & 0xffU);
     }
     compress_block(state, std::span<const std::byte, 64>(tail.data(), 64));
     if (tail_size == 128U) {
@@ -199,7 +193,7 @@ Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t
         }
     }
 
-    struct stat before {};
+    struct stat before{};
     if (::fstat(fd, &before) != 0) {
         return unexpected_result<CapturedFile>(
             ErrorCode::failed, "cannot stat file: " + std::string(std::strerror(errno)),
@@ -207,8 +201,8 @@ Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t
     }
 
     if (!S_ISREG(before.st_mode)) {
-        return unexpected_result<CapturedFile>(
-            ErrorCode::invalid_argument, "path is not a regular file", path.string());
+        return unexpected_result<CapturedFile>(ErrorCode::invalid_argument,
+                                               "path is not a regular file", path.string());
     }
 
     if (before.st_size < 0 || static_cast<std::uint64_t>(before.st_size) > max_bytes) {
@@ -240,8 +234,8 @@ Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t
         }
     }
 
-    struct stat after_fd {};
-    struct stat after_path {};
+    struct stat after_fd{};
+    struct stat after_path{};
     if (::fstat(fd, &after_fd) != 0 || ::stat(path.c_str(), &after_path) != 0) {
         return unexpected_result<CapturedFile>(
             ErrorCode::conflict, "file metadata changed while reading", path.string());
@@ -249,8 +243,8 @@ Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t
 
     if (!same_file(before, after_fd) || !same_file(before, after_path) ||
         static_cast<std::uint64_t>(after_fd.st_size) != bytes.size()) {
-        return unexpected_result<CapturedFile>(
-            ErrorCode::conflict, "file content changed while reading", path.string());
+        return unexpected_result<CapturedFile>(ErrorCode::conflict,
+                                               "file content changed while reading", path.string());
     }
 
     if (workspace_root) {

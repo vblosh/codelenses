@@ -96,6 +96,56 @@ std::optional<ReferenceOccurrence> ReferenceRepository::get_by_id(int64_t id) {
     return std::nullopt;
 }
 
+std::vector<ReferenceOccurrence> ReferenceRepository::list_by_source_file(int64_t source_file_id) {
+    std::string sql = "SELECT " + std::string(kReferenceSelectFields) +
+                      " FROM reference_occurrence WHERE source_file_id = ? ORDER BY start_byte;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, source_file_id);
+
+    std::vector<ReferenceOccurrence> results;
+    while (stmt.step()) {
+        results.push_back(read_reference_row(stmt));
+    }
+    return results;
+}
+
+std::vector<ReferenceOccurrence> ReferenceRepository::list_by_workspace(int64_t workspace_id) {
+    std::string sql = "SELECT " + std::string(kReferenceSelectFields) +
+                      " FROM reference_occurrence WHERE workspace_id = ? ORDER BY source_file_id, "
+                      "start_byte;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, workspace_id);
+
+    std::vector<ReferenceOccurrence> results;
+    while (stmt.step()) {
+        results.push_back(read_reference_row(stmt));
+    }
+    return results;
+}
+
+bool ReferenceRepository::update_resolution(int64_t id, std::optional<int64_t> source_symbol_id,
+                                            std::optional<int64_t> target_symbol_id,
+                                            const std::string& resolution, double confidence,
+                                            const std::optional<std::string>& metadata_json) {
+    Statement stmt(conn_.handle(), R"SQL(
+        UPDATE reference_occurrence
+        SET source_symbol_id = ?,
+            target_symbol_id = ?,
+            resolution = ?,
+            confidence = ?,
+            metadata_json = ?
+        WHERE id = ?;
+    )SQL");
+    stmt.bind_optional_int64(1, source_symbol_id);
+    stmt.bind_optional_int64(2, target_symbol_id);
+    stmt.bind_text(3, resolution);
+    stmt.bind_double(4, confidence);
+    stmt.bind_optional_text(5, metadata_json);
+    stmt.bind_int64(6, id);
+    stmt.execute();
+    return conn_.changes() > 0;
+}
+
 std::vector<ReferencerResult> ReferenceRepository::find_referencers(int64_t workspace_id,
                                                                     int64_t symbol_id,
                                                                     int64_t limit, int64_t offset) {

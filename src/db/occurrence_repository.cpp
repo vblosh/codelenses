@@ -107,6 +107,39 @@ std::vector<Occurrence> OccurrenceRepository::list_by_file(int64_t file_id) {
     return results;
 }
 
+std::vector<Occurrence> OccurrenceRepository::list_by_workspace(int64_t workspace_id) {
+    std::string sql = "SELECT " + std::string(kOccurrenceSelectFields) +
+                      " FROM occurrence WHERE workspace_id = ? ORDER BY file_id, start_byte;";
+    Statement stmt(conn_.handle(), sql);
+    stmt.bind_int64(1, workspace_id);
+
+    std::vector<Occurrence> results;
+    while (stmt.step()) {
+        results.push_back(read_occurrence_row(stmt));
+    }
+    return results;
+}
+
+bool OccurrenceRepository::update_resolution(int64_t id, std::optional<int64_t> symbol_id,
+                                             const std::string& resolution, double confidence,
+                                             const std::optional<std::string>& metadata_json) {
+    Statement stmt(conn_.handle(), R"SQL(
+        UPDATE occurrence
+        SET symbol_id = ?,
+            resolution = ?,
+            confidence = ?,
+            metadata_json = ?
+        WHERE id = ?;
+    )SQL");
+    stmt.bind_optional_int64(1, symbol_id);
+    stmt.bind_text(2, resolution);
+    stmt.bind_double(3, confidence);
+    stmt.bind_optional_text(4, metadata_json);
+    stmt.bind_int64(5, id);
+    stmt.execute();
+    return conn_.changes() > 0;
+}
+
 std::vector<Occurrence> OccurrenceRepository::list_by_symbol(int64_t symbol_id) {
     std::string sql = "SELECT " + std::string(kOccurrenceSelectFields) +
                       " FROM occurrence WHERE symbol_id = ? ORDER BY file_id, start_byte;";

@@ -25,15 +25,15 @@ Result<std::filesystem::path> canonicalize_workspace_root(const std::filesystem:
 
     if (!std::filesystem::is_directory(status)) {
         return unexpected_result<std::filesystem::path>(
-            ErrorCode::invalid_argument,
-            "workspace root path is not a directory: " + root.string(), root.string());
+            ErrorCode::invalid_argument, "workspace root path is not a directory: " + root.string(),
+            root.string());
     }
 
     const auto canonical = std::filesystem::canonical(root, ec);
     if (ec) {
         return unexpected_result<std::filesystem::path>(
-            ErrorCode::invalid_argument,
-            "cannot canonicalize workspace root: " + ec.message(), root.string());
+            ErrorCode::invalid_argument, "cannot canonicalize workspace root: " + ec.message(),
+            root.string());
     }
 
     return canonical;
@@ -52,9 +52,8 @@ bool is_contained_in(const std::filesystem::path& base, const std::filesystem::p
     return base_it == base.end();
 }
 
-Result<std::filesystem::path>
-resolve_workspace_path(const std::filesystem::path& canonical_root,
-                       const std::filesystem::path& rel_or_abs_path) {
+Result<std::filesystem::path> resolve_workspace_path(const std::filesystem::path& canonical_root,
+                                                     const std::filesystem::path& rel_or_abs_path) {
     if (rel_or_abs_path.empty() || rel_or_abs_path == ".") {
         return canonical_root;
     }
@@ -75,15 +74,15 @@ resolve_workspace_path(const std::filesystem::path& canonical_root,
     }
 
     if (ec) {
-        return unexpected_result<std::filesystem::path>(
-            ErrorCode::invalid_argument,
-            "cannot resolve path: " + ec.message(), rel_or_abs_path.string());
+        return unexpected_result<std::filesystem::path>(ErrorCode::invalid_argument,
+                                                        "cannot resolve path: " + ec.message(),
+                                                        rel_or_abs_path.string());
     }
 
     if (!is_contained_in(canonical_root, canonical_target)) {
         return unexpected_result<std::filesystem::path>(
-            ErrorCode::invalid_argument,
-            "path escapes workspace root: " + rel_or_abs_path.string(), rel_or_abs_path.string());
+            ErrorCode::invalid_argument, "path escapes workspace root: " + rel_or_abs_path.string(),
+            rel_or_abs_path.string());
     }
 
     return canonical_target;

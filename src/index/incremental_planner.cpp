@@ -1,10 +1,10 @@
 #include "codelenses/index/incremental_planner.hpp"
-#include "codelenses/filesystem/file_capture.hpp"
-
-#include <sys/stat.h>
 
 #include <unordered_map>
 #include <unordered_set>
+
+#include "codelenses/filesystem/file_capture.hpp"
+#include <sys/stat.h>
 
 namespace codelenses::index {
 
@@ -60,7 +60,7 @@ PlanResult plan_indexing(int64_t /*workspace_id*/,
                 plan.files_to_process.push_back(std::move(pf));
             } else {
                 // Check filesystem mtime
-                struct stat st {};
+                struct stat st{};
                 int64_t current_mtime_ns = 0;
                 if (::stat(file.absolute_path.c_str(), &st) == 0 && st.st_mtim.tv_sec >= 0 &&
                     st.st_mtim.tv_nsec >= 0) {

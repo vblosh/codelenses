@@ -1,16 +1,15 @@
 #include "codelenses/filesystem/discovery.hpp"
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <algorithm>
 #include <fstream>
 #include <regex>
 #include <set>
 
 #include "codelenses/filesystem/path.hpp"
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace codelenses::filesystem {
 namespace {
@@ -115,7 +114,7 @@ std::optional<IgnoreRule> parse_ignore_line(std::string_view line_view,
 }
 
 std::vector<IgnoreRule> load_ignore_file(const std::filesystem::path& file_path,
-                                        const std::filesystem::path& base_dir) {
+                                         const std::filesystem::path& base_dir) {
     std::vector<IgnoreRule> rules;
     std::ifstream in(file_path);
     if (!in.is_open())
@@ -215,8 +214,7 @@ std::optional<Language> FileDiscovery::parse_shebang_line(std::string_view line)
     // Extract command and optional args
     const auto space_pos = line.find_first_of(" \t");
     std::string_view cmd = (space_pos != std::string_view::npos) ? line.substr(0, space_pos) : line;
-    std::string_view rest =
-        (space_pos != std::string_view::npos) ? line.substr(space_pos + 1) : "";
+    std::string_view rest = (space_pos != std::string_view::npos) ? line.substr(space_pos + 1) : "";
 
     // Check /usr/bin/env
     if (cmd == "/usr/bin/env" || cmd == "/bin/env" || cmd == "env") {
@@ -293,7 +291,7 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
     std::vector<IgnoreRule> ignore_rules;
     std::error_code ec;
 
-    struct stat root_st {};
+    struct stat root_st{};
     if (::stat(canonical_root.c_str(), &root_st) == 0) {
         visited_dirs.insert({root_st.st_dev, root_st.st_ino});
     }
@@ -377,11 +375,10 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
         }
 
         if (depth > options_.max_discovery_depth) {
-            scan_error = make_error(
-                ErrorCode::out_of_range,
-                "directory scan exceeded maximum discovery depth (" +
-                    std::to_string(options_.max_discovery_depth) + ")",
-                current_dir.string());
+            scan_error = make_error(ErrorCode::out_of_range,
+                                    "directory scan exceeded maximum discovery depth (" +
+                                        std::to_string(options_.max_discovery_depth) + ")",
+                                    current_dir.string());
             return;
         }
 
@@ -390,15 +387,13 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
             const auto gitignore = current_dir / ".gitignore";
             if (std::filesystem::exists(gitignore, ec)) {
                 auto new_rules = load_ignore_file(gitignore, current_rel);
-                ignore_rules.insert(ignore_rules.end(),
-                                    std::make_move_iterator(new_rules.begin()),
+                ignore_rules.insert(ignore_rules.end(), std::make_move_iterator(new_rules.begin()),
                                     std::make_move_iterator(new_rules.end()));
             }
             const auto codelensignore = current_dir / ".codelensignore";
             if (std::filesystem::exists(codelensignore, ec)) {
                 auto new_rules = load_ignore_file(codelensignore, current_rel);
-                ignore_rules.insert(ignore_rules.end(),
-                                    std::make_move_iterator(new_rules.begin()),
+                ignore_rules.insert(ignore_rules.end(), std::make_move_iterator(new_rules.begin()),
                                     std::make_move_iterator(new_rules.end()));
             }
         }
@@ -407,9 +402,9 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
         auto it = std::filesystem::directory_iterator(
             current_dir, std::filesystem::directory_options::none, iter_ec);
         if (iter_ec) {
-            scan_error = make_error(ErrorCode::failed,
-                                    "failed to open directory: " + iter_ec.message(),
-                                    current_dir.string());
+            scan_error =
+                make_error(ErrorCode::failed, "failed to open directory: " + iter_ec.message(),
+                           current_dir.string());
             return;
         }
 
@@ -422,8 +417,8 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
                     return;
                 }
 
-                const auto rel_path = current_rel.empty() ? std::filesystem::path(filename)
-                                                          : current_rel / filename;
+                const auto rel_path =
+                    current_rel.empty() ? std::filesystem::path(filename) : current_rel / filename;
                 const std::string rel_str = normalize_separators(rel_path.generic_string());
 
                 bool is_symlink = entry.is_symlink(ec);
@@ -461,7 +456,7 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
                         return;
                     }
 
-                    struct stat st {};
+                    struct stat st{};
                     if (::stat(target_path.c_str(), &st) == 0) {
                         std::pair<dev_t, ino_t> dir_id{st.st_dev, st.st_ino};
                         if (visited_dirs.contains(dir_id)) {

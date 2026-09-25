@@ -1,19 +1,19 @@
 #include <atomic>
-#include <catch2/catch_test_macros.hpp>
 #include <chrono>
-#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <sys/stat.h>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 #include "codelenses/filesystem/file_capture.hpp"
 #include "codelenses/index/bounded_queue.hpp"
 #include "codelenses/index/incremental_planner.hpp"
 #include "codelenses/index/thread_pool.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace codelenses;
