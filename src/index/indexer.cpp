@@ -68,7 +68,8 @@ std::string fact_kind_to_occurrence_kind(worker::FactKind kind) {
 
 ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const PlannedFile& planned,
                               adapters::AdapterRegistry& registry, std::size_t max_file_size,
-                              const std::stop_token& stop_token) {
+                              const std::stop_token& stop_token,
+                              const std::filesystem::path& workspace_root) {
     ExtractionResult result;
     result.planned = planned;
 
@@ -77,7 +78,7 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
         return result;
     }
 
-    auto capture_res = filesystem::capture_file(planned.absolute_path, max_file_size);
+    auto capture_res = filesystem::capture_file(planned.absolute_path, max_file_size, workspace_root);
     if (!capture_res) {
         result.success = false;
         result.errors++;
@@ -94,6 +95,7 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
     }
 
     const auto& captured = *capture_res;
+    const auto bom_offset = captured.bom_offset;
     result.index_data.size_bytes = static_cast<int64_t>(captured.byte_size);
     result.index_data.modified_ns = captured.modified_ns;
     result.index_data.content_hash = captured.content_hash;
@@ -138,12 +140,14 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
     result.index_data.symbols.reserve(adapter_res.symbols.size());
     for (size_t i = 0; i < adapter_res.symbols.size(); ++i) {
         const auto& s = adapter_res.symbols[i];
+        const auto sym_start = static_cast<int64_t>(s.range.start + bom_offset);
+        const auto sym_end = static_cast<int64_t>(s.range.end + bom_offset);
         Symbol sym{
             .id = static_cast<int64_t>(i + 1), // temporary 1-based ID for within-file remapping
             .workspace_id = workspace_id,
             .symbol_key = make_symbol_key(planned.relative_path, s.kind,
                                           s.qualified_name.empty() ? s.name : s.qualified_name,
-                                          s.signature, static_cast<int64_t>(s.range.start)),
+                                          s.signature, sym_start),
             .name = s.name,
             .qualified_name = s.qualified_name.empty() ? std::nullopt
                                                        : std::make_optional(s.qualified_name),
@@ -154,8 +158,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
             .is_definition = true,
             .range =
                 SourceRange{
-                    .start_byte = static_cast<int64_t>(s.range.start),
-                    .end_byte = static_cast<int64_t>(s.range.end),
+                    .start_byte = sym_start,
+                    .end_byte = sym_end,
                     .start_line = static_cast<int64_t>(s.display_range.start_line),
                     .start_column = static_cast<int64_t>(s.display_range.start_column),
                     .end_line = static_cast<int64_t>(s.display_range.end_line),
@@ -168,14 +172,16 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
     // 2. Process occurrences
     result.index_data.occurrences.reserve(adapter_res.occurrences.size());
     for (const auto& occ : adapter_res.occurrences) {
+        const auto occ_start = static_cast<int64_t>(occ.range.start + bom_offset);
+        const auto occ_end = static_cast<int64_t>(occ.range.end + bom_offset);
         Occurrence db_occ{
             .workspace_id = workspace_id,
             .occurrence_kind = fact_kind_to_occurrence_kind(occ.kind),
             .name = occ.written_name,
             .range =
                 SourceRange{
-                    .start_byte = static_cast<int64_t>(occ.range.start),
-                    .end_byte = static_cast<int64_t>(occ.range.end),
+                    .start_byte = occ_start,
+                    .end_byte = occ_end,
                     .start_line = static_cast<int64_t>(occ.display_range.start_line),
                     .start_column = static_cast<int64_t>(occ.display_range.start_column),
                     .end_line = static_cast<int64_t>(occ.display_range.end_line),
@@ -217,8 +223,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                 .dependency_kind = (occ.kind == worker::FactKind::include) ? "include" : "import",
                 .raw_name = occ.written_name,
                 .resolution = "unresolved",
-                .start_byte = static_cast<int64_t>(occ.range.start),
-                .end_byte = static_cast<int64_t>(occ.range.end),
+                .start_byte = occ_start,
+                .end_byte = occ_end,
             };
             result.index_data.dependencies.push_back(std::move(dep));
         }
@@ -244,8 +250,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
             .source = "parser",
             .code = d.code.empty() ? "syntax_error" : d.code,
             .message = d.message.empty() ? "Syntax error" : d.message,
-            .start_byte = static_cast<int64_t>(d.byte_range.start),
-            .end_byte = static_cast<int64_t>(d.byte_range.end),
+            .start_byte = static_cast<int64_t>(d.byte_range.start + bom_offset),
+            .end_byte = static_cast<int64_t>(d.byte_range.end + bom_offset),
             .start_line = static_cast<int64_t>(d.display_range.start_line),
             .start_column = static_cast<int64_t>(d.display_range.start_column),
             .end_line = static_cast<int64_t>(d.display_range.end_line),
@@ -303,6 +309,15 @@ bool IndexingPipeline::is_indexing(int64_t workspace_id) const {
 Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                                                    const std::string& job_type, bool force_full,
                                                    std::stop_token stop) {
+    if (options_.queue_capacity == 0) {
+        return unexpected_result<IndexResult>(
+            ErrorCode::invalid_argument, "queue_capacity must be greater than zero");
+    }
+    if (options_.queue_max_bytes == 0) {
+        return unexpected_result<IndexResult>(
+            ErrorCode::invalid_argument, "queue_max_bytes must be greater than zero");
+    }
+
     auto ws = db_.workspaces().get_by_id(workspace_id);
     if (!ws) {
         return unexpected_result<IndexResult>(ErrorCode::not_found, "workspace not found");
@@ -311,39 +326,69 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     auto stop_source = std::make_shared<std::stop_source>();
     std::stop_callback stop_cb(stop, [stop_source]() { stop_source->request_stop(); });
 
-    int64_t job_id = 0;
     {
         std::lock_guard lock(jobs_mutex_);
         if (active_workspace_jobs_.contains(workspace_id)) {
             return unexpected_result<IndexResult>(
                 ErrorCode::conflict, "an indexing job is already active for this workspace");
         }
-
-        IndexJob job{
-            .workspace_id = workspace_id,
-            .job_type = job_type,
-            .status = "running",
-            .requested_mode = (force_full ? "full" : "incremental"),
-        };
-        job_id = db_.jobs().create(job);
-        db_.jobs().update_status(job_id, "running");
-
         active_workspace_jobs_[workspace_id] = stop_source;
-        job_to_workspace_map_[job_id] = workspace_id;
     }
+
+    auto job_stop = stop_source->get_token();
+
+    // Serialize indexing jobs that share the database connection
+    auto coord = db_.indexing_coordinator();
+    std::unique_lock<std::mutex> coord_lock(coord->mutex);
+
+    std::stop_callback coord_stop_cb(job_stop, [&]() { coord->cv.notify_all(); });
+    coord->cv.wait(coord_lock, [&] {
+        return !coord->job_running || job_stop.stop_requested();
+    });
+
+    if (job_stop.stop_requested()) {
+        std::lock_guard lock(jobs_mutex_);
+        active_workspace_jobs_.erase(workspace_id);
+        return unexpected_result<IndexResult>(ErrorCode::cancelled, "indexing job was cancelled");
+    }
+
+    coord->job_running = true;
+    coord_lock.unlock();
 
     struct JobCleanup {
         IndexingPipeline& self;
         int64_t ws_id;
         int64_t j_id;
+        std::shared_ptr<IndexingCoordinator> coord;
         ~JobCleanup() {
-            std::lock_guard lock(self.jobs_mutex_);
-            self.active_workspace_jobs_.erase(ws_id);
-            self.job_to_workspace_map_.erase(j_id);
+            {
+                std::lock_guard lock(self.jobs_mutex_);
+                self.active_workspace_jobs_.erase(ws_id);
+                if (j_id > 0) {
+                    self.job_to_workspace_map_.erase(j_id);
+                }
+            }
+            if (coord) {
+                std::lock_guard lock(coord->mutex);
+                coord->job_running = false;
+                coord->cv.notify_all();
+            }
         }
-    } cleanup{*this, workspace_id, job_id};
+    } cleanup{*this, workspace_id, 0, coord};
 
-    auto job_stop = stop_source->get_token();
+    IndexJob job{
+        .workspace_id = workspace_id,
+        .job_type = job_type,
+        .status = "running",
+        .requested_mode = (force_full ? "full" : "incremental"),
+    };
+    int64_t job_id = db_.jobs().create(job);
+    db_.jobs().update_status(job_id, "running");
+    cleanup.j_id = job_id;
+    {
+        std::lock_guard lock(jobs_mutex_);
+        job_to_workspace_map_[job_id] = workspace_id;
+    }
 
     // Set workspace status to indexing
     ws->status = WorkspaceStatus::indexing;
@@ -418,7 +463,6 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     // Parallel parsing via ThreadPool and bounded batches
     ThreadPool pool(options_.worker_threads);
 
-    std::size_t batch_size = options_.queue_capacity;
     std::size_t idx = 0;
     bool cancelled = false;
 
@@ -428,16 +472,29 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
             break;
         }
 
-        std::size_t current_batch =
-            std::min(batch_size, plan.files_to_process.size() - idx);
+        std::size_t current_batch = 0;
+        std::size_t current_batch_bytes = 0;
+        while (idx + current_batch < plan.files_to_process.size()) {
+            const auto& planned = plan.files_to_process[idx + current_batch];
+            if (current_batch > 0 && current_batch >= options_.queue_capacity) {
+                break;
+            }
+            if (current_batch > 0 &&
+                (current_batch_bytes + planned.file_size > options_.queue_max_bytes)) {
+                break;
+            }
+            current_batch_bytes += planned.file_size;
+            current_batch++;
+        }
+
         std::vector<std::future<ExtractionResult>> futures;
         futures.reserve(current_batch);
 
         for (std::size_t i = 0; i < current_batch; ++i) {
             const auto& planned = plan.files_to_process[idx + i];
-            futures.push_back(pool.submit([this, workspace_id, job_id, planned, job_stop] {
+            futures.push_back(pool.submit([this, workspace_id, job_id, planned, job_stop, canonical_root] {
                 return extract_file(workspace_id, job_id, planned, registry_,
-                                    options_.max_file_size_bytes, job_stop);
+                                    options_.max_file_size_bytes, job_stop, canonical_root);
             }));
         }
 
@@ -450,6 +507,20 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
 
             error_count += ext_res.errors;
             warning_count += ext_res.warnings;
+
+            // If file capture/read failed, do NOT replace file index!
+            if (!ext_res.success) {
+                if (ext_res.planned.file_id > 0) {
+                    plan.keep_file_ids.push_back(ext_res.planned.file_id);
+                    for (auto& diag : ext_res.diagnostics) {
+                        diag.file_id = ext_res.planned.file_id;
+                    }
+                }
+                if (!ext_res.diagnostics.empty()) {
+                    db_.diagnostics().insert_batch(ext_res.diagnostics);
+                }
+                continue;
+            }
 
             // Database persistence (single writer thread)
             int64_t file_id = ext_res.planned.file_id;

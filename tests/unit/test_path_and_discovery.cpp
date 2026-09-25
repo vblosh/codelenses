@@ -298,4 +298,55 @@ TEST_CASE("Content hashing and file capture (D-05)", "[filesystem][capture]") {
         REQUIRE(res->modified_ns > 0);
         REQUIRE_FALSE(res->is_binary);
     }
+
+    SECTION("Capture file rechecks workspace containment") {
+        TempWorkspace outside_ws;
+        outside_ws.write_file("secret.txt", "secret content");
+
+        // Try capturing file outside workspace root
+        auto res = capture_file(outside_ws.root / "secret.txt", 1024, ws.root);
+        REQUIRE_FALSE(res.has_value());
+        REQUIRE(res.error().code == ErrorCode::invalid_argument);
+
+        // Symlink pointing outside workspace root
+        std::error_code ec;
+        fs::create_symlink(outside_ws.root / "secret.txt", ws.root / "sym_outside.txt", ec);
+        auto sym_res = capture_file(ws.root / "sym_outside.txt", 1024, ws.root);
+        REQUIRE_FALSE(sym_res.has_value());
+        REQUIRE(sym_res.error().code == ErrorCode::invalid_argument);
+    }
+}
+
+TEST_CASE("Incomplete directory scan and depth limits are treated as errors", "[filesystem][discovery]") {
+    TempWorkspace ws;
+    ws.write_file("sub/nested/file.txt", "content");
+
+    SECTION("Discovery depth limit exceeded returns out_of_range error") {
+        DiscoveryOptions opts;
+        opts.max_discovery_depth = 1; // sub/nested requires depth 2
+        FileDiscovery discovery(opts);
+
+        auto res = discovery.discover(ws.root);
+        REQUIRE_FALSE(res.has_value());
+        REQUIRE(res.error().code == ErrorCode::out_of_range);
+    }
+
+    SECTION("Unreadable directory returns failure error") {
+        ws.write_file("protected/secret.txt", "secret");
+        auto prot_dir = ws.root / "protected";
+
+        // Remove read & execute permissions from directory
+        std::error_code ec;
+        fs::permissions(prot_dir, fs::perms::none, fs::perm_options::replace, ec);
+
+        DiscoveryOptions opts;
+        FileDiscovery discovery(opts);
+        auto res = discovery.discover(ws.root);
+
+        // Restore permissions for cleanup
+        fs::permissions(prot_dir, fs::perms::all, fs::perm_options::replace, ec);
+
+        REQUIRE_FALSE(res.has_value());
+        REQUIRE(res.error().code == ErrorCode::failed);
+    }
 }

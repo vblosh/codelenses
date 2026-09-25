@@ -1,4 +1,5 @@
 #include "codelenses/filesystem/file_capture.hpp"
+#include "codelenses/filesystem/path.hpp"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -8,6 +9,7 @@
 #include <array>
 #include <bit>
 #include <cerrno>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 
@@ -154,10 +156,20 @@ bool is_binary_buffer(std::span<const std::byte> bytes) noexcept {
     return !is_valid_utf8(bytes);
 }
 
-Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t max_bytes) {
+Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t max_bytes,
+                                  const std::optional<std::filesystem::path>& workspace_root) {
     if (max_bytes == 0) {
         return unexpected_result<CapturedFile>(ErrorCode::invalid_argument,
                                                "file capture size limit must be positive");
+    }
+
+    if (workspace_root) {
+        std::error_code ec;
+        auto canonical_target = std::filesystem::canonical(path, ec);
+        if (ec || !is_contained_in(*workspace_root, canonical_target)) {
+            return unexpected_result<CapturedFile>(
+                ErrorCode::invalid_argument, "file path escapes workspace root", path.string());
+        }
     }
 
     const int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
@@ -174,6 +186,18 @@ Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t
                 ::close(d);
         }
     } guard{fd};
+
+    if (workspace_root) {
+        std::error_code ec;
+        char fd_proc[64];
+        std::snprintf(fd_proc, sizeof(fd_proc), "/proc/self/fd/%d", fd);
+        auto fd_target = std::filesystem::canonical(fd_proc, ec);
+        if (!ec && !is_contained_in(*workspace_root, fd_target)) {
+            return unexpected_result<CapturedFile>(ErrorCode::invalid_argument,
+                                                   "opened file descriptor escapes workspace root",
+                                                   path.string());
+        }
+    }
 
     struct stat before {};
     if (::fstat(fd, &before) != 0) {
@@ -227,6 +251,15 @@ Result<CapturedFile> capture_file(const std::filesystem::path& path, std::size_t
         static_cast<std::uint64_t>(after_fd.st_size) != bytes.size()) {
         return unexpected_result<CapturedFile>(
             ErrorCode::conflict, "file content changed while reading", path.string());
+    }
+
+    if (workspace_root) {
+        std::error_code ec;
+        auto canonical_target = std::filesystem::canonical(path, ec);
+        if (ec || !is_contained_in(*workspace_root, canonical_target)) {
+            return unexpected_result<CapturedFile>(
+                ErrorCode::conflict, "file path escaped workspace root during read", path.string());
+        }
     }
 
     constexpr std::array<std::byte, 3> kUtf8Bom{std::byte{0xef}, std::byte{0xbb}, std::byte{0xbf}};

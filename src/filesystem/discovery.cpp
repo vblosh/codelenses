@@ -368,9 +368,20 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
         return Language::unknown;
     };
 
+    std::optional<Error> scan_error;
+
     auto traverse = [&](auto& self, const std::filesystem::path& current_dir,
                         const std::filesystem::path& current_rel, std::size_t depth) -> void {
-        if (discovery_limit_exceeded || depth > options_.max_discovery_depth) {
+        if (discovery_limit_exceeded || scan_error.has_value()) {
+            return;
+        }
+
+        if (depth > options_.max_discovery_depth) {
+            scan_error = make_error(
+                ErrorCode::out_of_range,
+                "directory scan exceeded maximum discovery depth (" +
+                    std::to_string(options_.max_discovery_depth) + ")",
+                current_dir.string());
             return;
         }
 
@@ -392,98 +403,115 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
             }
         }
 
-        for (const auto& entry : std::filesystem::directory_iterator(
-                 current_dir, std::filesystem::directory_options::none, ec)) {
-            if (ec)
-                continue;
+        std::error_code iter_ec;
+        auto it = std::filesystem::directory_iterator(
+            current_dir, std::filesystem::directory_options::none, iter_ec);
+        if (iter_ec) {
+            scan_error = make_error(ErrorCode::failed,
+                                    "failed to open directory: " + iter_ec.message(),
+                                    current_dir.string());
+            return;
+        }
 
-            const auto filename = entry.path().filename().string();
-            if (is_default_ignored(filename)) {
-                continue;
-            }
-
-            const auto rel_path = current_rel.empty() ? std::filesystem::path(filename)
-                                                      : current_rel / filename;
-            const std::string rel_str = normalize_separators(rel_path.generic_string());
-
-            bool is_symlink = entry.is_symlink(ec);
-            std::filesystem::path target_path = entry.path();
-
-            if (is_symlink) {
-                if (options_.symlink_policy == SymlinkPolicy::ignore) {
-                    continue;
+        auto end = std::filesystem::directory_iterator();
+        while (it != end && !scan_error.has_value() && !discovery_limit_exceeded) {
+            auto process_entry = [&]() {
+                const auto& entry = *it;
+                const auto filename = entry.path().filename().string();
+                if (is_default_ignored(filename)) {
+                    return;
                 }
 
-                auto canonical_target = std::filesystem::canonical(entry.path(), ec);
-                if (ec) {
-                    // Broken symlink
-                    continue;
-                }
+                const auto rel_path = current_rel.empty() ? std::filesystem::path(filename)
+                                                          : current_rel / filename;
+                const std::string rel_str = normalize_separators(rel_path.generic_string());
 
-                // Verify symlink does not escape workspace root
-                if (!is_contained_in(canonical_root, canonical_target)) {
-                    continue;
-                }
+                bool is_symlink = entry.is_symlink(ec);
+                std::filesystem::path target_path = entry.path();
 
-                target_path = canonical_target;
-            }
-
-            const auto status = std::filesystem::status(target_path, ec);
-            if (ec)
-                continue;
-
-            if (std::filesystem::is_directory(status)) {
-                if (matches_exclude(rel_str)) {
-                    continue;
-                }
-                if (options_.respect_ignore_files &&
-                    is_path_ignored(rel_str, true, ignore_rules)) {
-                    continue;
-                }
-
-                struct stat st {};
-                if (::stat(target_path.c_str(), &st) == 0) {
-                    std::pair<dev_t, ino_t> dir_id{st.st_dev, st.st_ino};
-                    if (visited_dirs.contains(dir_id)) {
-                        continue; // Cyclic symlink or already visited
+                if (is_symlink) {
+                    if (options_.symlink_policy == SymlinkPolicy::ignore) {
+                        return;
                     }
-                    visited_dirs.insert(dir_id);
+
+                    auto canonical_target = std::filesystem::canonical(entry.path(), ec);
+                    if (ec) {
+                        // Broken symlink
+                        return;
+                    }
+
+                    // Verify symlink does not escape workspace root
+                    if (!is_contained_in(canonical_root, canonical_target)) {
+                        return;
+                    }
+
+                    target_path = canonical_target;
                 }
 
-                self(self, target_path, rel_path, depth + 1);
-                if (discovery_limit_exceeded)
-                    break;
-            } else if (std::filesystem::is_regular_file(status)) {
-                if (matches_exclude(rel_str)) {
-                    continue;
-                }
-                if (options_.respect_ignore_files &&
-                    is_path_ignored(rel_str, false, ignore_rules)) {
-                    continue;
-                }
-                if (!matches_include(rel_str)) {
-                    continue;
-                }
+                const auto status = std::filesystem::status(target_path, ec);
+                if (ec)
+                    return;
 
-                const auto fsize = std::filesystem::file_size(target_path, ec);
-                const auto observed_size = ec ? uint64_t{0} : static_cast<uint64_t>(fsize);
-                ec.clear();
+                if (std::filesystem::is_directory(status)) {
+                    if (matches_exclude(rel_str)) {
+                        return;
+                    }
+                    if (options_.respect_ignore_files &&
+                        is_path_ignored(rel_str, true, ignore_rules)) {
+                        return;
+                    }
 
-                const auto lang = resolve_language(rel_path, target_path);
-                const bool is_binary = quick_check_binary(target_path);
+                    struct stat st {};
+                    if (::stat(target_path.c_str(), &st) == 0) {
+                        std::pair<dev_t, ino_t> dir_id{st.st_dev, st.st_ino};
+                        if (visited_dirs.contains(dir_id)) {
+                            return; // Cyclic symlink or already visited
+                        }
+                        visited_dirs.insert(dir_id);
+                    }
 
-                if (discovered.size() >= options_.max_discovered_files) {
-                    discovery_limit_exceeded = true;
-                    break;
+                    self(self, target_path, rel_path, depth + 1);
+                } else if (std::filesystem::is_regular_file(status)) {
+                    if (matches_exclude(rel_str)) {
+                        return;
+                    }
+                    if (options_.respect_ignore_files &&
+                        is_path_ignored(rel_str, false, ignore_rules)) {
+                        return;
+                    }
+                    if (!matches_include(rel_str)) {
+                        return;
+                    }
+
+                    const auto fsize = std::filesystem::file_size(target_path, ec);
+                    const auto observed_size = ec ? uint64_t{0} : static_cast<uint64_t>(fsize);
+                    ec.clear();
+
+                    const auto lang = resolve_language(rel_path, target_path);
+                    const bool is_binary = quick_check_binary(target_path);
+
+                    if (discovered.size() >= options_.max_discovered_files) {
+                        discovery_limit_exceeded = true;
+                        return;
+                    }
+
+                    discovered.push_back(DiscoveredFile{
+                        .relative_path = rel_str,
+                        .absolute_path = is_symlink ? target_path : entry.path(),
+                        .language = is_binary ? Language::unknown : lang,
+                        .file_size = observed_size,
+                        .is_binary = is_binary,
+                    });
                 }
+            };
 
-                discovered.push_back(DiscoveredFile{
-                    .relative_path = rel_str,
-                    .absolute_path = entry.path(),
-                    .language = is_binary ? Language::unknown : lang,
-                    .file_size = observed_size,
-                    .is_binary = is_binary,
-                });
+            process_entry();
+            it.increment(iter_ec);
+            if (iter_ec) {
+                scan_error = make_error(ErrorCode::failed,
+                                        "failed to iterate directory: " + iter_ec.message(),
+                                        current_dir.string());
+                break;
             }
         }
 
@@ -491,6 +519,10 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
     };
 
     traverse(traverse, canonical_root, "", 0);
+
+    if (scan_error.has_value()) {
+        return std::unexpected(*scan_error);
+    }
 
     if (discovery_limit_exceeded) {
         return unexpected_result<std::vector<DiscoveredFile>>(

@@ -1,4 +1,5 @@
 #include "codelenses/index/incremental_planner.hpp"
+#include "codelenses/filesystem/file_capture.hpp"
 
 #include <sys/stat.h>
 
@@ -69,17 +70,39 @@ PlanResult plan_indexing(int64_t /*workspace_id*/,
 
                 if (existing->size_bytes == static_cast<int64_t>(file.file_size) &&
                     existing->modified_ns == current_mtime_ns) {
-                    PlannedFile pf{
-                        .relative_path = file.relative_path,
-                        .absolute_path = file.absolute_path,
-                        .file_id = existing->id,
-                        .language = file.language,
-                        .action = PlannedAction::skip,
-                        .reason = "source size and timestamp unchanged",
-                        .file_size = file.file_size,
-                        .is_binary = file.is_binary,
-                    };
-                    plan.files_to_skip.push_back(std::move(pf));
+                    bool content_changed = false;
+                    if (existing->content_hash.has_value()) {
+                        auto capture_res = filesystem::capture_file(file.absolute_path);
+                        if (capture_res && capture_res->content_hash != *existing->content_hash) {
+                            content_changed = true;
+                        }
+                    }
+
+                    if (!content_changed) {
+                        PlannedFile pf{
+                            .relative_path = file.relative_path,
+                            .absolute_path = file.absolute_path,
+                            .file_id = existing->id,
+                            .language = file.language,
+                            .action = PlannedAction::skip,
+                            .reason = "source size and timestamp unchanged",
+                            .file_size = file.file_size,
+                            .is_binary = file.is_binary,
+                        };
+                        plan.files_to_skip.push_back(std::move(pf));
+                    } else {
+                        PlannedFile pf{
+                            .relative_path = file.relative_path,
+                            .absolute_path = file.absolute_path,
+                            .file_id = existing->id,
+                            .language = file.language,
+                            .action = PlannedAction::parse,
+                            .reason = "source content modified",
+                            .file_size = file.file_size,
+                            .is_binary = file.is_binary,
+                        };
+                        plan.files_to_process.push_back(std::move(pf));
+                    }
                 } else {
                     PlannedFile pf{
                         .relative_path = file.relative_path,

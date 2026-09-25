@@ -1,14 +1,21 @@
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <fcntl.h>
+#include <filesystem>
+#include <fstream>
 #include <string>
+#include <sys/stat.h>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
+#include "codelenses/filesystem/file_capture.hpp"
 #include "codelenses/index/bounded_queue.hpp"
 #include "codelenses/index/incremental_planner.hpp"
 #include "codelenses/index/thread_pool.hpp"
 
+namespace fs = std::filesystem;
 using namespace codelenses;
 using namespace codelenses::index;
 
@@ -197,4 +204,68 @@ TEST_CASE("Incremental planner classifies files correctly (D-05, D-10)", "[index
     auto full_plan = plan_indexing(1, discovered, db_states, true);
     REQUIRE(full_plan.files_to_skip.empty());
     REQUIRE(full_plan.files_to_process.size() == 3);
+}
+
+TEST_CASE("Incremental planner detects same-size edit with restored mtime", "[index][planner]") {
+    auto pid = std::to_string(::getpid());
+    auto now = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    auto temp_dir = fs::temp_directory_path() / ("codelenses_test_planner_" + pid + "_" + now);
+    fs::create_directories(temp_dir);
+
+    struct DirCleanup {
+        fs::path p;
+        ~DirCleanup() {
+            std::error_code ec;
+            fs::remove_all(p, ec);
+        }
+    } guard{temp_dir};
+
+    auto file_path = temp_dir / "code.c";
+    std::string original_content = "int a = 1;\n"; // 11 bytes
+    {
+        std::ofstream out(file_path, std::ios::binary);
+        out << original_content;
+    }
+
+    auto capture1 = filesystem::capture_file(file_path);
+    REQUIRE(capture1.has_value());
+
+    // Record file state in DB items
+    std::vector<FileStateItem> db_states = {
+        {.id = 42,
+         .relative_path = "code.c",
+         .size_bytes = static_cast<int64_t>(capture1->byte_size),
+         .modified_ns = capture1->modified_ns,
+         .content_hash = capture1->content_hash,
+         .is_deleted = false},
+    };
+
+    // Edit file with same size: "int b = 2;\n" (11 bytes)
+    std::string edited_content = "int b = 2;\n";
+    {
+        std::ofstream out(file_path, std::ios::binary);
+        out << edited_content;
+    }
+
+    // Restore original mtime using utime/timespec
+    struct timespec times[2];
+    times[0].tv_sec = capture1->modified_ns / 1'000'000'000LL;
+    times[0].tv_nsec = capture1->modified_ns % 1'000'000'000LL;
+    times[1] = times[0];
+    utimensat(AT_FDCWD, file_path.c_str(), times, 0);
+
+    std::vector<filesystem::DiscoveredFile> discovered = {
+        {.relative_path = "code.c",
+         .absolute_path = file_path,
+         .language = Language::c,
+         .file_size = static_cast<uint64_t>(edited_content.size()),
+         .is_binary = false},
+    };
+
+    auto plan = plan_indexing(1, discovered, db_states, false);
+    // Should be detected as modified despite matching size and restored mtime!
+    REQUIRE(plan.files_to_process.size() == 1);
+    REQUIRE(plan.files_to_skip.empty());
+    REQUIRE(plan.files_to_process[0].action == PlannedAction::parse);
+    REQUIRE(plan.files_to_process[0].reason == "source content modified");
 }

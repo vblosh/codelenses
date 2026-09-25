@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -53,8 +54,10 @@ struct CapturedFile {
 
 // Safely reads file content, verifies file size limits, ensures no concurrent modification
 // during read via stat comparison, and computes content hash & binary/UTF-8 status.
+// If workspace_root is provided, verifies that opened file is strictly contained within workspace_root.
 [[nodiscard]] Result<CapturedFile>
 capture_file(const std::filesystem::path& path,
-             std::size_t max_bytes = 32U * 1024U * 1024U);
+             std::size_t max_bytes = 32U * 1024U * 1024U,
+             const std::optional<std::filesystem::path>& workspace_root = std::nullopt);
 
 } // namespace codelenses::filesystem

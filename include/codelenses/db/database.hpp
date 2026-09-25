@@ -1,7 +1,9 @@
 #pragma once
 
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -38,6 +40,12 @@ struct FileIndexData {
     std::vector<FileDependency> dependencies = {};
 };
 
+struct IndexingCoordinator {
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool job_running{false};
+};
+
 class Database {
 public:
     static std::unique_ptr<Database> open(const std::string& path, bool apply_migrations = true);
@@ -65,10 +73,15 @@ public:
     [[nodiscard]] JobRepository& jobs() noexcept { return jobs_; }
     [[nodiscard]] FtsRepository& fts() noexcept { return fts_; }
 
+    [[nodiscard]] std::shared_ptr<IndexingCoordinator> indexing_coordinator() noexcept {
+        return indexing_coord_;
+    }
+
     // Section 6: Transactional file replacement
     void replace_file_index(int64_t file_id, const FileIndexData& data);
 
 private:
+    std::shared_ptr<IndexingCoordinator> indexing_coord_{std::make_shared<IndexingCoordinator>()};
     std::unique_ptr<Connection> conn_;
     MigrationRunner migrations_;
     WorkspaceRepository workspaces_;

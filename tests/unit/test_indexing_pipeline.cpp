@@ -384,3 +384,157 @@ TEST_CASE("Concurrency tests for one writer and multiple readers (D-14)",
     auto final_symbols = env.db->symbols().find_by_name(ws_id, "calc_0");
     REQUIRE_FALSE(final_symbols.empty());
 }
+
+TEST_CASE("Serialized indexing jobs sharing same database connection (Finding 1)",
+          "[index][pipeline][concurrency]") {
+    PipelineTestWorkspace env;
+    for (int i = 0; i < 10; ++i) {
+        env.write_file("ws1/file_" + std::to_string(i) + ".c",
+                       "int func_ws1_" + std::to_string(i) + "() { return " + std::to_string(i) + "; }\n");
+        env.write_file("ws2/file_" + std::to_string(i) + ".c",
+                       "int func_ws2_" + std::to_string(i) + "() { return " + std::to_string(i) + "; }\n");
+    }
+
+    Workspace ws1{.root_path = (env.root / "ws1").string(), .name = "WS 1"};
+    int64_t ws1_id = env.db->workspaces().create(ws1);
+    Workspace ws2{.root_path = (env.root / "ws2").string(), .name = "WS 2"};
+    int64_t ws2_id = env.db->workspaces().create(ws2);
+
+    IndexingPipeline pipeline(*env.db);
+
+    // Run both indexing jobs concurrently on the same Database connection
+    auto fut1 = std::async(std::launch::async, [&] {
+        return pipeline.run_indexing(ws1_id, "full", true);
+    });
+    auto fut2 = std::async(std::launch::async, [&] {
+        return pipeline.run_indexing(ws2_id, "full", true);
+    });
+
+    auto res1 = fut1.get();
+    auto res2 = fut2.get();
+
+    REQUIRE(res1.has_value());
+    REQUIRE(res1->status == "completed");
+    REQUIRE(res1->files_processed == 10);
+
+    REQUIRE(res2.has_value());
+    REQUIRE(res2->status == "completed");
+    REQUIRE(res2->files_processed == 10);
+
+    auto ws1_rec = env.db->workspaces().get_by_id(ws1_id);
+    REQUIRE(ws1_rec->status == WorkspaceStatus::ready);
+    auto ws2_rec = env.db->workspaces().get_by_id(ws2_id);
+    REQUIRE(ws2_rec->status == WorkspaceStatus::ready);
+}
+
+TEST_CASE("Capture failure does not replace index or insert empty file record (Finding 2)",
+          "[index][pipeline][capture]") {
+    PipelineTestWorkspace env;
+    env.write_file("src/valid.c", "int existing() { return 10; }\n");
+
+    int64_t ws_id = env.create_workspace();
+    IndexingPipeline pipeline(*env.db);
+
+    // Initial indexing
+    auto res1 = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res1.has_value());
+    REQUIRE(res1->files_processed == 1);
+
+    auto initial_file = env.db->files().get_by_path(ws_id, "src/valid.c");
+    REQUIRE(initial_file.has_value());
+    auto initial_syms = env.db->symbols().list_by_file(initial_file->id);
+    REQUIRE(initial_syms.size() == 1);
+    REQUIRE(initial_syms[0].name == "existing");
+
+    // Make the file unreadable (permission 000)
+    auto file_path = env.root / "src/valid.c";
+    std::error_code ec;
+    fs::permissions(file_path, fs::perms::none, fs::perm_options::replace, ec);
+
+    // Force reindex - file capture will fail
+    auto res2 = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res2.has_value());
+    REQUIRE(res2->error_count > 0);
+
+    // Restore permissions for cleanup
+    fs::permissions(file_path, fs::perms::all, fs::perm_options::replace, ec);
+
+    // Existing file was NOT purged by replace_file_index!
+    auto existing_file = env.db->files().get_by_path(ws_id, "src/valid.c");
+    REQUIRE(existing_file.has_value());
+    auto existing_syms = env.db->symbols().list_by_file(existing_file->id);
+    REQUIRE(existing_syms.size() == 1);
+    REQUIRE(existing_syms[0].name == "existing");
+
+    // Diagnostic was recorded
+    auto diags = env.db->diagnostics().list_by_workspace(ws_id);
+    bool has_read_error = false;
+    for (const auto& d : diags) {
+        if (d.code == "read_error") {
+            has_read_error = true;
+        }
+    }
+    REQUIRE(has_read_error);
+}
+
+TEST_CASE("Reject zero queue capacity and zero queue max bytes (Findings 5, 8)",
+          "[index][pipeline][options]") {
+    PipelineTestWorkspace env;
+    env.write_file("src/main.c", "int main() { return 0; }\n");
+    int64_t ws_id = env.create_workspace();
+
+    SECTION("queue_capacity == 0 returns invalid_argument") {
+        IndexerOptions opts;
+        opts.queue_capacity = 0;
+        IndexingPipeline pipeline(*env.db, opts);
+        auto res = pipeline.run_indexing(ws_id, "full", true);
+        REQUIRE_FALSE(res.has_value());
+        REQUIRE(res.error().code == ErrorCode::invalid_argument);
+    }
+
+    SECTION("queue_max_bytes == 0 returns invalid_argument") {
+        IndexerOptions opts;
+        opts.queue_max_bytes = 0;
+        IndexingPipeline pipeline(*env.db, opts);
+        auto res = pipeline.run_indexing(ws_id, "full", true);
+        REQUIRE_FALSE(res.has_value());
+        REQUIRE(res.error().code == ErrorCode::invalid_argument);
+    }
+}
+
+TEST_CASE("BOM offset is included in persisted byte ranges (Finding 6)",
+          "[index][pipeline][bom]") {
+    PipelineTestWorkspace env;
+    // UTF-8 BOM (\xef\xbb\xbf) followed by C code
+    std::string bom_content = "\xef\xbb\xbf" "int hello() { return 1; }\n";
+    env.write_file("src/bom.c", bom_content);
+
+    int64_t ws_id = env.create_workspace();
+    IndexingPipeline pipeline(*env.db);
+
+    auto res = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res.has_value());
+    REQUIRE(res->files_processed == 1);
+
+    auto file = env.db->files().get_by_path(ws_id, "src/bom.c");
+    REQUIRE(file.has_value());
+
+    auto syms = env.db->symbols().list_by_file(file->id);
+    REQUIRE(syms.size() == 1);
+    REQUIRE(syms[0].name == "hello");
+    // Index same code without BOM for comparison
+    env.write_file("src/nobom.c", "int hello() { return 1; }\n");
+
+    auto res2 = pipeline.run_indexing(ws_id, "incremental", false);
+    REQUIRE(res2.has_value());
+
+    auto no_bom_file = env.db->files().get_by_path(ws_id, "src/nobom.c");
+    REQUIRE(no_bom_file.has_value());
+    auto no_bom_syms = env.db->symbols().list_by_file(no_bom_file->id);
+    REQUIRE(no_bom_syms.size() == 1);
+
+    // Verify non-BOM is at byte 4 ("int " is 4 bytes), and BOM is at byte 4 + 3 = 7
+    REQUIRE(no_bom_syms[0].range.start_byte == 4);
+    REQUIRE(syms[0].range.start_byte == 7);
+    REQUIRE(syms[0].range.start_byte == no_bom_syms[0].range.start_byte + 3);
+}
