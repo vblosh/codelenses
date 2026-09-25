@@ -269,7 +269,7 @@ Result<DiagnosticSeverity> diagnostic_severity_from_string(std::string_view valu
     return invalid_enum<DiagnosticSeverity>("diagnostic severity", value);
 }
 
-Result<void> Diagnostic::validate() const {
+Result<void> SourceDiagnostic::validate() const {
     if (!valid_severity(severity)) {
         return std::unexpected<Error>(
             make_error(ErrorCode::invalid_argument, "diagnostic severity is invalid"));
@@ -297,14 +297,14 @@ Result<void> Diagnostic::validate() const {
     return {};
 }
 
-Result<Diagnostic> Diagnostic::create(DiagnosticSeverity severity, std::string code,
-                                      std::string message, std::filesystem::path path,
-                                      std::optional<ByteRange> byte_range,
-                                      std::optional<DisplayRange> display_range,
-                                      Language language) {
-    Diagnostic diagnostic{severity,        std::move(code),       std::move(message),
-                          std::move(path), std::move(byte_range), std::move(display_range),
-                          language};
+Result<SourceDiagnostic> SourceDiagnostic::create(DiagnosticSeverity severity, std::string code,
+                                                  std::string message, std::filesystem::path path,
+                                                  std::optional<ByteRange> byte_range,
+                                                  std::optional<DisplayRange> display_range,
+                                                  Language language) {
+    SourceDiagnostic diagnostic{severity,        std::move(code),       std::move(message),
+                                std::move(path), std::move(byte_range), std::move(display_range),
+                                language};
     if (auto valid = diagnostic.validate(); !valid) {
         return std::unexpected<Error>(std::move(valid.error()));
     }

@@ -81,6 +81,12 @@ set(CODELENSES_CORE_SOURCES
     src/adapters/shell_adapter.cpp
     src/adapters/ts_adapter.cpp
     src/modules/domain.cpp
+    src/filesystem/path.cpp
+    src/filesystem/file_capture.cpp
+    src/filesystem/discovery.cpp
+    src/index/thread_pool.cpp
+    src/index/incremental_planner.cpp
+    src/index/indexer.cpp
 )
 
 add_library(codelenses_core STATIC

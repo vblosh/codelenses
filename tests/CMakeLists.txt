@@ -7,6 +7,9 @@ set(UNIT_TEST_SOURCES
     unit/test_migration.cpp
     unit/test_persistence.cpp
     unit/test_adapters_sdk.cpp
+    unit/test_path_and_discovery.cpp
+    unit/test_bounded_queue_and_pool.cpp
+    unit/test_indexing_pipeline.cpp
 )
 
 add_executable(codelenses_unit_tests

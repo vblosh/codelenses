@@ -55,20 +55,20 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 **Dependencies:** A, B interfaces, C interfaces
 
-- [ ] D-01 Implement workspace path canonicalization and containment checks.
-- [ ] D-02 Implement recursive file discovery with include/exclude rules.
-- [ ] D-03 Implement default ignored-directory policy.
-- [ ] D-04 Implement language and binary detection.
-- [ ] D-05 Implement content hashing and file-state comparison.
-- [ ] D-06 Implement index job lifecycle and progress counters.
-- [ ] D-07 Implement bounded worker queue for parsing.
-- [ ] D-08 Implement per-file extraction flow.
-- [ ] D-09 Replace file-owned records in one transaction.
-- [ ] D-10 Remove stale records for deleted files.
-- [ ] D-11 Implement cancellation and safe shutdown.
-- [ ] D-12 Add diagnostics for read, parse, extraction, and persistence failures.
-- [ ] D-13 Add incremental-index tests with unchanged, modified, renamed, and deleted files.
-- [ ] D-14 Add concurrency tests for one writer and multiple readers.
+- [x] D-01 Implement workspace path canonicalization and containment checks.
+- [x] D-02 Implement recursive file discovery with include/exclude rules.
+- [x] D-03 Implement default ignored-directory policy.
+- [x] D-04 Implement language and binary detection.
+- [x] D-05 Implement content hashing and file-state comparison.
+- [x] D-06 Implement index job lifecycle and progress counters.
+- [x] D-07 Implement bounded worker queue for parsing.
+- [x] D-08 Implement per-file extraction flow.
+- [x] D-09 Replace file-owned records in one transaction.
+- [x] D-10 Remove stale records for deleted files.
+- [x] D-11 Implement cancellation and safe shutdown.
+- [x] D-12 Add diagnostics for read, parse, extraction, and persistence failures.
+- [x] D-13 Add incremental-index tests with unchanged, modified, renamed, and deleted files.
+- [x] D-14 Add concurrency tests for one writer and multiple readers.
 
 **Done when:** full and incremental jobs produce consistent database state and survive malformed files.
 

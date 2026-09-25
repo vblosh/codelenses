@@ -15,9 +15,9 @@ enum class DiagnosticSeverity { info, warning, error, fatal };
 [[nodiscard]] std::string_view to_string(DiagnosticSeverity value) noexcept;
 [[nodiscard]] Result<DiagnosticSeverity> diagnostic_severity_from_string(std::string_view value);
 
-// Diagnostics own all text and paths.  They can therefore safely be queued,
+// Source diagnostics own all text and paths. They can therefore safely be queued,
 // persisted, or returned by an API after the parser's input buffer dies.
-struct Diagnostic {
+struct SourceDiagnostic {
     DiagnosticSeverity severity{DiagnosticSeverity::error};
     std::string code;
     std::string message;
@@ -28,7 +28,7 @@ struct Diagnostic {
 
     [[nodiscard]] Result<void> validate() const;
 
-    [[nodiscard]] static Result<Diagnostic>
+    [[nodiscard]] static Result<SourceDiagnostic>
     create(DiagnosticSeverity severity, std::string code, std::string message,
            std::filesystem::path path = {}, std::optional<ByteRange> byte_range = {},
            std::optional<DisplayRange> display_range = {}, Language language = Language::unknown);
