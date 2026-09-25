@@ -89,6 +89,39 @@ TEST_CASE("AppConfig JSON serialization round-trips cleanly", "[config]") {
     REQUIRE(config_in.server == config.server);
 }
 
+TEST_CASE("AppConfig JSON port validation prevents narrowing out-of-range values",
+          "[config][json]") {
+    SECTION("Port 65537 is rejected without narrowing") {
+        nlohmann::json j = {{"server", {{"port", 65537}}}};
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json(j), std::out_of_range);
+    }
+
+    SECTION("Port 70000 is rejected") {
+        nlohmann::json j = {{"server", {{"port", 70000}}}};
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json(j), std::out_of_range);
+    }
+
+    SECTION("Port 0 is rejected") {
+        nlohmann::json j = {{"server", {{"port", 0}}}};
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json(j), std::out_of_range);
+    }
+
+    SECTION("Negative port is rejected") {
+        nlohmann::json j = {{"server", {{"port", -1}}}};
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json(j), std::out_of_range);
+    }
+
+    SECTION("Zero worker threads in JSON is rejected") {
+        nlohmann::json j = {{"server", {{"worker_threads", 0}}}};
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json(j), std::out_of_range);
+    }
+
+    SECTION("Negative worker threads in JSON is rejected") {
+        nlohmann::json j = {{"server", {{"worker_threads", -2}}}};
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json(j), std::out_of_range);
+    }
+}
+
 TEST_CASE("AppConfig loads from file", "[config]") {
     std::filesystem::path temp_config =
         std::filesystem::temp_directory_path() / "test_codelenses_config.json";
@@ -115,6 +148,18 @@ TEST_CASE("AppConfig loads from file", "[config]") {
     SECTION("Non-existent config file throws") {
         REQUIRE_THROWS_AS(codelenses::AppConfig::from_json_file("/non/existent/path/config.json"),
                           std::runtime_error);
+    }
+
+    SECTION("Config file with out-of-range port throws") {
+        std::filesystem::path bad_config =
+            std::filesystem::temp_directory_path() / "test_codelenses_bad_port.json";
+        nlohmann::json bad_sample = {{"server", {{"port", 65537}}}};
+        {
+            std::ofstream out(bad_config);
+            out << bad_sample.dump();
+        }
+        REQUIRE_THROWS_AS(codelenses::AppConfig::from_json_file(bad_config), std::runtime_error);
+        std::filesystem::remove(bad_config);
     }
 }
 
@@ -155,6 +200,54 @@ TEST_CASE("CLI argument parser handles commands and flags", "[config][cli]") {
         REQUIRE(result.should_exit);
         REQUIRE(result.exit_code == 1);
         REQUIRE(result.message.find("Invalid port") != std::string::npos);
+    }
+
+    SECTION("Malformed port with numeric prefix is rejected") {
+        const char* argv[] = {"codelenses", "--port", "8080oops"};
+        auto result = codelenses::AppConfig::parse_cli(3, argv);
+        REQUIRE(result.should_exit);
+        REQUIRE(result.exit_code == 1);
+        REQUIRE(result.message.find("Invalid port number: 8080oops") != std::string::npos);
+    }
+
+    SECTION("Port with trailing suffix is rejected") {
+        const char* argv[] = {"codelenses", "-p", "8080extra"};
+        auto result = codelenses::AppConfig::parse_cli(3, argv);
+        REQUIRE(result.should_exit);
+        REQUIRE(result.exit_code == 1);
+        REQUIRE(result.message.find("Invalid port number: 8080extra") != std::string::npos);
+    }
+
+    SECTION("Port zero is rejected") {
+        const char* argv[] = {"codelenses", "-p", "0"};
+        auto result = codelenses::AppConfig::parse_cli(3, argv);
+        REQUIRE(result.should_exit);
+        REQUIRE(result.exit_code == 1);
+        REQUIRE(result.message.find("Invalid port number: 0") != std::string::npos);
+    }
+
+    SECTION("Negative port is rejected") {
+        const char* argv[] = {"codelenses", "-p", "-80"};
+        auto result = codelenses::AppConfig::parse_cli(3, argv);
+        REQUIRE(result.should_exit);
+        REQUIRE(result.exit_code == 1);
+        REQUIRE(result.message.find("Invalid port number: -80") != std::string::npos);
+    }
+
+    SECTION("Malformed thread count with numeric prefix is rejected") {
+        const char* argv[] = {"codelenses", "--threads", "4x"};
+        auto result = codelenses::AppConfig::parse_cli(3, argv);
+        REQUIRE(result.should_exit);
+        REQUIRE(result.exit_code == 1);
+        REQUIRE(result.message.find("Invalid thread count: 4x") != std::string::npos);
+    }
+
+    SECTION("Zero thread count is rejected") {
+        const char* argv[] = {"codelenses", "-t", "0"};
+        auto result = codelenses::AppConfig::parse_cli(3, argv);
+        REQUIRE(result.should_exit);
+        REQUIRE(result.exit_code == 1);
+        REQUIRE(result.message.find("Invalid thread count: 0") != std::string::npos);
     }
 
     SECTION("Missing value for option is rejected") {

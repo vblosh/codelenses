@@ -83,21 +83,47 @@ int main(int argc, char* argv[]) {
         res.set_content(body.dump(), "application/json");
     });
 
-    std::cout << "Server starting on http://" << config.server.host << ":" << config.server.port
-              << " ...\n";
-
     std::string host = config.server.host;
     uint16_t port = config.server.port;
 
-    // Bind and listen in a separate thread so we can handle graceful shutdown
-    std::thread server_thread([&svr, host, port]() {
-        if (!svr.listen(host, port)) {
-            std::cerr << "Server stopped listening.\n";
+    // Bind to the port synchronously to catch address/port errors immediately
+    if (!svr.bind_to_port(host, port)) {
+        std::cerr << "Failed to bind HTTP server to " << host << ":" << port << "\n";
+        return 1;
+    }
+
+    std::atomic<bool> server_failed{false};
+
+    // Listen on the bound socket in a background thread
+    std::thread server_thread([&svr, &server_failed]() {
+        if (!svr.listen_after_bind()) {
+            server_failed.store(true);
         }
     });
 
-    while (!g_stop_requested.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // Wait until listener is ready or startup failure detected
+    svr.wait_until_ready();
+    if (!svr.is_running() || server_failed.load()) {
+        std::cerr << "Failed to start HTTP server on " << host << ":" << port << "\n";
+        svr.stop();
+        if (server_thread.joinable()) {
+            server_thread.join();
+        }
+        return 1;
+    }
+
+    std::cout << "Server starting on http://" << host << ":" << port << " ...\n";
+
+    while (!g_stop_requested.load() && !server_failed.load() && svr.is_running()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    if (server_failed.load() || (!g_stop_requested.load() && !svr.is_running())) {
+        std::cerr << "Server stopped listening unexpectedly.\n";
+        if (server_thread.joinable()) {
+            server_thread.join();
+        }
+        return 1;
     }
 
     std::cout << "\nShutdown signal received. Stopping server...\n";

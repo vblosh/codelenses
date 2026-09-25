@@ -36,7 +36,9 @@ echo "Using compilation database: ${BUILD_DIR}/compile_commands.json"
 
 FILES=()
 while IFS= read -r -d '' file; do
-    FILES+=("$file")
+    if grep -q "\"${file}\"" "${BUILD_DIR}/compile_commands.json" 2>/dev/null; then
+        FILES+=("$file")
+    fi
 done < <(find "${REPO_ROOT}/src" "${REPO_ROOT}/tests" \
     -type f -name "*.cpp" -print0 2>/dev/null || true)
 

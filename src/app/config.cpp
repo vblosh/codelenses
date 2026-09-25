@@ -1,8 +1,10 @@
 #include "codelenses/app/config.h"
 
 #include <algorithm>
+#include <charconv>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -10,6 +12,29 @@
 #include "codelenses/app/version.h"
 
 namespace codelenses {
+
+namespace {
+
+template <typename T>
+bool parse_complete_integer(std::string_view str, T& out, T min_val, T max_val) {
+    if (str.empty()) {
+        return false;
+    }
+    const char* first = str.data();
+    const char* last = first + str.size();
+    T val = 0;
+    auto [ptr, ec] = std::from_chars(first, last, val);
+    if (ec != std::errc{} || ptr != last) {
+        return false;
+    }
+    if (val < min_val || val > max_val) {
+        return false;
+    }
+    out = val;
+    return true;
+}
+
+} // namespace
 
 void to_json(nlohmann::json& j, const ServerConfig& config) {
     j = nlohmann::json{{"host", config.host},
@@ -30,8 +55,16 @@ void from_json(const nlohmann::json& j, ServerConfig& config) {
     if (j.contains("host") && j["host"].is_string()) {
         config.host = j["host"].get<std::string>();
     }
-    if (j.contains("port") && j["port"].is_number_integer()) {
-        config.port = j["port"].get<uint16_t>();
+    if (j.contains("port")) {
+        if (!j["port"].is_number_integer() && !j["port"].is_number_unsigned()) {
+            throw std::invalid_argument("Server port must be an integer");
+        }
+        int64_t raw_port = j["port"].get<int64_t>();
+        if (raw_port <= 0 || raw_port > 65535) {
+            throw std::out_of_range("Server port out of range (1-65535): " +
+                                    std::to_string(raw_port));
+        }
+        config.port = static_cast<uint16_t>(raw_port);
     }
     if (j.contains("db_path") && j["db_path"].is_string()) {
         config.db_path = j["db_path"].get<std::string>();
@@ -42,8 +75,16 @@ void from_json(const nlohmann::json& j, ServerConfig& config) {
     if (j.contains("log_level") && j["log_level"].is_string()) {
         config.log_level = j["log_level"].get<std::string>();
     }
-    if (j.contains("worker_threads") && j["worker_threads"].is_number_unsigned()) {
-        config.worker_threads = j["worker_threads"].get<size_t>();
+    if (j.contains("worker_threads")) {
+        if (!j["worker_threads"].is_number_integer() && !j["worker_threads"].is_number_unsigned()) {
+            throw std::invalid_argument("Worker threads must be an integer");
+        }
+        int64_t raw_threads = j["worker_threads"].get<int64_t>();
+        if (raw_threads <= 0) {
+            throw std::out_of_range("Worker threads must be at least 1: " +
+                                    std::to_string(raw_threads));
+        }
+        config.worker_threads = static_cast<size_t>(raw_threads);
     }
     if (j.contains("enable_cors") && j["enable_cors"].is_boolean()) {
         config.enable_cors = j["enable_cors"].get<bool>();
@@ -84,7 +125,11 @@ AppConfig AppConfig::from_json_file(const std::filesystem::path& path) {
         throw std::runtime_error(std::string("JSON parse error in config: ") + e.what());
     }
 
-    return from_json(j);
+    try {
+        return from_json(j);
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Configuration error in " + path.string() + ": " + e.what());
+    }
 }
 
 AppConfig AppConfig::from_json(const nlohmann::json& j) {
@@ -230,18 +275,14 @@ CliParseResult AppConfig::parse_cli(int argc, const char* const argv[]) {
                 result.message = "Error: --port requires a port argument";
                 return result;
             }
-            try {
-                int port = std::stoi(argv[++i]);
-                if (port <= 0 || port > 65535) {
-                    throw std::out_of_range("port out of range");
-                }
-                result.config.server.port = static_cast<uint16_t>(port);
-            } catch (...) {
+            int port = 0;
+            if (!parse_complete_integer(std::string_view(argv[++i]), port, 1, 65535)) {
                 result.should_exit = true;
                 result.exit_code = 1;
                 result.message = "Error: Invalid port number: " + std::string(argv[i]);
                 return result;
             }
+            result.config.server.port = static_cast<uint16_t>(port);
         } else if (arg == "-d" || arg == "--db") {
             if (i + 1 >= argc) {
                 result.should_exit = true;
@@ -273,18 +314,16 @@ CliParseResult AppConfig::parse_cli(int argc, const char* const argv[]) {
                 result.message = "Error: --threads requires a thread count argument";
                 return result;
             }
-            try {
-                int threads = std::stoi(argv[++i]);
-                if (threads <= 0) {
-                    throw std::out_of_range("threads must be > 0");
-                }
-                result.config.server.worker_threads = static_cast<size_t>(threads);
-            } catch (...) {
+            size_t threads = 0;
+            if (!parse_complete_integer(std::string_view(argv[++i]), threads,
+                                        static_cast<size_t>(1),
+                                        std::numeric_limits<size_t>::max())) {
                 result.should_exit = true;
                 result.exit_code = 1;
                 result.message = "Error: Invalid thread count: " + std::string(argv[i]);
                 return result;
             }
+            result.config.server.worker_threads = threads;
         } else if (arg == "--static-dir") {
             if (i + 1 >= argc) {
                 result.should_exit = true;
