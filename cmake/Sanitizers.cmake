@@ -1,0 +1,23 @@
+# Sanitizer support for Debug builds
+
+function(codelenses_set_sanitizers TARGET_NAME)
+    if(MSVC)
+        if(CODELENSES_ENABLE_ASAN)
+            target_compile_options(${TARGET_NAME} PRIVATE /fsanitize=address)
+        endif()
+    else()
+        set(SANITIZERS "")
+        if(CODELENSES_ENABLE_ASAN)
+            list(APPEND SANITIZERS "address")
+        endif()
+        if(CODELENSES_ENABLE_UBSAN)
+            list(APPEND SANITIZERS "undefined")
+        endif()
+
+        if(SANITIZERS)
+            list(JOIN SANITIZERS "," SANITIZERS_STR)
+            target_compile_options(${TARGET_NAME} PRIVATE -fsanitize=${SANITIZERS_STR} -fno-omit-frame-pointer)
+            target_link_options(${TARGET_NAME} PRIVATE -fsanitize=${SANITIZERS_STR})
+        endif()
+    endif()
+endfunction()

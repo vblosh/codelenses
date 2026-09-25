@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "GCC Debug (Warnings as Errors)"
+            c_compiler: gcc
+            cxx_compiler: g++
+            build_type: Debug
+            warnings_as_errors: "ON"
+            enable_asan: "OFF"
+            enable_ubsan: "OFF"
+          - name: "GCC Release"
+            c_compiler: gcc
+            cxx_compiler: g++
+            build_type: Release
+            warnings_as_errors: "ON"
+            enable_asan: "OFF"
+            enable_ubsan: "OFF"
+          - name: "Clang Debug (ASan + UBSan)"
+            c_compiler: clang
+            cxx_compiler: clang++
+            build_type: Debug
+            warnings_as_errors: "ON"
+            enable_asan: "ON"
+            enable_ubsan: "ON"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '98d7cb0cf1f4686a3e43aa5672b6230c1d56bce8'
+
+      - name: Configure CMake
+        env:
+          CC: ${{ matrix.c_compiler }}
+          CXX: ${{ matrix.cxx_compiler }}
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCODELENSES_BUILD_TESTS=ON \
+            -DCODELENSES_WARNINGS_AS_ERRORS=${{ matrix.warnings_as_errors }} \
+            -DCODELENSES_ENABLE_ASAN=${{ matrix.enable_asan }} \
+            -DCODELENSES_ENABLE_UBSAN=${{ matrix.enable_ubsan }} \
+            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        run: |
+          cmake --build build --parallel
+
+      - name: Run Tests
+        run: |
+          ctest --test-dir build --output-on-failure
+
+  code-quality:
+    name: Code Quality (Formatting & Clang-Tidy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format clang-tidy ninja-build
+
+      - name: Check Formatting
+        run: |
+          ./scripts/format.sh --check
+
+      - name: Setup vcpkg and configure for clang-tidy
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '98d7cb0cf1f4686a3e43aa5672b6230c1d56bce8'
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCODELENSES_BUILD_TESTS=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+
+      - name: Run Clang-Tidy
+        run: |
+          ./scripts/lint.sh build

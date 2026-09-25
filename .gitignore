@@ -1,0 +1,28 @@
+# Build directories
+build/
+build-*/
+cmake-build-*/
+out/
+
+# vcpkg
+vcpkg_installed/
+.vcpkg/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*~
+compile_commands.json
+.cache/
+
+# Databases & local run artifacts
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+codelenses.db
+codelenses.log
+
+# Temporary test files
+test_run/
