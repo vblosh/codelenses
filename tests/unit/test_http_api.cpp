@@ -39,12 +39,18 @@ struct TestHttpServerEnv {
         fs::remove_all(root);
         fs::remove(db_file);
         fs::create_directories(root / "src");
+        fs::create_directories(root / "z_crlf");
 
         // Write a test source file
         std::ofstream f1(root / "src" / "main.c");
         f1 << "int add(int a, int b) {\n    return a + b;\n}\n\nint main() {\n    return add(1, "
               "2);\n}\n";
         f1.close();
+
+        // Write a test CRLF file
+        std::ofstream fcrlf(root / "z_crlf" / "crlf.c", std::ios::binary);
+        fcrlf << "int mult(int x, int y) {\r\n    return x * y;\r\n}\r\n";
+        fcrlf.close();
 
         // Write another file
         std::ofstream f2(root / "README.md");
@@ -161,6 +167,17 @@ TEST_CASE("HTTP Server Error envelope with request IDs (F-02, F-12)", "[server][
         auto j = nlohmann::json::parse(res->body);
         CHECK(j["requestId"] == "custom_test_req_42");
     }
+
+    SECTION("Unmatched route 404 sets identical X-Request-ID in header and JSON body") {
+        auto res = env.client->Get("/api/v1/nonexistent_route_for_test");
+        REQUIRE(res != nullptr);
+        CHECK(res->status == 404);
+        CHECK(res->has_header("X-Request-ID"));
+        std::string header_id = res->get_header_value("X-Request-ID");
+        CHECK(!header_id.empty());
+        auto j = nlohmann::json::parse(res->body);
+        CHECK(j["requestId"] == header_id);
+    }
 }
 
 TEST_CASE("Workspace CRUD and path validation (F-04, F-10)", "[server][workspace]") {
@@ -227,6 +244,47 @@ TEST_CASE("Workspace CRUD and path validation (F-04, F-10)", "[server][workspace
         CHECK(res->status == 400);
         auto j = nlohmann::json::parse(res->body);
         CHECK(j["code"] == "invalid_workspace_root");
+    }
+
+    SECTION("Forbidden system directories like / and /etc rejected with 403 (F-10)") {
+        nlohmann::json root_body = {
+            {"rootPath", "/"},
+            {"name", "Root WS"},
+        };
+        auto res1 = env.client->Post("/api/v1/workspaces", root_body.dump(), "application/json");
+        REQUIRE(res1 != nullptr);
+        CHECK(res1->status == 403);
+        auto j1 = nlohmann::json::parse(res1->body);
+        CHECK(j1["code"] == "forbidden_workspace_root");
+
+        nlohmann::json etc_body = {
+            {"rootPath", "/etc"},
+            {"name", "Etc WS"},
+        };
+        auto res2 = env.client->Post("/api/v1/workspaces", etc_body.dump(), "application/json");
+        REQUIRE(res2 != nullptr);
+        CHECK(res2->status == 403);
+        auto j2 = nlohmann::json::parse(res2->body);
+        CHECK(j2["code"] == "forbidden_workspace_root");
+    }
+
+    SECTION("Symlink workspace root rejected when allow_external_symlinks is disabled") {
+        auto sym_target = env.root / "sym_target";
+        auto sym_link = env.root / "sym_link";
+        fs::create_directories(sym_target);
+        std::error_code ec;
+        fs::create_directory_symlink(sym_target, sym_link, ec);
+        if (!ec) {
+            nlohmann::json sym_body = {
+                {"rootPath", sym_link.string()},
+                {"name", "Symlink WS"},
+            };
+            auto res = env.client->Post("/api/v1/workspaces", sym_body.dump(), "application/json");
+            REQUIRE(res != nullptr);
+            CHECK(res->status == 403);
+            auto j = nlohmann::json::parse(res->body);
+            CHECK(j["code"] == "forbidden_workspace_root");
+        }
     }
 }
 
@@ -464,5 +522,98 @@ TEST_CASE("Indexing lifecycle, status, jobs, and file content (F-05, F-06)", "[s
             env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/search?query=return");
         REQUIRE(fts_src_res != nullptr);
         CHECK(fts_src_res->status == 200);
+
+        // Test CRLF file content and accurate byte range
+        auto tree_crlf_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=z_crlf");
+        REQUIRE(tree_crlf_res != nullptr);
+        auto tree_crlf_json = nlohmann::json::parse(tree_crlf_res->body);
+        int64_t crlf_file_id = -1;
+        for (const auto& entry : tree_crlf_json["entries"]) {
+            if (entry["name"] == "crlf.c") {
+                crlf_file_id = entry["fileId"].get<int64_t>();
+                break;
+            }
+        }
+        REQUIRE(crlf_file_id > 0);
+
+        // Whole CRLF file preserves \r\n
+        auto crlf_full_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                             "/files/" + std::to_string(crlf_file_id) + "/content");
+        REQUIRE(crlf_full_res != nullptr);
+        CHECK(crlf_full_res->status == 200);
+        auto crlf_full_json = nlohmann::json::parse(crlf_full_res->body);
+        std::string crlf_full_text = crlf_full_json["content"];
+        CHECK(crlf_full_text.find("\r\n") != std::string::npos);
+
+        // Line-range CRLF file preserves \r\n and bounds endByte at line boundary
+        auto crlf_range_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                            std::to_string(crlf_file_id) + "/content?startLine=0&endLine=1");
+        REQUIRE(crlf_range_res != nullptr);
+        CHECK(crlf_range_res->status == 200);
+        auto crlf_range_json = nlohmann::json::parse(crlf_range_res->body);
+        std::string crlf_range_text = crlf_range_json["content"];
+        CHECK(crlf_range_text.find("\r\n") != std::string::npos);
+        CHECK(crlf_range_json["startByte"] == 0);
+        CHECK(crlf_range_json["endByte"].get<int64_t>() <
+              crlf_full_json["totalSizeBytes"].get<int64_t>());
+
+        // Cross-workspace file access prevention in list_symbols
+        auto cross_sym_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                             "/symbols?fileId=999999");
+        REQUIRE(cross_sym_res != nullptr);
+        CHECK(cross_sym_res->status == 404);
+
+        // Graph bounds validation (negative values rejected)
+        auto bad_graph_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                            std::to_string(add_symbol_id) + "/graph?depth=-1");
+        REQUIRE(bad_graph_res != nullptr);
+        CHECK(bad_graph_res->status == 400);
+
+        // Graph kinds filtering
+        auto filtered_graph_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                            std::to_string(add_symbol_id) + "/graph?kinds=calls");
+        REQUIRE(filtered_graph_res != nullptr);
+        CHECK(filtered_graph_res->status == 200);
+
+        // Symbol search pagination
+        auto paged_sym_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                             "/search/symbols?query=add&limit=1&offset=0");
+        REQUIRE(paged_sym_res != nullptr);
+        CHECK(paged_sym_res->status == 200);
+        auto paged_sym_json = nlohmann::json::parse(paged_sym_res->body);
+        CHECK(paged_sym_json["items"].size() == 1);
+        CHECK(paged_sym_json["limit"] == 1);
+        CHECK(paged_sym_json["offset"] == 0);
+        CHECK(paged_sym_json["total"] >= 1);
+
+        auto paged_sym_oob = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                             "/search/symbols?query=add&limit=1&offset=1000");
+        REQUIRE(paged_sym_oob != nullptr);
+        CHECK(paged_sym_oob->status == 200);
+        auto paged_oob_json = nlohmann::json::parse(paged_sym_oob->body);
+        CHECK(paged_oob_json["items"].empty());
+        CHECK(paged_oob_json["hasMore"] == false);
+
+        // Source search pagination
+        auto paged_src_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                             "/search?query=return&limit=1&offset=0");
+        REQUIRE(paged_src_res != nullptr);
+        CHECK(paged_src_res->status == 200);
+        auto paged_src_json = nlohmann::json::parse(paged_src_res->body);
+        CHECK(paged_src_json["limit"] == 1);
+        CHECK(paged_src_json["offset"] == 0);
+
+        // Job cancellation
+        auto cancel_res = env.client->Post("/api/v1/jobs/" + std::to_string(job_id) + "/cancel", "",
+                                           "application/json");
+        REQUIRE(cancel_res != nullptr);
+        CHECK(cancel_res->status == 200);
+        auto cancel_json = nlohmann::json::parse(cancel_res->body);
+        std::string st = cancel_json["status"];
+        CHECK((st == "completed" || st == "canceled"));
     }
 }

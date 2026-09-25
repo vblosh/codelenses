@@ -110,9 +110,15 @@ void HttpServer::setup_cors() {
 
     svr_.set_error_handler([](const httplib::Request& req, httplib::Response& res) {
         if (res.body.empty() || res.get_header_value("Content-Type") != "application/json") {
-            std::string req_id = req.has_header("X-Request-ID")
-                                     ? req.get_header_value("X-Request-ID")
-                                     : generate_request_id();
+            std::string req_id;
+            if (res.has_header("X-Request-ID")) {
+                req_id = res.get_header_value("X-Request-ID");
+            } else if (req.has_header("X-Request-ID")) {
+                req_id = req.get_header_value("X-Request-ID");
+            } else {
+                req_id = generate_request_id();
+            }
+            res.set_header("X-Request-ID", req_id);
             int st = res.status > 0 ? res.status : 404;
             ApiError err(st, st == 404 ? "not_found" : "http_error",
                          "HTTP request failed with status " + std::to_string(st));
@@ -428,11 +434,34 @@ void HttpServer::register_routes() {
         handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
             int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
             int64_t sym_id = parse_id(r.matches[2].str(), "symbolId");
-            int depth = static_cast<int>(get_int_query_param(r, "depth").value_or(1));
-            size_t max_nodes = static_cast<size_t>(get_int_query_param(r, "maxNodes").value_or(50));
-            size_t max_edges =
-                static_cast<size_t>(get_int_query_param(r, "maxEdges").value_or(100));
-            return service_.get_symbol_graph(ws_id, sym_id, depth, max_nodes, max_edges);
+
+            auto raw_depth = get_int_query_param(r, "depth").value_or(1);
+            auto raw_nodes = get_int_query_param(r, "maxNodes").value_or(50);
+            auto raw_edges = get_int_query_param(r, "maxEdges").value_or(100);
+
+            if (raw_depth < 0 || raw_nodes < 0 || raw_edges < 0) {
+                throw ApiError::bad_request(
+                    "invalid_bounds",
+                    "Graph bounds (depth, maxNodes, maxEdges) cannot be negative");
+            }
+
+            int depth = static_cast<int>(raw_depth);
+            size_t max_nodes = static_cast<size_t>(raw_nodes);
+            size_t max_edges = static_cast<size_t>(raw_edges);
+
+            std::vector<std::string> kinds;
+            auto kinds_str = get_str_query_param(r, "kinds");
+            if (kinds_str.has_value() && !kinds_str->empty()) {
+                std::stringstream ss(*kinds_str);
+                std::string item;
+                while (std::getline(ss, item, ',')) {
+                    if (!item.empty()) {
+                        kinds.push_back(item);
+                    }
+                }
+            }
+
+            return service_.get_symbol_graph(ws_id, sym_id, depth, max_nodes, max_edges, kinds);
         });
     });
 
@@ -494,16 +523,16 @@ bool HttpServer::start() {
         bound_port_ = config_.port;
     }
 
-    std::atomic<bool> listen_failed{false};
-    server_thread_ = std::thread([this, &listen_failed]() {
+    listen_failed_.store(false);
+    server_thread_ = std::thread([this]() {
         if (!svr_.listen_after_bind()) {
-            listen_failed.store(true);
+            listen_failed_.store(true);
         }
         is_running_.store(false);
     });
 
     svr_.wait_until_ready();
-    if (!svr_.is_running() || listen_failed.load()) {
+    if (!svr_.is_running() || listen_failed_.load()) {
         svr_.stop();
         if (server_thread_.joinable()) {
             server_thread_.join();
@@ -520,12 +549,13 @@ void HttpServer::stop() {
         return;
     }
 
-    service_.shutdown();
     svr_.stop();
     if (server_thread_.joinable()) {
         server_thread_.join();
     }
     is_running_.store(false);
+
+    service_.shutdown();
 }
 
 void HttpServer::wait() {

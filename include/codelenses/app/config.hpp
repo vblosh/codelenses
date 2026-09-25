@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "codelenses/server/server_config.hpp"
 #include <nlohmann/json.hpp>
 
 namespace codelenses {
@@ -19,6 +20,7 @@ struct ServerConfig {
     size_t worker_threads = 4;
     bool enable_cors = true;
     std::string static_dir;
+    server::WorkspacePolicy workspace_policy;
 
     bool operator==(const ServerConfig& other) const = default;
 };

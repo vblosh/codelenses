@@ -19,6 +19,7 @@ public:
                                                                  const std::string& query,
                                                                  int64_t limit = 50,
                                                                  int64_t offset = 0);
+    [[nodiscard]] int64_t count_search_symbols(int64_t workspace_id, const std::string& query);
 
     void insert_or_update_file_content(const FileContent& content);
     void delete_file_content(int64_t file_id);
@@ -27,6 +28,7 @@ public:
                                                              const std::string& query,
                                                              int64_t limit = 50,
                                                              int64_t offset = 0);
+    [[nodiscard]] int64_t count_search_files(int64_t workspace_id, const std::string& query);
 
     void rebuild_symbol_index();
     void rebuild_file_index();

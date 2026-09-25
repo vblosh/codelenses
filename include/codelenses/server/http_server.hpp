@@ -45,6 +45,7 @@ private:
     std::thread server_thread_;
     std::atomic<bool> is_running_{false};
     std::atomic<bool> stop_requested_{false};
+    std::atomic<bool> listen_failed_{false};
     uint16_t bound_port_{0};
 };
 

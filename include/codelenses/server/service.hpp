@@ -4,8 +4,11 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <stop_token>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "codelenses/db/database.hpp"
@@ -71,7 +74,8 @@ public:
     std::vector<CallerCalleeDto> get_symbol_callers(int64_t workspace_id, int64_t symbol_id);
     std::vector<CallerCalleeDto> get_symbol_callees(int64_t workspace_id, int64_t symbol_id);
     SymbolGraphDto get_symbol_graph(int64_t workspace_id, int64_t symbol_id, int depth = 1,
-                                    size_t max_nodes = 50, size_t max_edges = 100);
+                                    size_t max_nodes = 50, size_t max_edges = 100,
+                                    const std::vector<std::string>& kinds = {});
 
     // Search (F-09)
     PaginatedResultDto<SourceSearchHitDto> search_source(int64_t workspace_id,
@@ -95,6 +99,8 @@ private:
 
     std::mutex threads_mutex_;
     std::vector<std::thread> background_threads_;
+    std::unordered_set<int64_t> reserved_workspaces_;
+    std::unordered_map<int64_t, std::shared_ptr<std::stop_source>> active_job_stops_;
     std::atomic<bool> shutting_down_{false};
 };
 

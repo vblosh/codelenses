@@ -63,8 +63,7 @@ int main(int argc, char* argv[]) {
     codelenses::index::IndexingPipeline pipeline(*db, indexer_opts);
 
     // Initialize API Service
-    codelenses::server::WorkspacePolicy policy;
-    codelenses::server::ApiService api_service(*db, pipeline, policy);
+    codelenses::server::ApiService api_service(*db, pipeline, config.server.workspace_policy);
 
     // Register initial workspace if provided
     if (config.server.initial_workspace.has_value()) {
@@ -98,7 +97,7 @@ int main(int argc, char* argv[]) {
         .worker_threads = config.server.worker_threads,
         .enable_cors = config.server.enable_cors,
         .static_dir = config.server.static_dir,
-        .workspace_policy = policy,
+        .workspace_policy = config.server.workspace_policy,
     };
 
     codelenses::server::HttpServer server(api_service, server_config);

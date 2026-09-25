@@ -22,19 +22,56 @@ namespace codelenses::server {
 
 namespace {
 
-std::vector<std::string> split_lines(std::string_view text) {
-    std::vector<std::string> lines;
-    std::string current;
-    for (char c : text) {
-        if (c == '\n') {
-            lines.push_back(std::move(current));
-            current.clear();
-        } else if (c != '\r') {
-            current.push_back(c);
+struct LineSpan {
+    int64_t start_byte{0};
+    int64_t content_end_byte{0};
+    int64_t line_end_byte{0};
+};
+
+std::vector<LineSpan> compute_line_spans(std::string_view text) {
+    std::vector<LineSpan> spans;
+    if (text.empty()) {
+        return spans;
+    }
+
+    size_t pos = 0;
+    while (pos < text.size()) {
+        size_t start = pos;
+        size_t nl = text.find('\n', pos);
+        if (nl == std::string_view::npos) {
+            size_t content_end = text.size();
+            if (content_end > start && text[content_end - 1] == '\r') {
+                content_end--;
+            }
+            spans.push_back(LineSpan{
+                .start_byte = static_cast<int64_t>(start),
+                .content_end_byte = static_cast<int64_t>(content_end),
+                .line_end_byte = static_cast<int64_t>(text.size()),
+            });
+            break;
+        } else {
+            size_t content_end = nl;
+            if (content_end > start && text[content_end - 1] == '\r') {
+                content_end--;
+            }
+            spans.push_back(LineSpan{
+                .start_byte = static_cast<int64_t>(start),
+                .content_end_byte = static_cast<int64_t>(content_end),
+                .line_end_byte = static_cast<int64_t>(nl + 1),
+            });
+            pos = nl + 1;
         }
     }
-    lines.push_back(std::move(current));
-    return lines;
+
+    if (!text.empty() && text.back() == '\n') {
+        spans.push_back(LineSpan{
+            .start_byte = static_cast<int64_t>(text.size()),
+            .content_end_byte = static_cast<int64_t>(text.size()),
+            .line_end_byte = static_cast<int64_t>(text.size()),
+        });
+    }
+
+    return spans;
 }
 
 bool matches_any_ignore(const std::string& name, const std::vector<std::string>& patterns) {
@@ -73,6 +110,11 @@ void ApiService::shutdown() {
     std::vector<std::thread> threads_to_join;
     {
         std::lock_guard<std::mutex> lock(threads_mutex_);
+        for (auto& [jid, stop_src] : active_job_stops_) {
+            if (stop_src) {
+                stop_src->request_stop();
+            }
+        }
         threads_to_join = std::move(background_threads_);
     }
 
@@ -131,11 +173,24 @@ WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
         throw ApiError::bad_request("missing_field", "Field 'rootPath' is required");
     }
 
+    std::error_code ec;
+    auto sym_status = fs::symlink_status(req.root_path, ec);
+    if (!ec && fs::is_symlink(sym_status) && !policy_.allow_external_symlinks) {
+        throw ApiError::forbidden(
+            "forbidden_workspace_root",
+            "Workspace root cannot be a symlink when allow_external_symlinks is disabled");
+    }
+
     auto canonical_root = filesystem::canonicalize_workspace_root(req.root_path);
     if (!canonical_root.has_value()) {
         throw ApiError::bad_request("invalid_workspace_root",
                                     "Workspace root path does not exist or is not a directory: " +
                                         req.root_path);
+    }
+
+    std::string reason;
+    if (!policy_.is_allowed_root(*canonical_root, &reason)) {
+        throw ApiError::forbidden("forbidden_workspace_root", reason);
     }
 
     std::string root_str = canonical_root->string();
@@ -213,6 +268,10 @@ WorkspaceDto ApiService::update_workspace(int64_t id, const UpdateWorkspaceReque
 
 void ApiService::delete_workspace(int64_t id) {
     require_workspace(id);
+    {
+        std::lock_guard<std::mutex> lock(threads_mutex_);
+        reserved_workspaces_.erase(id);
+    }
     if (pipeline_.is_indexing(id)) {
         static_cast<void>(pipeline_.cancel_workspace(id));
     }
@@ -225,15 +284,18 @@ void ApiService::delete_workspace(int64_t id) {
 JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest& req) {
     require_workspace(workspace_id);
 
+    std::unique_lock<std::mutex> lock(threads_mutex_);
     if (shutting_down_.load()) {
         throw ApiError::conflict("shutting_down", "Server is shutting down");
     }
 
-    if (pipeline_.is_indexing(workspace_id)) {
+    if (pipeline_.is_indexing(workspace_id) || reserved_workspaces_.contains(workspace_id)) {
         throw ApiError::conflict("indexing_in_progress",
                                  "An indexing job is already active for workspace " +
                                      std::to_string(workspace_id));
     }
+
+    reserved_workspaces_.insert(workspace_id);
 
     IndexJob job{
         .workspace_id = workspace_id,
@@ -243,13 +305,38 @@ JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest&
     };
     int64_t job_id = db_.jobs().create(job);
 
+    auto stop_source = std::make_shared<std::stop_source>();
+    active_job_stops_[job_id] = stop_source;
+
     std::string job_type = job.job_type;
     bool force_full = req.force_full;
 
-    std::lock_guard<std::mutex> lock(threads_mutex_);
-    background_threads_.emplace_back([this, workspace_id, job_type, force_full, job_id]() {
-        static_cast<void>(pipeline_.run_indexing(workspace_id, job_type, force_full, {}, job_id));
+    background_threads_.emplace_back([this, workspace_id, job_type, force_full, job_id,
+                                      stop_source]() {
+        struct ThreadCleanup {
+            ApiService& self;
+            int64_t ws_id;
+            int64_t j_id;
+            ~ThreadCleanup() {
+                std::lock_guard<std::mutex> lk(self.threads_mutex_);
+                self.reserved_workspaces_.erase(ws_id);
+                self.active_job_stops_.erase(j_id);
+            }
+        } cleanup{*this, workspace_id, job_id};
+
+        auto res = pipeline_.run_indexing(workspace_id, job_type, force_full,
+                                          stop_source->get_token(), job_id);
+        if (!res) {
+            auto current = db_.jobs().get_by_id(job_id);
+            if (current.has_value() &&
+                (current->status == "queued" || current->status == "running")) {
+                std::string st = (res.error().code == ErrorCode::cancelled) ? "canceled" : "failed";
+                db_.jobs().finish_job(job_id, st, std::nullopt, res.error().message);
+            }
+        }
     });
+
+    lock.unlock();
 
     auto created_job = db_.jobs().get_by_id(job_id);
     if (!created_job.has_value()) {
@@ -284,7 +371,13 @@ WorkspaceStatusDto ApiService::get_workspace_status(int64_t workspace_id) {
     }
 
     std::string status_str = to_string(ws.status);
-    if (pipeline_.is_indexing(workspace_id)) {
+    bool is_indexing_active = false;
+    {
+        std::lock_guard<std::mutex> lock(threads_mutex_);
+        is_indexing_active =
+            pipeline_.is_indexing(workspace_id) || reserved_workspaces_.contains(workspace_id);
+    }
+    if (is_indexing_active) {
         status_str = "indexing";
     }
 
@@ -313,7 +406,18 @@ JobDto ApiService::get_job(int64_t job_id) {
 JobDto ApiService::cancel_job(int64_t job_id) {
     auto j = get_job(job_id);
     if (j.status == "running" || j.status == "queued") {
-        static_cast<void>(pipeline_.cancel_job(job_id));
+        bool cancelled_in_pipeline = pipeline_.cancel_job(job_id).has_value();
+        {
+            std::lock_guard<std::mutex> lock(threads_mutex_);
+            auto it = active_job_stops_.find(job_id);
+            if (it != active_job_stops_.end() && it->second) {
+                it->second->request_stop();
+            }
+        }
+        auto current = db_.jobs().get_by_id(job_id);
+        if (current.has_value() && (current->status == "queued" || !cancelled_in_pipeline)) {
+            db_.jobs().finish_job(job_id, "canceled", std::nullopt, "Canceled by user");
+        }
     }
     return get_job(job_id);
 }
@@ -445,20 +549,23 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
 
     std::string_view full_text = captured->as_string_view();
     int64_t total_size = static_cast<int64_t>(full_text.size());
+    auto spans = compute_line_spans(full_text);
+    int64_t total_lines = static_cast<int64_t>(spans.size());
 
     if (start_byte.has_value() || end_byte.has_value()) {
         int64_t sb = std::clamp(start_byte.value_or(0), 0L, total_size);
         int64_t eb = std::clamp(end_byte.value_or(total_size), sb, total_size);
         std::string sliced(full_text.substr(static_cast<size_t>(sb), static_cast<size_t>(eb - sb)));
-        auto lines = split_lines(sliced);
+        auto sliced_spans = compute_line_spans(sliced);
+        int64_t sl_count = static_cast<int64_t>(sliced_spans.size());
         return FileContentDto{
             .file_id = f.id,
             .path = f.relative_path,
             .content = std::move(sliced),
             .total_size_bytes = total_size,
-            .total_lines = static_cast<int64_t>(lines.size()),
+            .total_lines = sl_count,
             .start_line = 0,
-            .end_line = static_cast<int64_t>(lines.size() > 0 ? lines.size() - 1 : 0),
+            .end_line = sl_count > 0 ? sl_count - 1 : 0,
             .start_byte = sb,
             .end_byte = eb,
             .is_binary = false,
@@ -466,34 +573,43 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
         };
     }
 
-    auto all_lines = split_lines(full_text);
-    int64_t total_lines = static_cast<int64_t>(all_lines.size());
+    if (!start_line.has_value() && !end_line.has_value()) {
+        return FileContentDto{
+            .file_id = f.id,
+            .path = f.relative_path,
+            .content = std::string(full_text),
+            .total_size_bytes = total_size,
+            .total_lines = total_lines,
+            .start_line = 0,
+            .end_line = total_lines > 0 ? total_lines - 1 : 0,
+            .start_byte = 0,
+            .end_byte = total_size,
+            .is_binary = false,
+            .content_hash = captured->content_hash,
+        };
+    }
 
     int64_t sl = std::clamp(start_line.value_or(0), 0L, std::max(0L, total_lines - 1));
     int64_t el = std::clamp(end_line.value_or(total_lines - 1), sl, std::max(0L, total_lines - 1));
 
-    std::ostringstream oss;
     int64_t actual_start_byte = 0;
-    int64_t current_byte = 0;
-    for (int64_t i = 0; i < total_lines; ++i) {
-        if (i == sl) {
-            actual_start_byte = current_byte;
+    int64_t actual_end_byte = 0;
+    std::string sliced_content;
+
+    if (!spans.empty()) {
+        actual_start_byte = spans[static_cast<size_t>(sl)].start_byte;
+        actual_end_byte = spans[static_cast<size_t>(el)].content_end_byte;
+        if (actual_end_byte >= actual_start_byte) {
+            sliced_content = std::string(
+                full_text.substr(static_cast<size_t>(actual_start_byte),
+                                 static_cast<size_t>(actual_end_byte - actual_start_byte)));
         }
-        if (i >= sl && i <= el) {
-            oss << all_lines[static_cast<size_t>(i)];
-            if (i < el) {
-                oss << "\n";
-            }
-        }
-        current_byte +=
-            static_cast<int64_t>(all_lines[static_cast<size_t>(i)].size()) + 1; // +1 for '\n'
     }
-    int64_t actual_end_byte = current_byte > 0 ? current_byte - 1 : 0;
 
     return FileContentDto{
         .file_id = f.id,
         .path = f.relative_path,
-        .content = oss.str(),
+        .content = std::move(sliced_content),
         .total_size_bytes = total_size,
         .total_lines = total_lines,
         .start_line = sl,
@@ -685,6 +801,9 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
                          std::optional<std::string> kind, std::optional<std::string> language,
                          std::optional<int64_t> file_id, int64_t limit, int64_t offset) {
     require_workspace(workspace_id);
+    if (file_id.has_value()) {
+        require_file(workspace_id, *file_id);
+    }
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
 
@@ -855,8 +974,13 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callees(int64_t workspace_id
 }
 
 SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol_id, int depth,
-                                            size_t max_nodes, size_t max_edges) {
+                                            size_t max_nodes, size_t max_edges,
+                                            const std::vector<std::string>& kinds) {
     auto root_sym = require_symbol(workspace_id, symbol_id);
+
+    int eff_depth = std::clamp(depth, 1, 10);
+    size_t eff_max_nodes = std::clamp(max_nodes, size_t{1}, size_t{500});
+    size_t eff_max_edges = std::clamp(max_edges, size_t{1}, size_t{1000});
 
     std::vector<GraphNodeDto> nodes;
     std::vector<GraphEdgeDto> edges;
@@ -885,7 +1009,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
         auto [curr_id, curr_depth] = queue.front();
         queue.pop_front();
 
-        if (curr_depth >= depth) {
+        if (curr_depth >= eff_depth) {
             continue;
         }
 
@@ -895,9 +1019,15 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
             if (!rel.target_symbol_id.has_value())
                 continue;
 
+            if (!kinds.empty()) {
+                if (std::find(kinds.begin(), kinds.end(), rel.relation_kind) == kinds.end()) {
+                    continue;
+                }
+            }
+
             int64_t tid = *rel.target_symbol_id;
 
-            if (edges.size() >= max_edges) {
+            if (edges.size() >= eff_max_edges) {
                 truncated = true;
                 break;
             }
@@ -911,7 +1041,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
             });
 
             if (!visited_nodes.contains(tid)) {
-                if (nodes.size() >= max_nodes) {
+                if (nodes.size() >= eff_max_nodes) {
                     truncated = true;
                     continue;
                 }
@@ -935,44 +1065,46 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
         }
 
         // Callers / callees
-        auto callers = db_.references().find_callers(curr_id);
-        for (const auto& c : callers) {
-            if (!c.symbol_id.has_value())
-                continue;
-            int64_t cid = *c.symbol_id;
-
-            if (edges.size() >= max_edges) {
-                truncated = true;
-                break;
-            }
-
-            edges.push_back(GraphEdgeDto{
-                .source_symbol_id = cid,
-                .target_symbol_id = curr_id,
-                .relation_kind = "calls",
-                .resolution = "resolved",
-                .confidence = 1.0,
-            });
-
-            if (!visited_nodes.contains(cid)) {
-                if (nodes.size() >= max_nodes) {
-                    truncated = true;
+        if (kinds.empty() || std::find(kinds.begin(), kinds.end(), "calls") != kinds.end()) {
+            auto callers = db_.references().find_callers(curr_id);
+            for (const auto& c : callers) {
+                if (!c.symbol_id.has_value())
                     continue;
+                int64_t cid = *c.symbol_id;
+
+                if (edges.size() >= eff_max_edges) {
+                    truncated = true;
+                    break;
                 }
-                std::string caller_rel;
-                if (auto cf = db_.files().get_by_id(c.file_id)) {
-                    caller_rel = cf->relative_path;
-                }
-                nodes.push_back(GraphNodeDto{
-                    .id = cid,
-                    .name = c.name,
-                    .qualified_name = c.qualified_name,
-                    .kind = "function",
-                    .file_id = c.file_id,
-                    .relative_path = std::move(caller_rel),
+
+                edges.push_back(GraphEdgeDto{
+                    .source_symbol_id = cid,
+                    .target_symbol_id = curr_id,
+                    .relation_kind = "calls",
+                    .resolution = "resolved",
+                    .confidence = 1.0,
                 });
-                visited_nodes.insert(cid);
-                queue.push_back({cid, curr_depth + 1});
+
+                if (!visited_nodes.contains(cid)) {
+                    if (nodes.size() >= eff_max_nodes) {
+                        truncated = true;
+                        continue;
+                    }
+                    std::string caller_rel;
+                    if (auto cf = db_.files().get_by_id(c.file_id)) {
+                        caller_rel = cf->relative_path;
+                    }
+                    nodes.push_back(GraphNodeDto{
+                        .id = cid,
+                        .name = c.name,
+                        .qualified_name = c.qualified_name,
+                        .kind = "function",
+                        .file_id = c.file_id,
+                        .relative_path = std::move(caller_rel),
+                    });
+                    visited_nodes.insert(cid);
+                    queue.push_back({cid, curr_depth + 1});
+                }
             }
         }
     }
@@ -995,28 +1127,25 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
 
-    auto hits = db_.fts().search_files(workspace_id, query, 1000, 0);
-    int64_t total = static_cast<int64_t>(hits.size());
+    int64_t total = db_.fts().count_search_files(workspace_id, query);
+    auto hits = db_.fts().search_files(workspace_id, query, eff_limit, eff_offset);
 
     std::vector<SourceSearchHitDto> items;
-    if (eff_offset < total) {
-        int64_t end = std::min(total, eff_offset + eff_limit);
-        for (int64_t i = eff_offset; i < end; ++i) {
-            std::string rel_path;
-            const auto& hit = hits[static_cast<size_t>(i)];
-            if (auto f = db_.files().get_by_id(hit.file_id)) {
-                rel_path = f->relative_path;
-            }
-            items.push_back(SourceSearchHitDto{
-                .file_id = hit.file_id,
-                .relative_path = std::move(rel_path),
-                .snippet = hit.snippet,
-                .rank = hit.rank,
-            });
+    items.reserve(hits.size());
+    for (const auto& hit : hits) {
+        std::string rel_path;
+        if (auto f = db_.files().get_by_id(hit.file_id)) {
+            rel_path = f->relative_path;
         }
+        items.push_back(SourceSearchHitDto{
+            .file_id = hit.file_id,
+            .relative_path = std::move(rel_path),
+            .snippet = hit.snippet,
+            .rank = hit.rank,
+        });
     }
 
-    bool has_more = (eff_offset + eff_limit) < total;
+    bool has_more = (eff_offset + static_cast<int64_t>(items.size())) < total;
 
     return PaginatedResultDto<SourceSearchHitDto>{
         .items = std::move(items),
@@ -1034,53 +1163,52 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
 
-    std::vector<SymbolSearchHitDto> all_hits;
+    int64_t total = db_.fts().count_search_symbols(workspace_id, query);
+    std::vector<SymbolSearchHitDto> items;
 
-    auto fts_hits = db_.fts().search_symbols(workspace_id, query, 1000, 0);
-    for (const auto& hit : fts_hits) {
-        std::string rel_path;
-        if (auto f = db_.files().get_by_id(hit.file_id)) {
-            rel_path = f->relative_path;
-        }
-        all_hits.push_back(SymbolSearchHitDto{
-            .id = hit.id,
-            .file_id = hit.file_id,
-            .relative_path = std::move(rel_path),
-            .name = hit.name,
-            .qualified_name = hit.qualified_name,
-            .kind = hit.kind,
-            .rank = hit.rank,
-        });
-    }
-
-    if (all_hits.empty()) {
-        auto by_name = db_.symbols().find_by_name(workspace_id, query);
-        for (const auto& s : by_name) {
+    if (total > 0) {
+        auto hits = db_.fts().search_symbols(workspace_id, query, eff_limit, eff_offset);
+        items.reserve(hits.size());
+        for (const auto& hit : hits) {
             std::string rel_path;
-            if (auto f = db_.files().get_by_id(s.file_id)) {
+            if (auto f = db_.files().get_by_id(hit.file_id)) {
                 rel_path = f->relative_path;
             }
-            all_hits.push_back(SymbolSearchHitDto{
-                .id = s.id,
-                .file_id = s.file_id,
+            items.push_back(SymbolSearchHitDto{
+                .id = hit.id,
+                .file_id = hit.file_id,
                 .relative_path = std::move(rel_path),
-                .name = s.name,
-                .qualified_name = s.qualified_name,
-                .kind = s.kind,
-                .rank = 1.0,
+                .name = hit.name,
+                .qualified_name = hit.qualified_name,
+                .kind = hit.kind,
+                .rank = hit.rank,
             });
+        }
+    } else {
+        auto by_name = db_.symbols().find_by_name(workspace_id, query);
+        total = static_cast<int64_t>(by_name.size());
+        if (eff_offset < total) {
+            int64_t end = std::min(total, eff_offset + eff_limit);
+            for (int64_t i = eff_offset; i < end; ++i) {
+                const auto& s = by_name[static_cast<size_t>(i)];
+                std::string rel_path;
+                if (auto f = db_.files().get_by_id(s.file_id)) {
+                    rel_path = f->relative_path;
+                }
+                items.push_back(SymbolSearchHitDto{
+                    .id = s.id,
+                    .file_id = s.file_id,
+                    .relative_path = std::move(rel_path),
+                    .name = s.name,
+                    .qualified_name = s.qualified_name,
+                    .kind = s.kind,
+                    .rank = 1.0,
+                });
+            }
         }
     }
 
-    int64_t total = static_cast<int64_t>(all_hits.size());
-    std::vector<SymbolSearchHitDto> items;
-    if (eff_offset < total) {
-        int64_t end = std::min(total, eff_offset + eff_limit);
-        items.assign(all_hits.begin() + static_cast<std::ptrdiff_t>(eff_offset),
-                     all_hits.begin() + static_cast<std::ptrdiff_t>(end));
-    }
-
-    bool has_more = (eff_offset + eff_limit) < total;
+    bool has_more = (eff_offset + static_cast<int64_t>(items.size())) < total;
 
     return PaginatedResultDto<SymbolSearchHitDto>{
         .items = std::move(items),

@@ -20,6 +20,95 @@ struct WorkspacePolicy {
         "vendor", ".codelens",    ".codelenses", ".cache",
     };
 
+    std::vector<std::string> allowed_roots;
+    std::vector<std::string> forbidden_roots = {"/",     "/etc",     "/proc", "/sys",    "/dev",
+                                                "/boot", "/root",    "/bin",  "/sbin",   "/usr/bin",
+                                                "/lib",  "/usr/lib", "/run",  "/var/run"};
+
+    [[nodiscard]] bool is_allowed_root(const std::filesystem::path& canonical_path,
+                                       std::string* error_reason = nullptr) const {
+        if (canonical_path.empty()) {
+            if (error_reason) {
+                *error_reason = "Workspace root path is empty";
+            }
+            return false;
+        }
+
+        auto norm_path = canonical_path.lexically_normal();
+        if (norm_path == "/" || norm_path == norm_path.root_path()) {
+            if (error_reason) {
+                *error_reason = "Root filesystem directory '/' cannot be used as a workspace";
+            }
+            return false;
+        }
+
+        for (const auto& forbidden : forbidden_roots) {
+            std::error_code ec;
+            std::filesystem::path fb_path(forbidden);
+            auto fb_canon = std::filesystem::exists(fb_path, ec)
+                                ? std::filesystem::canonical(fb_path, ec)
+                                : fb_path.lexically_normal();
+            if (fb_canon.empty()) {
+                fb_canon = fb_path.lexically_normal();
+            }
+
+            if (norm_path == fb_canon) {
+                if (error_reason) {
+                    *error_reason =
+                        "Workspace root cannot be forbidden system directory: " + forbidden;
+                }
+                return false;
+            }
+
+            if (fb_canon == "/" || fb_canon == fb_canon.root_path()) {
+                continue;
+            }
+
+            auto rel = norm_path.lexically_relative(fb_canon);
+            if (!rel.empty() && rel.native() != "." && rel.native() != ".." &&
+                !rel.native().starts_with("..")) {
+                if (error_reason) {
+                    *error_reason =
+                        "Workspace root is inside forbidden system directory: " + forbidden;
+                }
+                return false;
+            }
+        }
+
+        if (!allowed_roots.empty()) {
+            bool matches_allowed = false;
+            for (const auto& allowed : allowed_roots) {
+                std::error_code ec;
+                std::filesystem::path al_path(allowed);
+                auto al_canon = std::filesystem::exists(al_path, ec)
+                                    ? std::filesystem::canonical(al_path, ec)
+                                    : al_path.lexically_normal();
+                if (al_canon.empty()) {
+                    al_canon = al_path.lexically_normal();
+                }
+
+                if (norm_path == al_canon) {
+                    matches_allowed = true;
+                    break;
+                }
+                auto rel = norm_path.lexically_relative(al_canon);
+                if (!rel.empty() && rel.native() != "." && rel.native() != ".." &&
+                    !rel.native().starts_with("..")) {
+                    matches_allowed = true;
+                    break;
+                }
+            }
+            if (!matches_allowed) {
+                if (error_reason) {
+                    *error_reason = "Workspace root is not within any allowed roots";
+                }
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     bool operator==(const WorkspacePolicy& other) const = default;
 };
 
@@ -44,6 +133,8 @@ inline void to_json(nlohmann::json& j, const WorkspacePolicy& p) {
         {"defaultPageSize", p.default_page_size},
         {"maxPageSize", p.max_page_size},
         {"defaultIgnores", p.default_ignores},
+        {"allowedRoots", p.allowed_roots},
+        {"forbiddenRoots", p.forbidden_roots},
     };
 }
 
@@ -58,6 +149,10 @@ inline void from_json(const nlohmann::json& j, WorkspacePolicy& p) {
         p.max_page_size = j["maxPageSize"].get<size_t>();
     if (j.contains("defaultIgnores"))
         p.default_ignores = j["defaultIgnores"].get<std::vector<std::string>>();
+    if (j.contains("allowedRoots"))
+        p.allowed_roots = j["allowedRoots"].get<std::vector<std::string>>();
+    if (j.contains("forbiddenRoots"))
+        p.forbidden_roots = j["forbiddenRoots"].get<std::vector<std::string>>();
 }
 
 inline void to_json(nlohmann::json& j, const HttpServerConfig& c) {

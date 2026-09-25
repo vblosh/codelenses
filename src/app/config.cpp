@@ -43,7 +43,8 @@ void to_json(nlohmann::json& j, const ServerConfig& config) {
                        {"log_level", config.log_level},
                        {"worker_threads", config.worker_threads},
                        {"enable_cors", config.enable_cors},
-                       {"static_dir", config.static_dir}};
+                       {"static_dir", config.static_dir},
+                       {"workspace_policy", config.workspace_policy}};
     if (config.initial_workspace.has_value()) {
         j["initial_workspace"] = *config.initial_workspace;
     } else {
@@ -91,6 +92,11 @@ void from_json(const nlohmann::json& j, ServerConfig& config) {
     }
     if (j.contains("static_dir") && j["static_dir"].is_string()) {
         config.static_dir = j["static_dir"].get<std::string>();
+    }
+    if (j.contains("workspace_policy")) {
+        config.workspace_policy = j["workspace_policy"].get<server::WorkspacePolicy>();
+    } else if (j.contains("workspacePolicy")) {
+        config.workspace_policy = j["workspacePolicy"].get<server::WorkspacePolicy>();
     }
 }
 

@@ -332,16 +332,27 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                                                    std::stop_token stop,
                                                    std::optional<int64_t> job_id_override) {
     if (options_.queue_capacity == 0) {
+        if (job_id_override.has_value()) {
+            db_.jobs().finish_job(*job_id_override, "failed", std::nullopt,
+                                  "queue_capacity must be greater than zero");
+        }
         return unexpected_result<IndexResult>(ErrorCode::invalid_argument,
                                               "queue_capacity must be greater than zero");
     }
     if (options_.queue_max_bytes == 0) {
+        if (job_id_override.has_value()) {
+            db_.jobs().finish_job(*job_id_override, "failed", std::nullopt,
+                                  "queue_max_bytes must be greater than zero");
+        }
         return unexpected_result<IndexResult>(ErrorCode::invalid_argument,
                                               "queue_max_bytes must be greater than zero");
     }
 
     auto ws = db_.workspaces().get_by_id(workspace_id);
     if (!ws) {
+        if (job_id_override.has_value()) {
+            db_.jobs().finish_job(*job_id_override, "failed", std::nullopt, "workspace not found");
+        }
         return unexpected_result<IndexResult>(ErrorCode::not_found, "workspace not found");
     }
 
@@ -351,10 +362,17 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     {
         std::lock_guard lock(jobs_mutex_);
         if (active_workspace_jobs_.contains(workspace_id)) {
+            if (job_id_override.has_value()) {
+                db_.jobs().finish_job(*job_id_override, "failed", std::nullopt,
+                                      "an indexing job is already active for this workspace");
+            }
             return unexpected_result<IndexResult>(
                 ErrorCode::conflict, "an indexing job is already active for this workspace");
         }
         active_workspace_jobs_[workspace_id] = stop_source;
+        if (job_id_override.has_value()) {
+            job_to_workspace_map_[*job_id_override] = workspace_id;
+        }
     }
 
     auto job_stop = stop_source->get_token();
@@ -367,8 +385,17 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     coord->cv.wait(coord_lock, [&] { return !coord->job_running || job_stop.stop_requested(); });
 
     if (job_stop.stop_requested()) {
-        std::lock_guard lock(jobs_mutex_);
-        active_workspace_jobs_.erase(workspace_id);
+        {
+            std::lock_guard lock(jobs_mutex_);
+            active_workspace_jobs_.erase(workspace_id);
+            if (job_id_override.has_value()) {
+                job_to_workspace_map_.erase(*job_id_override);
+            }
+        }
+        if (job_id_override.has_value()) {
+            db_.jobs().finish_job(*job_id_override, "canceled", std::nullopt,
+                                  "indexing job was cancelled");
+        }
         return unexpected_result<IndexResult>(ErrorCode::cancelled, "indexing job was cancelled");
     }
 
@@ -394,7 +421,7 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                 coord->cv.notify_all();
             }
         }
-    } cleanup{*this, workspace_id, 0, coord};
+    } cleanup{*this, workspace_id, job_id_override.value_or(0), coord};
 
     int64_t job_id = 0;
     if (job_id_override.has_value()) {

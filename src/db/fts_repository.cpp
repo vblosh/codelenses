@@ -91,6 +91,57 @@ std::vector<SymbolSearchResult> FtsRepository::search_symbols(int64_t workspace_
     return results;
 }
 
+int64_t FtsRepository::count_search_symbols(int64_t workspace_id, const std::string& query) {
+    if (query.empty()) {
+        return 0;
+    }
+
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT count(*)
+        FROM symbol_search
+        JOIN symbol AS s ON s.id = symbol_search.rowid
+        JOIN file AS fl ON fl.id = s.file_id
+        WHERE symbol_search MATCH ?
+          AND s.workspace_id = ?
+          AND fl.is_deleted = 0;
+    )SQL");
+
+    stmt.bind_text(1, query);
+    stmt.bind_int64(2, workspace_id);
+
+    try {
+        if (stmt.step()) {
+            return stmt.column_int64(0);
+        }
+    } catch (const DbError&) {
+        stmt.reset();
+        stmt.clear_bindings();
+        std::string escaped_query;
+        escaped_query.reserve(query.size() + 2);
+        escaped_query.push_back('"');
+        for (char c : query) {
+            if (c == '"') {
+                escaped_query.push_back('"');
+            }
+            escaped_query.push_back(c);
+        }
+        escaped_query.push_back('"');
+
+        stmt.bind_text(1, escaped_query);
+        stmt.bind_int64(2, workspace_id);
+
+        try {
+            if (stmt.step()) {
+                return stmt.column_int64(0);
+            }
+        } catch (const DbError&) {
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
 void FtsRepository::insert_or_update_file_content(const FileContent& content) {
     Statement stmt(conn_.handle(), R"SQL(
         INSERT INTO file_content (file_id, workspace_id, content, content_hash, updated_at)
@@ -185,6 +236,57 @@ std::vector<FileSearchResult> FtsRepository::search_files(int64_t workspace_id,
     }
 
     return results;
+}
+
+int64_t FtsRepository::count_search_files(int64_t workspace_id, const std::string& query) {
+    if (query.empty()) {
+        return 0;
+    }
+
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT count(*)
+        FROM file_search
+        JOIN file_content AS f ON f.file_id = file_search.rowid
+        JOIN file AS fl ON fl.id = f.file_id
+        WHERE file_search MATCH ?
+          AND f.workspace_id = ?
+          AND fl.is_deleted = 0;
+    )SQL");
+
+    stmt.bind_text(1, query);
+    stmt.bind_int64(2, workspace_id);
+
+    try {
+        if (stmt.step()) {
+            return stmt.column_int64(0);
+        }
+    } catch (const DbError&) {
+        stmt.reset();
+        stmt.clear_bindings();
+        std::string escaped_query;
+        escaped_query.reserve(query.size() + 2);
+        escaped_query.push_back('"');
+        for (char c : query) {
+            if (c == '"') {
+                escaped_query.push_back('"');
+            }
+            escaped_query.push_back(c);
+        }
+        escaped_query.push_back('"');
+
+        stmt.bind_text(1, escaped_query);
+        stmt.bind_int64(2, workspace_id);
+
+        try {
+            if (stmt.step()) {
+                return stmt.column_int64(0);
+            }
+        } catch (const DbError&) {
+            return 0;
+        }
+    }
+
+    return 0;
 }
 
 void FtsRepository::rebuild_symbol_index() {
