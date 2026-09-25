@@ -49,10 +49,10 @@ public:
     IndexingPipeline& operator=(const IndexingPipeline&) = delete;
 
     // Executes an indexing job on a workspace. Returns completed job result or error.
-    [[nodiscard]] Result<IndexResult> run_indexing(int64_t workspace_id,
-                                                   const std::string& job_type = "incremental",
-                                                   bool force_full = false,
-                                                   std::stop_token stop = {});
+    [[nodiscard]] Result<IndexResult>
+    run_indexing(int64_t workspace_id, const std::string& job_type = "incremental",
+                 bool force_full = false, std::stop_token stop = {},
+                 std::optional<int64_t> job_id_override = std::nullopt);
 
     // Requests cooperative cancellation of an active job by workspace ID.
     [[nodiscard]] Result<void> cancel_workspace(int64_t workspace_id);

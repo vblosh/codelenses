@@ -329,7 +329,8 @@ bool IndexingPipeline::is_indexing(int64_t workspace_id) const {
 
 Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                                                    const std::string& job_type, bool force_full,
-                                                   std::stop_token stop) {
+                                                   std::stop_token stop,
+                                                   std::optional<int64_t> job_id_override) {
     if (options_.queue_capacity == 0) {
         return unexpected_result<IndexResult>(ErrorCode::invalid_argument,
                                               "queue_capacity must be greater than zero");
@@ -395,14 +396,20 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         }
     } cleanup{*this, workspace_id, 0, coord};
 
-    IndexJob job{
-        .workspace_id = workspace_id,
-        .job_type = job_type,
-        .status = "running",
-        .requested_mode = (force_full ? "full" : "incremental"),
-    };
-    int64_t job_id = db_.jobs().create(job);
-    db_.jobs().update_status(job_id, "running");
+    int64_t job_id = 0;
+    if (job_id_override.has_value()) {
+        job_id = *job_id_override;
+        db_.jobs().update_status(job_id, "running");
+    } else {
+        IndexJob job{
+            .workspace_id = workspace_id,
+            .job_type = job_type,
+            .status = "running",
+            .requested_mode = (force_full ? "full" : "incremental"),
+        };
+        job_id = db_.jobs().create(job);
+        db_.jobs().update_status(job_id, "running");
+    }
     cleanup.j_id = job_id;
     {
         std::lock_guard lock(jobs_mutex_);

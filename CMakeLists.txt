@@ -93,6 +93,8 @@ set(CODELENSES_CORE_SOURCES
     src/resolver/symbol_resolver.cpp
     src/resolver/relationship_builder.cpp
     src/resolver/resolver.cpp
+    src/server/service.cpp
+    src/server/http_server.cpp
 )
 
 add_library(codelenses_core STATIC

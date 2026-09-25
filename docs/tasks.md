@@ -94,19 +94,19 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 **Dependencies:** A, B application-service interfaces
 
-- [ ] F-01 Define versioned route and DTO schemas.
-- [ ] F-02 Implement JSON error envelope with request IDs.
-- [ ] F-03 Implement server configuration: bind address, port, database path, workspace policy.
-- [ ] F-04 Implement workspace CRUD routes.
-- [ ] F-05 Implement indexing, status, job, and cancellation routes.
-- [ ] F-06 Implement tree, file metadata, and range content routes.
-- [ ] F-07 Implement symbols, outline, occurrences, and highlights routes.
-- [ ] F-08 Implement symbol detail, references, definitions, callers, callees, and graph routes.
-- [ ] F-09 Implement source and symbol search routes with pagination.
-- [ ] F-10 Add request validation and path traversal protection.
-- [ ] F-11 Add CORS policy for local development.
-- [ ] F-12 Add API contract tests and error-path tests.
-- [ ] F-13 Add graceful shutdown and active-job handling.
+- [x] F-01 Define versioned route and DTO schemas.
+- [x] F-02 Implement JSON error envelope with request IDs.
+- [x] F-03 Implement server configuration: bind address, port, database path, workspace policy.
+- [x] F-04 Implement workspace CRUD routes.
+- [x] F-05 Implement indexing, status, job, and cancellation routes.
+- [x] F-06 Implement tree, file metadata, and range content routes.
+- [x] F-07 Implement symbols, outline, occurrences, and highlights routes.
+- [x] F-08 Implement symbol detail, references, definitions, callers, callees, and graph routes.
+- [x] F-09 Implement source and symbol search routes with pagination.
+- [x] F-10 Add request validation and path traversal protection.
+- [x] F-11 Add CORS policy for local development.
+- [x] F-12 Add API contract tests and error-path tests.
+- [x] F-13 Add graceful shutdown and active-job handling.
 
 **Done when:** all required endpoints return stable JSON DTOs and integration tests cover successful and invalid requests.
 
