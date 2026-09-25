@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "codelenses/domain/job.h"
+#include "codelenses/domain/job.hpp"
 
 namespace codelenses {
 

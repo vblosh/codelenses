@@ -9,8 +9,8 @@ project(codelenses
     LANGUAGES C CXX
 )
 
-# Standard C++20 configuration
-set(CMAKE_CXX_STANDARD 20)
+# Standard C++23 configuration (required by codelens headers for std::expected)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -67,6 +67,20 @@ set(CODELENSES_CORE_SOURCES
     src/db/job_repository.cpp
     src/db/fts_repository.cpp
     src/db/database.cpp
+    src/treesitter/parser.cpp
+    src/treesitter/grammars.cpp
+    src/adapters/adapter.cpp
+    src/adapters/registry.cpp
+    src/adapters/reference_adapter.cpp
+    src/adapters/c_adapter.cpp
+    src/adapters/cpp_adapter.cpp
+    src/adapters/csharp_adapter.cpp
+    src/adapters/go_adapter.cpp
+    src/adapters/java_adapter.cpp
+    src/adapters/python_adapter.cpp
+    src/adapters/shell_adapter.cpp
+    src/adapters/ts_adapter.cpp
+    src/modules/domain.cpp
 )
 
 add_library(codelenses_core STATIC
@@ -80,6 +94,8 @@ target_include_directories(codelenses_core PUBLIC
 
 target_link_libraries(codelenses_core PUBLIC
     codelenses_external_deps
+    codelenses_grammar_c
+    codelenses_grammar_cpp
 )
 
 codelenses_set_compiler_warnings(codelenses_core)

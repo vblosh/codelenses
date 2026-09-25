@@ -3,8 +3,8 @@
 #include <iostream>
 #include <memory>
 
-#include "codelenses/app/config.h"
-#include "codelenses/app/version.h"
+#include "codelenses/app/config.hpp"
+#include "codelenses/app/version.hpp"
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <sqlite3.h>

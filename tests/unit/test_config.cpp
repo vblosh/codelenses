@@ -1,8 +1,8 @@
 #include <filesystem>
 #include <fstream>
 
-#include "codelenses/app/config.h"
-#include "codelenses/app/version.h"
+#include "codelenses/app/config.hpp"
+#include "codelenses/app/version.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("AppConfig defaults are sane and match requirements", "[config]") {

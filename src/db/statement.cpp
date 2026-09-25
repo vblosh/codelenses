@@ -1,6 +1,6 @@
-#include "codelenses/db/statement.h"
+#include "codelenses/db/statement.hpp"
 
-#include "codelenses/db/error.h"
+#include "codelenses/db/error.hpp"
 #include <sqlite3.h>
 
 namespace codelenses {

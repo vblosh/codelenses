@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "codelenses/domain/range.h"
+#include "codelenses/domain/range.hpp"
 
 namespace codelenses {
 

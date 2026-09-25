@@ -6,19 +6,19 @@
 #include <string>
 #include <vector>
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/dependency_repository.h"
-#include "codelenses/db/diagnostic_repository.h"
-#include "codelenses/db/file_repository.h"
-#include "codelenses/db/fts_repository.h"
-#include "codelenses/db/job_repository.h"
-#include "codelenses/db/migration.h"
-#include "codelenses/db/occurrence_repository.h"
-#include "codelenses/db/reference_repository.h"
-#include "codelenses/db/relation_repository.h"
-#include "codelenses/db/symbol_repository.h"
-#include "codelenses/db/transaction.h"
-#include "codelenses/db/workspace_repository.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/dependency_repository.hpp"
+#include "codelenses/db/diagnostic_repository.hpp"
+#include "codelenses/db/file_repository.hpp"
+#include "codelenses/db/fts_repository.hpp"
+#include "codelenses/db/job_repository.hpp"
+#include "codelenses/db/migration.hpp"
+#include "codelenses/db/occurrence_repository.hpp"
+#include "codelenses/db/reference_repository.hpp"
+#include "codelenses/db/relation_repository.hpp"
+#include "codelenses/db/symbol_repository.hpp"
+#include "codelenses/db/transaction.hpp"
+#include "codelenses/db/workspace_repository.hpp"
 
 namespace codelenses {
 

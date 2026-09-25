@@ -1,8 +1,8 @@
-#include "codelenses/db/fts_repository.h"
+#include "codelenses/db/fts_repository.hpp"
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/error.h"
-#include "codelenses/db/statement.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/error.hpp"
+#include "codelenses/db/statement.hpp"
 
 namespace codelenses {
 

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "codelenses/domain/symbol.h"
+#include "codelenses/domain/symbol.hpp"
 
 namespace codelenses {
 

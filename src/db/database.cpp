@@ -1,9 +1,9 @@
-#include "codelenses/db/database.h"
+#include "codelenses/db/database.hpp"
 
 #include <unordered_map>
 
-#include "codelenses/db/error.h"
-#include "codelenses/db/statement.h"
+#include "codelenses/db/error.hpp"
+#include "codelenses/db/statement.hpp"
 
 namespace codelenses {
 

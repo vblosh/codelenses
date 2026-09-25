@@ -39,15 +39,15 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 **Dependencies:** A-02
 
-- [ ] C-01 Define `LanguageAdapter` interface.
-- [ ] C-02 Define source range, highlight token, extracted symbol, reference, dependency, and diagnostic types.
-- [ ] C-03 Define normalized symbol kinds and relation kinds.
-- [ ] C-04 Implement parser wrapper with tree ownership and parse-error collection.
-- [ ] C-05 Implement adapter registry by language ID and filename mapping.
-- [ ] C-06 Define byte/line/column conversion utilities and test them with UTF-8 input.
-- [ ] C-07 Define highlight token legend.
-- [ ] C-08 Define fixture format and golden-output comparison helper.
-- [ ] C-09 Add a minimal reference adapter used by pipeline tests.
+- [x] C-01 Define Language Adapter interface.
+- [x] C-02 Define source range, highlight token, extracted symbol, reference, dependency, and diagnostic types.
+- [x] C-03 Define normalized symbol kinds and relation kinds.
+- [x] C-04 Implement parser wrapper with tree ownership and parse-error collection.
+- [x] C-05 Implement adapter registry by language ID and filename mapping.
+- [x] C-06 Define byte/line/column conversion utilities and test them with UTF-8 input.
+- [x] C-07 Define highlight token legend.
+- [x] C-08 Define fixture format and golden-output comparison helper.
+- [x] C-09 Add a minimal reference adapter used by pipeline tests.
 
 **Done when:** a test adapter can parse fixture text and produce normalized IR without any database dependency.
 

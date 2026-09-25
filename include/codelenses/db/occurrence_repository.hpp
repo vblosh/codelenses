@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-#include "codelenses/domain/occurrence.h"
+#include "codelenses/domain/occurrence.hpp"
 
 namespace codelenses {
 

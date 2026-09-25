@@ -1,7 +1,7 @@
-#include "codelenses/db/transaction.h"
+#include "codelenses/db/transaction.hpp"
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/error.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/error.hpp"
 #include <sqlite3.h>
 
 namespace codelenses {

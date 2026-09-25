@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "codelenses/domain/diagnostic.h"
+#include "codelenses/domain/diagnostic.hpp"
 
 namespace codelenses {
 

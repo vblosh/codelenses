@@ -1,7 +1,7 @@
-#include "codelenses/db/job_repository.h"
+#include "codelenses/db/job_repository.hpp"
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/statement.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/statement.hpp"
 
 namespace codelenses {
 

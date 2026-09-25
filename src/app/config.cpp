@@ -1,4 +1,4 @@
-#include "codelenses/app/config.h"
+#include "codelenses/app/config.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <string_view>
 
-#include "codelenses/app/version.h"
+#include "codelenses/app/version.hpp"
 
 namespace codelenses {
 

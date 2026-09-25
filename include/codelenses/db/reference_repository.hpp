@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-#include "codelenses/domain/reference.h"
+#include "codelenses/domain/reference.hpp"
 
 namespace codelenses {
 

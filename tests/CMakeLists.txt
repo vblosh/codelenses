@@ -6,6 +6,7 @@ set(UNIT_TEST_SOURCES
     unit/test_dependencies.cpp
     unit/test_migration.cpp
     unit/test_persistence.cpp
+    unit/test_adapters_sdk.cpp
 )
 
 add_executable(codelenses_unit_tests

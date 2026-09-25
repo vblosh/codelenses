@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "codelenses/domain/file_content.h"
-#include "codelenses/domain/search.h"
+#include "codelenses/domain/file_content.hpp"
+#include "codelenses/domain/search.hpp"
 
 namespace codelenses {
 

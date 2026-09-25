@@ -1,11 +1,11 @@
 #include <filesystem>
 #include <thread>
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/database.h"
-#include "codelenses/db/error.h"
-#include "codelenses/db/statement.h"
-#include "codelenses/db/transaction.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/database.hpp"
+#include "codelenses/db/error.hpp"
+#include "codelenses/db/statement.hpp"
+#include "codelenses/db/transaction.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 namespace fs = std::filesystem;

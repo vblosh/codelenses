@@ -1,10 +1,10 @@
-#include "codelenses/db/file_repository.h"
+#include "codelenses/db/file_repository.hpp"
 
 #include <sstream>
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/statement.h"
-#include "codelenses/db/transaction.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/statement.hpp"
+#include "codelenses/db/transaction.hpp"
 
 namespace codelenses {
 

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "codelenses/domain/relation.h"
+#include "codelenses/domain/relation.hpp"
 
 namespace codelenses {
 

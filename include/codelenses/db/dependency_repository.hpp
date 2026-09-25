@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "codelenses/domain/dependency.h"
+#include "codelenses/domain/dependency.hpp"
 
 namespace codelenses {
 

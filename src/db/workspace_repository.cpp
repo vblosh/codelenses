@@ -1,7 +1,7 @@
-#include "codelenses/db/workspace_repository.h"
+#include "codelenses/db/workspace_repository.hpp"
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/statement.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/statement.hpp"
 #include <nlohmann/json.hpp>
 
 namespace codelenses {

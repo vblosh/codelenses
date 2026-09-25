@@ -1,12 +1,12 @@
-#include "codelenses/db/migration.h"
+#include "codelenses/db/migration.hpp"
 
 #include <algorithm>
 #include <unordered_set>
 
-#include "codelenses/db/connection.h"
-#include "codelenses/db/error.h"
-#include "codelenses/db/statement.h"
-#include "codelenses/db/transaction.h"
+#include "codelenses/db/connection.hpp"
+#include "codelenses/db/error.hpp"
+#include "codelenses/db/statement.hpp"
+#include "codelenses/db/transaction.hpp"
 
 namespace codelenses {
 
