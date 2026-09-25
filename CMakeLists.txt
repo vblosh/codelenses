@@ -52,6 +52,21 @@ codelenses_add_tree_sitter_grammar(
 # Core library
 set(CODELENSES_CORE_SOURCES
     src/app/config.cpp
+    src/db/connection.cpp
+    src/db/statement.cpp
+    src/db/transaction.cpp
+    src/db/migration.cpp
+    src/db/workspace_repository.cpp
+    src/db/file_repository.cpp
+    src/db/symbol_repository.cpp
+    src/db/occurrence_repository.cpp
+    src/db/reference_repository.cpp
+    src/db/relation_repository.cpp
+    src/db/dependency_repository.cpp
+    src/db/diagnostic_repository.cpp
+    src/db/job_repository.cpp
+    src/db/fts_repository.cpp
+    src/db/database.cpp
 )
 
 add_library(codelenses_core STATIC

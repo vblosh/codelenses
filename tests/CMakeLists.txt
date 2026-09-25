@@ -4,6 +4,8 @@ include(Catch)
 set(UNIT_TEST_SOURCES
     unit/test_config.cpp
     unit/test_dependencies.cpp
+    unit/test_migration.cpp
+    unit/test_persistence.cpp
 )
 
 add_executable(codelenses_unit_tests

@@ -21,17 +21,17 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 **Dependencies:** A-01, A-03
 
-- [ ] B-01 Define domain structs for workspace, file, symbol, occurrence, reference, relation, dependency, diagnostic, and job.
-- [ ] B-02 Create migration version table and migration runner.
-- [ ] B-03 Implement initial schema for workspaces, files, symbols, occurrences, references, relations, dependencies, diagnostics, and jobs.
-- [ ] B-04 Add SQLite initialization pragmas: foreign keys, WAL, busy timeout, synchronous mode.
-- [ ] B-05 Implement transaction wrapper with rollback-on-error behavior.
-- [ ] B-06 Implement workspace repository.
-- [ ] B-07 Implement file repository and file-state comparison queries.
-- [ ] B-08 Implement symbol/occurrence/reference/relation repositories.
-- [ ] B-09 Implement FTS5 maintenance and search queries.
-- [ ] B-10 Add indexes for file path, symbol name, target symbol, and source ranges.
-- [ ] B-11 Add migration, cascade-delete, rollback, and query tests.
+- [x] B-01 Define domain structs for workspace, file, symbol, occurrence, reference, relation, dependency, diagnostic, and job.
+- [x] B-02 Create migration version table and migration runner.
+- [x] B-03 Implement initial schema for workspaces, files, symbols, occurrences, references, relations, dependencies, diagnostics, and jobs.
+- [x] B-04 Add SQLite initialization pragmas: foreign keys, WAL, busy timeout, synchronous mode.
+- [x] B-05 Implement transaction wrapper with rollback-on-error behavior.
+- [x] B-06 Implement workspace repository.
+- [x] B-07 Implement file repository and file-state comparison queries.
+- [x] B-08 Implement symbol/occurrence/reference/relation repositories.
+- [x] B-09 Implement FTS5 maintenance and search queries.
+- [x] B-10 Add indexes for file path, symbol name, target symbol, and source ranges.
+- [x] B-11 Add migration, cascade-delete, rollback, and query tests.
 
 **Done when:** repositories can create a database, persist one complete file index transactionally, query referencers, and upgrade schema versions.
 
