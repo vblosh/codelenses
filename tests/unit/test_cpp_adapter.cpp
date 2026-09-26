@@ -1034,3 +1034,140 @@ void pre_cpp20_func(void);
     CHECK(has_cpp20);
     CHECK_FALSE(has_pre20);
 }
+
+TEST_CASE("CppAdapter auto variables references in range-for and structured bindings [Issue 4]",
+          "[adapter][cpp][auto][issue4]") {
+    CppAdapter adapter;
+    std::string_view source = R"(
+void test_range_for() {
+    for (auto it : vec) {
+        use(it);
+    }
+    for (const auto& item : items) {
+        use(item);
+    }
+}
+
+void test_structured_bindings() {
+    auto [first, second] = get_pair();
+    use(first);
+    use(second);
+
+    for (auto [key, val] : map) {
+        use(key);
+        use(val);
+    }
+}
+
+void test_condition_declaration() {
+    if (auto ptr = get_ptr()) {
+        use(ptr);
+    }
+}
+
+void test_range_for_init() {
+    for (auto v = get_vec(); auto elem : v) {
+        use(elem);
+    }
+}
+)";
+
+    auto res = adapter.parse(source, "test.cpp");
+    REQUIRE(res.has_value());
+
+    auto find_sym = [&](std::string_view name) -> const SymbolFact* {
+        for (const auto& s : res->symbols) {
+            if (s.name == name) {
+                return &s;
+            }
+        }
+        return nullptr;
+    };
+
+    auto find_decl = [&](std::string_view name) -> const DeclarationFact* {
+        for (const auto& d : res->declarations) {
+            if (d.symbol_name == name) {
+                return &d;
+            }
+        }
+        return nullptr;
+    };
+
+    auto count_occ = [&](std::string_view name, worker::FactKind kind) -> size_t {
+        size_t count = 0;
+        for (const auto& o : res->occurrences) {
+            if (o.written_name == name && o.kind == kind) {
+                ++count;
+            }
+        }
+        return count;
+    };
+
+    // 1. Range-for variable 'it'
+    const auto* sym_it = find_sym("it");
+    REQUIRE(sym_it != nullptr);
+    CHECK(sym_it->kind == NodeKind::variable);
+    CHECK(sym_it->qualified_name == "test_range_for::it");
+    CHECK(sym_it->signature == "auto it");
+    const auto* decl_it = find_decl("it");
+    REQUIRE(decl_it != nullptr);
+    CHECK(decl_it->is_definition);
+    // 'it' must be referenced in the body (use(it)), but NOT at its declaration site
+    CHECK(count_occ("it", worker::FactKind::reference) == 1);
+
+    // 2. Const ref range-for variable 'item'
+    const auto* sym_item = find_sym("item");
+    REQUIRE(sym_item != nullptr);
+    CHECK(sym_item->kind == NodeKind::variable);
+    CHECK(sym_item->signature == "const auto& item");
+    CHECK(count_occ("item", worker::FactKind::reference) == 1);
+
+    // 3. Structured bindings 'first' and 'second'
+    const auto* sym_first = find_sym("first");
+    const auto* sym_second = find_sym("second");
+    REQUIRE(sym_first != nullptr);
+    REQUIRE(sym_second != nullptr);
+    CHECK(sym_first->kind == NodeKind::variable);
+    CHECK(sym_second->kind == NodeKind::variable);
+    CHECK(sym_first->qualified_name == "test_structured_bindings::first");
+    CHECK(sym_second->qualified_name == "test_structured_bindings::second");
+    const auto* decl_first = find_decl("first");
+    const auto* decl_second = find_decl("second");
+    REQUIRE(decl_first != nullptr);
+    REQUIRE(decl_second != nullptr);
+    CHECK(decl_first->is_definition);
+    CHECK(decl_second->is_definition);
+    CHECK(count_occ("first", worker::FactKind::reference) == 1);
+    CHECK(count_occ("second", worker::FactKind::reference) == 1);
+    CHECK(count_occ("get_pair", worker::FactKind::call) == 1);
+
+    // 4. Structured bindings in range-for: 'key' and 'val'
+    const auto* sym_key = find_sym("key");
+    const auto* sym_val = find_sym("val");
+    REQUIRE(sym_key != nullptr);
+    REQUIRE(sym_val != nullptr);
+    CHECK(sym_key->kind == NodeKind::variable);
+    CHECK(sym_val->kind == NodeKind::variable);
+    CHECK(sym_key->signature == "auto [key, val]");
+    CHECK(sym_val->signature == "auto [key, val]");
+    CHECK(count_occ("key", worker::FactKind::reference) == 1);
+    CHECK(count_occ("val", worker::FactKind::reference) == 1);
+
+    // 5. Condition declaration 'ptr' and function call 'get_ptr'
+    const auto* sym_ptr = find_sym("ptr");
+    REQUIRE(sym_ptr != nullptr);
+    CHECK(sym_ptr->kind == NodeKind::variable);
+    CHECK(count_occ("ptr", worker::FactKind::reference) == 1);
+    CHECK(count_occ("get_ptr", worker::FactKind::call) == 1);
+
+    // 6. Range-for with init statement: 'v' and 'elem'
+    const auto* sym_v = find_sym("v");
+    const auto* sym_elem = find_sym("elem");
+    REQUIRE(sym_v != nullptr);
+    REQUIRE(sym_elem != nullptr);
+    CHECK(sym_v->kind == NodeKind::variable);
+    CHECK(sym_elem->kind == NodeKind::variable);
+    CHECK(count_occ("get_vec", worker::FactKind::call) == 1);
+    CHECK(count_occ("v", worker::FactKind::reference) == 1);
+    CHECK(count_occ("elem", worker::FactKind::reference) == 1);
+}

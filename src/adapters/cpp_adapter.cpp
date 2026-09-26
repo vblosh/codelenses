@@ -111,6 +111,22 @@ DeclaratorInfo unwrap_declarator_info(treesitter::Node node, std::string_view so
     return DeclaratorInfo{};
 }
 
+treesitter::Node find_structured_binding_declarator(treesitter::Node node) {
+    if (node.is_null()) {
+        return treesitter::Node{};
+    }
+    if (node.type() == "structured_binding_declarator") {
+        return node;
+    }
+    for (uint32_t i = 0; i < node.named_child_count(); ++i) {
+        auto found = find_structured_binding_declarator(node.named_child(i));
+        if (!found.is_null()) {
+            return found;
+        }
+    }
+    return treesitter::Node{};
+}
+
 bool has_function_declarator(treesitter::Node node) {
     if (node.is_null()) {
         return false;
@@ -1436,7 +1452,7 @@ void process_declaration(treesitter::Node node, ASTContext& ctx) {
         }
 
         DeclaratorInfo info = unwrap_declarator_info(child, ctx.source);
-        if (!info.id_node.is_null()) {
+        if (!info.id_node.is_null() || !find_structured_binding_declarator(child).is_null()) {
             first_decl = child;
             break;
         }
@@ -1477,7 +1493,57 @@ void process_declaration(treesitter::Node node, ASTContext& ctx) {
             child_type == "reference_declarator" || child_type == "array_declarator" ||
             child_type == "field_declarator" || child_type == "identifier" ||
             child_type == "parenthesized_declarator" || child_type == "attributed_declarator" ||
-            child_type == "template_function") {
+            child_type == "template_function" || child_type == "structured_binding_declarator") {
+
+            treesitter::Node sb = find_structured_binding_declarator(child);
+            if (!sb.is_null()) {
+                const auto scope = ctx.current_scope();
+                std::string decl_sig;
+                if (!prefix.empty()) {
+                    decl_sig = prefix + " ";
+                }
+                decl_sig += clean_signature(child.text(ctx.source));
+
+                for (uint32_t j = 0; j < sb.named_child_count(); ++j) {
+                    auto id_child = sb.named_child(j);
+                    if (id_child.type() == "identifier") {
+                        const std::string name = std::string(id_child.text(ctx.source));
+                        ctx.handled_identifier_byte_starts.insert(id_child.start_byte());
+                        const std::string qname = scope ? *scope + "::" + name : name;
+
+                        ctx.result.symbols.push_back(SymbolFact{
+                            .name = name,
+                            .qualified_name = qname,
+                            .kind = NodeKind::variable,
+                            .range = id_child.byte_range(),
+                            .display_range = id_child.display_range(),
+                            .enclosing_scope = scope,
+                            .signature = decl_sig,
+                        });
+
+                        ctx.result.declarations.push_back(DeclarationFact{
+                            .symbol_name = name,
+                            .qualified_name = qname,
+                            .kind = NodeKind::variable,
+                            .range = id_child.byte_range(),
+                            .display_range = id_child.display_range(),
+                            .enclosing_scope = scope,
+                            .is_definition = true,
+                        });
+                    }
+                }
+
+                if (child_type == "init_declarator") {
+                    treesitter::Node val_node = child.child_by_field_name("value");
+                    if (!val_node.is_null()) {
+                        walk_node(val_node, ctx);
+                    }
+                } else {
+                    walk_node(child, ctx);
+                }
+                continue;
+            }
+
             DeclaratorInfo info = unwrap_declarator_info(child, ctx.source);
             const bool is_fn = is_function_name_declarator(info.id_node, child);
 
@@ -1574,6 +1640,11 @@ void process_declaration(treesitter::Node node, ASTContext& ctx) {
                 walk_node(child, ctx);
             }
         }
+    }
+
+    treesitter::Node decl_val = node.child_by_field_name("value");
+    if (!decl_val.is_null()) {
+        walk_node(decl_val, ctx);
     }
 }
 
@@ -1813,6 +1884,149 @@ void process_template_declaration(treesitter::Node node, ASTContext& ctx) {
     ctx.template_param_names = std::move(saved_params);
 }
 
+void process_for_range_loop(treesitter::Node node, ASTContext& ctx) {
+    treesitter::Node init_node = node.child_by_field_name("initializer");
+    if (!init_node.is_null()) {
+        walk_node(init_node, ctx);
+    }
+
+    treesitter::Node type_node = node.child_by_field_name("type");
+    if (!type_node.is_null()) {
+        walk_node(type_node, ctx);
+    }
+
+    treesitter::Node decl_node = node.child_by_field_name("declarator");
+    if (decl_node.is_null() && !type_node.is_null()) {
+        bool after_type = false;
+        for (uint32_t i = 0; i < node.child_count(); ++i) {
+            auto ch = node.child(i);
+            if (ch == type_node) {
+                after_type = true;
+                continue;
+            }
+            if (after_type) {
+                if (ch.type() == ":") {
+                    break;
+                }
+                if (ch.type() != "comment") {
+                    decl_node = ch;
+                    break;
+                }
+            }
+        }
+    }
+
+    std::string sig;
+    std::size_t sig_start = 0;
+    if (!init_node.is_null()) {
+        sig_start = init_node.end_byte();
+    } else {
+        for (uint32_t i = 0; i < node.child_count(); ++i) {
+            if (node.child(i).type() == "(") {
+                sig_start = node.child(i).end_byte();
+                break;
+            }
+        }
+    }
+    while (sig_start < ctx.source.size() &&
+           (ctx.source[sig_start] == ' ' || ctx.source[sig_start] == '\t' ||
+            ctx.source[sig_start] == '\r' || ctx.source[sig_start] == '\n')) {
+        sig_start++;
+    }
+    std::size_t sig_end = !decl_node.is_null() ? decl_node.end_byte() : 0;
+    if (sig_end > sig_start && sig_end <= ctx.source.size()) {
+        sig = clean_signature(ctx.source.substr(sig_start, sig_end - sig_start));
+    }
+    if (sig.empty() && !decl_node.is_null()) {
+        sig = clean_signature(decl_node.text(ctx.source));
+    }
+
+    treesitter::Node sb = find_structured_binding_declarator(decl_node);
+    if (!sb.is_null()) {
+        const auto scope = ctx.current_scope();
+        for (uint32_t j = 0; j < sb.named_child_count(); ++j) {
+            auto id_child = sb.named_child(j);
+            if (id_child.type() == "identifier") {
+                const std::string name = std::string(id_child.text(ctx.source));
+                ctx.handled_identifier_byte_starts.insert(id_child.start_byte());
+                const std::string qname = scope ? *scope + "::" + name : name;
+
+                ctx.result.symbols.push_back(SymbolFact{
+                    .name = name,
+                    .qualified_name = qname,
+                    .kind = NodeKind::variable,
+                    .range = id_child.byte_range(),
+                    .display_range = id_child.display_range(),
+                    .enclosing_scope = scope,
+                    .signature = sig,
+                });
+
+                ctx.result.declarations.push_back(DeclarationFact{
+                    .symbol_name = name,
+                    .qualified_name = qname,
+                    .kind = NodeKind::variable,
+                    .range = id_child.byte_range(),
+                    .display_range = id_child.display_range(),
+                    .enclosing_scope = scope,
+                    .is_definition = true,
+                });
+            }
+        }
+    } else if (!decl_node.is_null()) {
+        DeclaratorInfo info = unwrap_declarator_info(decl_node, ctx.source);
+        if (!info.id_node.is_null()) {
+            const std::string name = info.base_name;
+            ctx.handled_identifier_byte_starts.insert(info.id_node.start_byte());
+            const auto scope = ctx.current_scope();
+            const std::string qname = scope ? *scope + "::" + name : name;
+
+            ctx.result.symbols.push_back(SymbolFact{
+                .name = name,
+                .qualified_name = qname,
+                .kind = NodeKind::variable,
+                .range = info.id_node.byte_range(),
+                .display_range = info.id_node.display_range(),
+                .enclosing_scope = scope,
+                .signature = sig,
+            });
+
+            ctx.result.declarations.push_back(DeclarationFact{
+                .symbol_name = name,
+                .qualified_name = qname,
+                .kind = NodeKind::variable,
+                .range = info.id_node.byte_range(),
+                .display_range = info.id_node.display_range(),
+                .enclosing_scope = scope,
+                .is_definition = true,
+            });
+        }
+    }
+
+    treesitter::Node right_node = node.child_by_field_name("right");
+    if (!right_node.is_null()) {
+        walk_node(right_node, ctx);
+    }
+
+    treesitter::Node body_node = node.child_by_field_name("body");
+    if (body_node.is_null()) {
+        bool after_paren = false;
+        for (uint32_t i = 0; i < node.child_count(); ++i) {
+            auto ch = node.child(i);
+            if (ch.type() == ")") {
+                after_paren = true;
+                continue;
+            }
+            if (after_paren) {
+                body_node = ch;
+                break;
+            }
+        }
+    }
+    if (!body_node.is_null()) {
+        walk_node(body_node, ctx);
+    }
+}
+
 void walk_node(treesitter::Node node, ASTContext& ctx) {
     if (node.is_null()) {
         return;
@@ -1890,6 +2104,11 @@ void walk_node(treesitter::Node node, ASTContext& ctx) {
 
     if (type == "declaration") {
         process_declaration(node, ctx);
+        return;
+    }
+
+    if (type == "for_range_loop") {
+        process_for_range_loop(node, ctx);
         return;
     }
 
