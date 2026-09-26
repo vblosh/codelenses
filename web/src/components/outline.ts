@@ -18,8 +18,8 @@ export class OutlineComponent {
     this.store = store;
     this.callbacks = callbacks;
     this.element = document.createElement("div");
-    this.element.className = "inspector-pane-view active";
-    this.element.id = "inspector-outline";
+    this.element.className = "outline-content";
+    this.element.id = "outline-content";
     this.render();
     this.initEvents();
   }

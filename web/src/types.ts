@@ -314,8 +314,8 @@ export interface AppState {
   openTabs: OpenTabDto[];
   expandedFolders: Set<string>;
   indexStatus: IndexStatus;
-  activeMobileTab: "explorer" | "code" | "inspector";
-  activeInspectorTab: "outline" | "references" | "diagnostics" | "compile-command";
+  activeMobileTab: "explorer" | "code" | "outline" | "inspector";
+  activeInspectorTab: "references" | "diagnostics" | "compile-command";
   searchQuery: string;
   searchType: "source" | "symbol";
   isSearching: boolean;
