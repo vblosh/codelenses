@@ -1,0 +1,446 @@
+{
+  "declarations": [
+    {
+      "end_byte": 20,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "defaultParser",
+      "start_byte": 7,
+      "symbol_name": "defaultParser"
+    },
+    {
+      "end_byte": 55,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "utils",
+      "start_byte": 50,
+      "symbol_name": "utils"
+    },
+    {
+      "end_byte": 113,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "writeData",
+      "start_byte": 104,
+      "symbol_name": "writeData"
+    },
+    {
+      "end_byte": 156,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "DEFAULT_TIMEOUT",
+      "start_byte": 141,
+      "symbol_name": "DEFAULT_TIMEOUT"
+    },
+    {
+      "end_byte": 185,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "isRunning",
+      "start_byte": 176,
+      "symbol_name": "isRunning"
+    },
+    {
+      "end_byte": 223,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "parseSource",
+      "start_byte": 212,
+      "symbol_name": "parseSource"
+    },
+    {
+      "end_byte": 317,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "TaskRunner",
+      "start_byte": 307,
+      "symbol_name": "TaskRunner"
+    },
+    {
+      "enclosing_scope": "TaskRunner",
+      "end_byte": 335,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "TaskRunner.constructor",
+      "start_byte": 324,
+      "symbol_name": "constructor"
+    },
+    {
+      "enclosing_scope": "TaskRunner",
+      "end_byte": 384,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "TaskRunner.run",
+      "start_byte": 381,
+      "symbol_name": "run"
+    },
+    {
+      "end_byte": 459,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "internalHelper",
+      "start_byte": 445,
+      "symbol_name": "internalHelper"
+    },
+    {
+      "end_byte": 530,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "startService",
+      "start_byte": 518,
+      "symbol_name": "startService"
+    },
+    {
+      "end_byte": 624,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "helperFn",
+      "start_byte": 616,
+      "symbol_name": "helperFn"
+    }
+  ],
+  "diagnostics": [],
+  "language": "JavaScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "./parser"
+      ],
+      "end_byte": 36,
+      "kind": "import",
+      "start_byte": 26,
+      "written_name": "./parser"
+    },
+    {
+      "candidate_targets": [
+        "./utils"
+      ],
+      "end_byte": 70,
+      "kind": "import",
+      "start_byte": 61,
+      "written_name": "./utils"
+    },
+    {
+      "candidate_targets": [
+        "fs"
+      ],
+      "end_byte": 125,
+      "kind": "import",
+      "start_byte": 121,
+      "written_name": "fs"
+    },
+    {
+      "candidate_targets": [
+        "readFile"
+      ],
+      "end_byte": 89,
+      "kind": "reference",
+      "start_byte": 81,
+      "written_name": "readFile"
+    },
+    {
+      "candidate_targets": [
+        "writeFile"
+      ],
+      "end_byte": 100,
+      "kind": "reference",
+      "start_byte": 91,
+      "written_name": "writeFile"
+    },
+    {
+      "candidate_targets": [
+        "source"
+      ],
+      "end_byte": 230,
+      "kind": "reference",
+      "start_byte": 224,
+      "written_name": "source"
+    },
+    {
+      "candidate_targets": [
+        "options"
+      ],
+      "end_byte": 239,
+      "kind": "reference",
+      "start_byte": 232,
+      "written_name": "options"
+    },
+    {
+      "candidate_targets": [
+        "defaultParser"
+      ],
+      "enclosing_scope": "parseSource",
+      "end_byte": 272,
+      "kind": "call",
+      "start_byte": 259,
+      "written_name": "defaultParser"
+    },
+    {
+      "candidate_targets": [
+        "source"
+      ],
+      "enclosing_scope": "parseSource",
+      "end_byte": 279,
+      "kind": "reference",
+      "start_byte": 273,
+      "written_name": "source"
+    },
+    {
+      "candidate_targets": [
+        "options"
+      ],
+      "enclosing_scope": "parseSource",
+      "end_byte": 288,
+      "kind": "reference",
+      "start_byte": 281,
+      "written_name": "options"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "TaskRunner",
+      "end_byte": 340,
+      "kind": "reference",
+      "start_byte": 336,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "TaskRunner.constructor",
+      "end_byte": 361,
+      "kind": "reference",
+      "start_byte": 357,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "TaskRunner.constructor",
+      "end_byte": 368,
+      "kind": "reference",
+      "start_byte": 364,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "execute"
+      ],
+      "enclosing_scope": "TaskRunner.run",
+      "end_byte": 417,
+      "kind": "call",
+      "start_byte": 410,
+      "written_name": "execute"
+    },
+    {
+      "candidate_targets": [
+        "utils"
+      ],
+      "enclosing_scope": "TaskRunner.run",
+      "end_byte": 409,
+      "kind": "reference",
+      "start_byte": 404,
+      "written_name": "utils"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "TaskRunner.run",
+      "end_byte": 427,
+      "kind": "reference",
+      "start_byte": 423,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "isRunning"
+      ],
+      "enclosing_scope": "startService",
+      "end_byte": 548,
+      "kind": "reference",
+      "start_byte": 539,
+      "written_name": "isRunning"
+    },
+    {
+      "candidate_targets": [
+        "internalHelper"
+      ],
+      "enclosing_scope": "startService",
+      "end_byte": 582,
+      "kind": "call",
+      "start_byte": 568,
+      "written_name": "internalHelper"
+    },
+    {
+      "candidate_targets": [
+        "internalHelper"
+      ],
+      "end_byte": 612,
+      "kind": "reference",
+      "start_byte": 598,
+      "written_name": "internalHelper"
+    },
+    {
+      "candidate_targets": [
+        "./constants"
+      ],
+      "end_byte": 655,
+      "kind": "import",
+      "start_byte": 642,
+      "written_name": "./constants"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 20,
+      "end_column": 21,
+      "end_line": 1,
+      "kind": "variable",
+      "name": "defaultParser",
+      "qualified_name": "defaultParser",
+      "signature": "import defaultParser",
+      "start_byte": 7,
+      "start_column": 8,
+      "start_line": 1
+    },
+    {
+      "end_byte": 55,
+      "end_column": 18,
+      "end_line": 2,
+      "kind": "namespace",
+      "name": "utils",
+      "qualified_name": "utils",
+      "signature": "import * as utils",
+      "start_byte": 50,
+      "start_column": 13,
+      "start_line": 2
+    },
+    {
+      "end_byte": 113,
+      "end_column": 42,
+      "end_line": 3,
+      "kind": "type_alias",
+      "name": "writeData",
+      "qualified_name": "writeData",
+      "signature": "import { writeFile as writeData }",
+      "start_byte": 104,
+      "start_column": 33,
+      "start_line": 3
+    },
+    {
+      "end_byte": 156,
+      "end_column": 29,
+      "end_line": 5,
+      "kind": "variable",
+      "name": "DEFAULT_TIMEOUT",
+      "qualified_name": "DEFAULT_TIMEOUT",
+      "signature": "DEFAULT_TIMEOUT",
+      "start_byte": 141,
+      "start_column": 14,
+      "start_line": 5
+    },
+    {
+      "end_byte": 185,
+      "end_column": 21,
+      "end_line": 6,
+      "kind": "variable",
+      "name": "isRunning",
+      "qualified_name": "isRunning",
+      "signature": "isRunning",
+      "start_byte": 176,
+      "start_column": 12,
+      "start_line": 6
+    },
+    {
+      "end_byte": 223,
+      "end_column": 28,
+      "end_line": 8,
+      "kind": "function",
+      "name": "parseSource",
+      "qualified_name": "parseSource",
+      "signature": "function parseSource(source, options = {}) ",
+      "start_byte": 212,
+      "start_column": 17,
+      "start_line": 8
+    },
+    {
+      "end_byte": 317,
+      "end_column": 24,
+      "end_line": 12,
+      "kind": "class",
+      "name": "TaskRunner",
+      "qualified_name": "TaskRunner",
+      "signature": "class TaskRunner ",
+      "start_byte": 307,
+      "start_column": 14,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "TaskRunner",
+      "end_byte": 335,
+      "end_column": 16,
+      "end_line": 13,
+      "kind": "method",
+      "name": "constructor",
+      "qualified_name": "TaskRunner.constructor",
+      "signature": "constructor(name) ",
+      "start_byte": 324,
+      "start_column": 5,
+      "start_line": 13
+    },
+    {
+      "enclosing_scope": "TaskRunner",
+      "end_byte": 384,
+      "end_column": 8,
+      "end_line": 17,
+      "kind": "method",
+      "name": "run",
+      "qualified_name": "TaskRunner.run",
+      "signature": "run() ",
+      "start_byte": 381,
+      "start_column": 5,
+      "start_line": 17
+    },
+    {
+      "end_byte": 459,
+      "end_column": 21,
+      "end_line": 22,
+      "kind": "function",
+      "name": "internalHelper",
+      "qualified_name": "internalHelper",
+      "signature": "internalHelper = function() ",
+      "start_byte": 445,
+      "start_column": 7,
+      "start_line": 22
+    },
+    {
+      "end_byte": 530,
+      "end_column": 37,
+      "end_line": 26,
+      "kind": "function",
+      "name": "startService",
+      "qualified_name": "startService",
+      "signature": "function startService() ",
+      "start_byte": 518,
+      "start_column": 25,
+      "start_line": 26
+    },
+    {
+      "end_byte": 624,
+      "end_column": 36,
+      "end_line": 31,
+      "kind": "type_alias",
+      "name": "helperFn",
+      "qualified_name": "helperFn",
+      "signature": "export { internalHelper as helperFn }",
+      "start_byte": 616,
+      "start_column": 28,
+      "start_line": 31
+    }
+  ]
+}

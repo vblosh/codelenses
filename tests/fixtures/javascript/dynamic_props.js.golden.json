@@ -1,0 +1,317 @@
+{
+  "declarations": [
+    {
+      "end_byte": 15,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "Animal",
+      "start_byte": 9,
+      "symbol_name": "Animal"
+    },
+    {
+      "enclosing_scope": "Animal",
+      "end_byte": 71,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Animal.speak",
+      "start_byte": 66,
+      "symbol_name": "speak"
+    },
+    {
+      "enclosing_scope": "Animal",
+      "end_byte": 162,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Animal.category",
+      "start_byte": 154,
+      "symbol_name": "category"
+    },
+    {
+      "end_byte": 188,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "config",
+      "start_byte": 182,
+      "symbol_name": "config"
+    },
+    {
+      "end_byte": 237,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "maxRetries",
+      "start_byte": 225,
+      "symbol_name": "maxRetries"
+    },
+    {
+      "end_byte": 305,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "accessProperties",
+      "start_byte": 289,
+      "symbol_name": "accessProperties"
+    }
+  ],
+  "diagnostics": [],
+  "language": "JavaScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "end_byte": 20,
+      "kind": "reference",
+      "start_byte": 16,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "Animal",
+      "end_byte": 37,
+      "kind": "reference",
+      "start_byte": 33,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "Animal",
+      "end_byte": 44,
+      "kind": "reference",
+      "start_byte": 40,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "sound"
+      ],
+      "enclosing_scope": "Animal.speak",
+      "end_byte": 88,
+      "kind": "reference",
+      "start_byte": 83,
+      "written_name": "sound"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "Animal.speak",
+      "end_byte": 112,
+      "kind": "reference",
+      "start_byte": 108,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "sound"
+      ],
+      "enclosing_scope": "Animal.speak",
+      "end_byte": 131,
+      "kind": "reference",
+      "start_byte": 126,
+      "written_name": "sound"
+    },
+    {
+      "candidate_targets": [
+        "defineProperty"
+      ],
+      "end_byte": 216,
+      "kind": "call",
+      "start_byte": 202,
+      "written_name": "defineProperty"
+    },
+    {
+      "candidate_targets": [
+        "Object"
+      ],
+      "end_byte": 201,
+      "kind": "reference",
+      "start_byte": 195,
+      "written_name": "Object"
+    },
+    {
+      "candidate_targets": [
+        "config"
+      ],
+      "end_byte": 223,
+      "kind": "reference",
+      "start_byte": 217,
+      "written_name": "config"
+    },
+    {
+      "candidate_targets": [
+        "value"
+      ],
+      "end_byte": 250,
+      "kind": "reference",
+      "start_byte": 245,
+      "written_name": "value"
+    },
+    {
+      "candidate_targets": [
+        "writable"
+      ],
+      "end_byte": 267,
+      "kind": "reference",
+      "start_byte": 259,
+      "written_name": "writable"
+    },
+    {
+      "candidate_targets": [
+        "obj"
+      ],
+      "end_byte": 309,
+      "kind": "reference",
+      "start_byte": 306,
+      "written_name": "obj"
+    },
+    {
+      "candidate_targets": [
+        "dynamicKey"
+      ],
+      "end_byte": 321,
+      "kind": "reference",
+      "start_byte": 311,
+      "written_name": "dynamicKey"
+    },
+    {
+      "candidate_targets": [
+        "obj"
+      ],
+      "enclosing_scope": "accessProperties",
+      "end_byte": 347,
+      "kind": "reference",
+      "start_byte": 344,
+      "written_name": "obj"
+    },
+    {
+      "candidate_targets": [
+        "staticField"
+      ],
+      "enclosing_scope": "accessProperties",
+      "end_byte": 361,
+      "kind": "reference",
+      "start_byte": 348,
+      "written_name": "staticField"
+    },
+    {
+      "candidate_targets": [
+        "obj"
+      ],
+      "enclosing_scope": "accessProperties",
+      "end_byte": 388,
+      "kind": "reference",
+      "start_byte": 385,
+      "written_name": "obj"
+    },
+    {
+      "candidate_targets": [
+        "dynamicKey"
+      ],
+      "enclosing_scope": "accessProperties",
+      "end_byte": 399,
+      "kind": "reference",
+      "start_byte": 389,
+      "written_name": "dynamicKey"
+    },
+    {
+      "candidate_targets": [
+        "direct"
+      ],
+      "enclosing_scope": "accessProperties",
+      "end_byte": 419,
+      "kind": "reference",
+      "start_byte": 413,
+      "written_name": "direct"
+    },
+    {
+      "candidate_targets": [
+        "indirect"
+      ],
+      "enclosing_scope": "accessProperties",
+      "end_byte": 430,
+      "kind": "reference",
+      "start_byte": 422,
+      "written_name": "indirect"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 15,
+      "end_column": 16,
+      "end_line": 1,
+      "kind": "function",
+      "name": "Animal",
+      "qualified_name": "Animal",
+      "signature": "function Animal(name) ",
+      "start_byte": 9,
+      "start_column": 10,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "Animal",
+      "end_byte": 71,
+      "end_column": 23,
+      "end_line": 5,
+      "kind": "method",
+      "name": "speak",
+      "qualified_name": "Animal.speak",
+      "signature": "speak",
+      "start_byte": 66,
+      "start_column": 18,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "Animal",
+      "end_byte": 162,
+      "end_column": 26,
+      "end_line": 9,
+      "kind": "field",
+      "name": "category",
+      "qualified_name": "Animal.category",
+      "signature": "category",
+      "start_byte": 154,
+      "start_column": 18,
+      "start_line": 9
+    },
+    {
+      "end_byte": 188,
+      "end_column": 13,
+      "end_line": 11,
+      "kind": "variable",
+      "name": "config",
+      "qualified_name": "config",
+      "signature": "config",
+      "start_byte": 182,
+      "start_column": 7,
+      "start_line": 11
+    },
+    {
+      "end_byte": 237,
+      "end_column": 43,
+      "end_line": 12,
+      "kind": "field",
+      "name": "maxRetries",
+      "qualified_name": "maxRetries",
+      "signature": "maxRetries",
+      "start_byte": 225,
+      "start_column": 31,
+      "start_line": 12
+    },
+    {
+      "end_byte": 305,
+      "end_column": 26,
+      "end_line": 17,
+      "kind": "function",
+      "name": "accessProperties",
+      "qualified_name": "accessProperties",
+      "signature": "function accessProperties(obj, dynamicKey) ",
+      "start_byte": 289,
+      "start_column": 10,
+      "start_line": 17
+    }
+  ]
+}

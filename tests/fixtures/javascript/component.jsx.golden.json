@@ -1,0 +1,240 @@
+{
+  "declarations": [
+    {
+      "end_byte": 12,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "React",
+      "start_byte": 7,
+      "symbol_name": "React"
+    },
+    {
+      "end_byte": 111,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "UserDashboard",
+      "start_byte": 98,
+      "symbol_name": "UserDashboard"
+    },
+    {
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 203,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "UserDashboard.handleIncrement",
+      "start_byte": 188,
+      "symbol_name": "handleIncrement"
+    }
+  ],
+  "diagnostics": [],
+  "language": "JavaScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "react"
+      ],
+      "end_byte": 39,
+      "kind": "import",
+      "start_byte": 32,
+      "written_name": "react"
+    },
+    {
+      "candidate_targets": [
+        "useState"
+      ],
+      "end_byte": 24,
+      "kind": "reference",
+      "start_byte": 16,
+      "written_name": "useState"
+    },
+    {
+      "candidate_targets": [
+        "./ui-lib"
+      ],
+      "end_byte": 79,
+      "kind": "import",
+      "start_byte": 69,
+      "written_name": "./ui-lib"
+    },
+    {
+      "candidate_targets": [
+        "Button"
+      ],
+      "end_byte": 56,
+      "kind": "reference",
+      "start_byte": 50,
+      "written_name": "Button"
+    },
+    {
+      "candidate_targets": [
+        "Nav"
+      ],
+      "end_byte": 61,
+      "kind": "reference",
+      "start_byte": 58,
+      "written_name": "Nav"
+    },
+    {
+      "candidate_targets": [
+        "useState"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 172,
+      "kind": "call",
+      "start_byte": 164,
+      "written_name": "useState"
+    },
+    {
+      "candidate_targets": [
+        "setCount"
+      ],
+      "enclosing_scope": "UserDashboard.handleIncrement",
+      "end_byte": 230,
+      "kind": "call",
+      "start_byte": 222,
+      "written_name": "setCount"
+    },
+    {
+      "candidate_targets": [
+        "count"
+      ],
+      "enclosing_scope": "UserDashboard.handleIncrement",
+      "end_byte": 236,
+      "kind": "reference",
+      "start_byte": 231,
+      "written_name": "count"
+    },
+    {
+      "candidate_targets": [
+        "username"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 374,
+      "kind": "reference",
+      "start_byte": 366,
+      "written_name": "username"
+    },
+    {
+      "candidate_targets": [
+        "Nav.Bar",
+        "Nav"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 405,
+      "kind": "call",
+      "start_byte": 398,
+      "written_name": "Nav.Bar"
+    },
+    {
+      "candidate_targets": [
+        "Nav.Item",
+        "Nav"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 451,
+      "kind": "call",
+      "start_byte": 443,
+      "written_name": "Nav.Item"
+    },
+    {
+      "candidate_targets": [
+        "Nav.Item",
+        "Nav"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 511,
+      "kind": "call",
+      "start_byte": 503,
+      "written_name": "Nav.Item"
+    },
+    {
+      "candidate_targets": [
+        "role"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 653,
+      "kind": "reference",
+      "start_byte": 649,
+      "written_name": "role"
+    },
+    {
+      "candidate_targets": [
+        "Button"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 682,
+      "kind": "call",
+      "start_byte": 676,
+      "written_name": "Button"
+    },
+    {
+      "candidate_targets": [
+        "handleIncrement"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 724,
+      "kind": "reference",
+      "start_byte": 709,
+      "written_name": "handleIncrement"
+    },
+    {
+      "candidate_targets": [
+        "count"
+      ],
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 738,
+      "kind": "reference",
+      "start_byte": 733,
+      "written_name": "count"
+    },
+    {
+      "candidate_targets": [
+        "UserDashboard"
+      ],
+      "end_byte": 883,
+      "kind": "reference",
+      "start_byte": 870,
+      "written_name": "UserDashboard"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 12,
+      "end_column": 13,
+      "end_line": 1,
+      "kind": "variable",
+      "name": "React",
+      "qualified_name": "React",
+      "signature": "import React",
+      "start_byte": 7,
+      "start_column": 8,
+      "start_line": 1
+    },
+    {
+      "end_byte": 111,
+      "end_column": 30,
+      "end_line": 4,
+      "kind": "function",
+      "name": "UserDashboard",
+      "qualified_name": "UserDashboard",
+      "signature": "function UserDashboard({ username, role }) ",
+      "start_byte": 98,
+      "start_column": 17,
+      "start_line": 4
+    },
+    {
+      "enclosing_scope": "UserDashboard",
+      "end_byte": 203,
+      "end_column": 26,
+      "end_line": 7,
+      "kind": "function",
+      "name": "handleIncrement",
+      "qualified_name": "UserDashboard.handleIncrement",
+      "signature": "handleIncrement = () => ",
+      "start_byte": 188,
+      "start_column": 11,
+      "start_line": 7
+    }
+  ]
+}

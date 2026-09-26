@@ -1,0 +1,124 @@
+{
+  "declarations": [
+    {
+      "end_byte": 35,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "UserManager",
+      "start_byte": 24,
+      "symbol_name": "UserManager"
+    },
+    {
+      "end_byte": 178,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "init",
+      "start_byte": 174,
+      "symbol_name": "init"
+    }
+  ],
+  "diagnostics": [],
+  "language": "TypeScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "./services"
+      ],
+      "end_byte": 55,
+      "kind": "import",
+      "start_byte": 43,
+      "written_name": "./services"
+    },
+    {
+      "candidate_targets": [
+        "UserService"
+      ],
+      "end_byte": 20,
+      "kind": "reference",
+      "start_byte": 9,
+      "written_name": "UserService"
+    },
+    {
+      "candidate_targets": [
+        "./logger"
+      ],
+      "end_byte": 90,
+      "kind": "import",
+      "start_byte": 80,
+      "written_name": "./logger"
+    },
+    {
+      "candidate_targets": [
+        "Logger"
+      ],
+      "end_byte": 72,
+      "kind": "reference",
+      "start_byte": 66,
+      "written_name": "Logger"
+    },
+    {
+      "candidate_targets": [
+        "./types"
+      ],
+      "end_byte": 115,
+      "kind": "import",
+      "start_byte": 106,
+      "written_name": "./types"
+    },
+    {
+      "candidate_targets": [
+        "./config"
+      ],
+      "end_byte": 155,
+      "kind": "import",
+      "start_byte": 145,
+      "written_name": "./config"
+    },
+    {
+      "candidate_targets": [
+        "Config"
+      ],
+      "end_byte": 137,
+      "kind": "reference",
+      "start_byte": 131,
+      "written_name": "Config"
+    },
+    {
+      "candidate_targets": [
+        "UserManager"
+      ],
+      "enclosing_scope": "init",
+      "end_byte": 220,
+      "kind": "call",
+      "start_byte": 209,
+      "written_name": "UserManager"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 35,
+      "end_column": 36,
+      "end_line": 1,
+      "kind": "type_alias",
+      "name": "UserManager",
+      "qualified_name": "UserManager",
+      "signature": "export { UserService as UserManager }",
+      "start_byte": 24,
+      "start_column": 25,
+      "start_line": 1
+    },
+    {
+      "end_byte": 178,
+      "end_column": 21,
+      "end_line": 6,
+      "kind": "function",
+      "name": "init",
+      "qualified_name": "init",
+      "signature": "function init(): void ",
+      "start_byte": 174,
+      "start_column": 17,
+      "start_line": 6
+    }
+  ]
+}

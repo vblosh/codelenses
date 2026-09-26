@@ -1,0 +1,244 @@
+{
+  "declarations": [
+    {
+      "end_byte": 25,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "read",
+      "start_byte": 21,
+      "symbol_name": "read"
+    },
+    {
+      "end_byte": 45,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "write",
+      "start_byte": 40,
+      "symbol_name": "write"
+    },
+    {
+      "end_byte": 75,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "path",
+      "start_byte": 71,
+      "symbol_name": "path"
+    },
+    {
+      "end_byte": 104,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "ID",
+      "start_byte": 102,
+      "symbol_name": "ID"
+    },
+    {
+      "end_byte": 143,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "Handler",
+      "start_byte": 136,
+      "symbol_name": "Handler"
+    },
+    {
+      "end_byte": 199,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "processFile",
+      "start_byte": 188,
+      "symbol_name": "processFile"
+    }
+  ],
+  "diagnostics": [],
+  "language": "TypeScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "fs"
+      ],
+      "end_byte": 57,
+      "kind": "import",
+      "start_byte": 53,
+      "written_name": "fs"
+    },
+    {
+      "candidate_targets": [
+        "readFile"
+      ],
+      "end_byte": 17,
+      "kind": "reference",
+      "start_byte": 9,
+      "written_name": "readFile"
+    },
+    {
+      "candidate_targets": [
+        "writeFile"
+      ],
+      "end_byte": 36,
+      "kind": "reference",
+      "start_byte": 27,
+      "written_name": "writeFile"
+    },
+    {
+      "candidate_targets": [
+        "path"
+      ],
+      "end_byte": 87,
+      "kind": "import",
+      "start_byte": 81,
+      "written_name": "path"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "end_byte": 154,
+      "kind": "reference",
+      "start_byte": 150,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "end_byte": 157,
+      "kind": "reference",
+      "start_byte": 156,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "filePath"
+      ],
+      "end_byte": 208,
+      "kind": "reference",
+      "start_byte": 200,
+      "written_name": "filePath"
+    },
+    {
+      "candidate_targets": [
+        "read"
+      ],
+      "enclosing_scope": "processFile",
+      "end_byte": 250,
+      "kind": "call",
+      "start_byte": 246,
+      "written_name": "read"
+    },
+    {
+      "candidate_targets": [
+        "filePath"
+      ],
+      "enclosing_scope": "processFile",
+      "end_byte": 259,
+      "kind": "reference",
+      "start_byte": 251,
+      "written_name": "filePath"
+    },
+    {
+      "candidate_targets": [
+        "write"
+      ],
+      "enclosing_scope": "processFile",
+      "end_byte": 278,
+      "kind": "call",
+      "start_byte": 273,
+      "written_name": "write"
+    },
+    {
+      "candidate_targets": [
+        "filePath"
+      ],
+      "enclosing_scope": "processFile",
+      "end_byte": 287,
+      "kind": "reference",
+      "start_byte": 279,
+      "written_name": "filePath"
+    },
+    {
+      "candidate_targets": [
+        "data"
+      ],
+      "enclosing_scope": "processFile",
+      "end_byte": 293,
+      "kind": "reference",
+      "start_byte": 289,
+      "written_name": "data"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 25,
+      "end_column": 26,
+      "end_line": 1,
+      "kind": "type_alias",
+      "name": "read",
+      "qualified_name": "read",
+      "signature": "import { readFile as read }",
+      "start_byte": 21,
+      "start_column": 22,
+      "start_line": 1
+    },
+    {
+      "end_byte": 45,
+      "end_column": 46,
+      "end_line": 1,
+      "kind": "type_alias",
+      "name": "write",
+      "qualified_name": "write",
+      "signature": "import { writeFile as write }",
+      "start_byte": 40,
+      "start_column": 41,
+      "start_line": 1
+    },
+    {
+      "end_byte": 75,
+      "end_column": 17,
+      "end_line": 2,
+      "kind": "namespace",
+      "name": "path",
+      "qualified_name": "path",
+      "signature": "import * as path",
+      "start_byte": 71,
+      "start_column": 13,
+      "start_line": 2
+    },
+    {
+      "end_byte": 104,
+      "end_column": 15,
+      "end_line": 4,
+      "kind": "type_alias",
+      "name": "ID",
+      "qualified_name": "ID",
+      "signature": "type ID = string | number",
+      "start_byte": 102,
+      "start_column": 13,
+      "start_line": 4
+    },
+    {
+      "end_byte": 143,
+      "end_column": 20,
+      "end_line": 5,
+      "kind": "type_alias",
+      "name": "Handler",
+      "qualified_name": "Handler",
+      "signature": "type Handler<T> = (item: T) => boolean",
+      "start_byte": 136,
+      "start_column": 13,
+      "start_line": 5
+    },
+    {
+      "end_byte": 199,
+      "end_column": 28,
+      "end_line": 7,
+      "kind": "function",
+      "name": "processFile",
+      "qualified_name": "processFile",
+      "signature": "function processFile(filePath: string): boolean ",
+      "start_byte": 188,
+      "start_column": 17,
+      "start_line": 7
+    }
+  ]
+}

@@ -796,6 +796,10 @@ HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64
         auto lang_res = language_from_string(f.language);
         const auto* grammar =
             lang_res.has_value() ? treesitter::grammar_for_language(*lang_res) : nullptr;
+        const auto ext = fs::path(f.path).extension().string();
+        if (ext == ".tsx" || ext == ".jsx") {
+            grammar = treesitter::grammar_for_tsx();
+        }
         if (grammar != nullptr) {
             treesitter::Parser parser;
             if (parser.set_language(grammar).has_value()) {

@@ -1,0 +1,477 @@
+{
+  "declarations": [
+    {
+      "end_byte": 8,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "fs",
+      "start_byte": 6,
+      "symbol_name": "fs"
+    },
+    {
+      "end_byte": 38,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "join",
+      "start_byte": 34,
+      "symbol_name": "join"
+    },
+    {
+      "end_byte": 60,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "pathResolve",
+      "start_byte": 49,
+      "symbol_name": "pathResolve"
+    },
+    {
+      "end_byte": 94,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "config",
+      "start_byte": 88,
+      "symbol_name": "config"
+    },
+    {
+      "end_byte": 132,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "VERSION",
+      "start_byte": 125,
+      "symbol_name": "VERSION"
+    },
+    {
+      "end_byte": 166,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "calculateSum",
+      "start_byte": 154,
+      "symbol_name": "calculateSum"
+    },
+    {
+      "end_byte": 208,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Logger",
+      "start_byte": 202,
+      "symbol_name": "Logger"
+    },
+    {
+      "enclosing_scope": "Logger",
+      "end_byte": 226,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Logger.constructor",
+      "start_byte": 215,
+      "symbol_name": "constructor"
+    },
+    {
+      "enclosing_scope": "Logger",
+      "end_byte": 281,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Logger.log",
+      "start_byte": 278,
+      "symbol_name": "log"
+    },
+    {
+      "end_byte": 373,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "calculateSum",
+      "start_byte": 361,
+      "symbol_name": "calculateSum"
+    },
+    {
+      "end_byte": 404,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "Logger",
+      "start_byte": 398,
+      "symbol_name": "Logger"
+    },
+    {
+      "end_byte": 430,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "VERSION",
+      "start_byte": 423,
+      "symbol_name": "VERSION"
+    },
+    {
+      "end_byte": 470,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "formatMessage",
+      "start_byte": 457,
+      "symbol_name": "formatMessage"
+    }
+  ],
+  "diagnostics": [],
+  "language": "JavaScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "fs"
+      ],
+      "end_byte": 23,
+      "kind": "import",
+      "start_byte": 19,
+      "written_name": "fs"
+    },
+    {
+      "candidate_targets": [
+        "path"
+      ],
+      "end_byte": 79,
+      "kind": "import",
+      "start_byte": 73,
+      "written_name": "path"
+    },
+    {
+      "candidate_targets": [
+        "./config"
+      ],
+      "end_byte": 115,
+      "kind": "import",
+      "start_byte": 105,
+      "written_name": "./config"
+    },
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "end_byte": 168,
+      "kind": "reference",
+      "start_byte": 167,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "end_byte": 171,
+      "kind": "reference",
+      "start_byte": 170,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "enclosing_scope": "calculateSum",
+      "end_byte": 187,
+      "kind": "reference",
+      "start_byte": 186,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "enclosing_scope": "calculateSum",
+      "end_byte": 191,
+      "kind": "reference",
+      "start_byte": 190,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "prefix"
+      ],
+      "enclosing_scope": "Logger",
+      "end_byte": 233,
+      "kind": "reference",
+      "start_byte": 227,
+      "written_name": "prefix"
+    },
+    {
+      "candidate_targets": [
+        "prefix"
+      ],
+      "enclosing_scope": "Logger.constructor",
+      "end_byte": 256,
+      "kind": "reference",
+      "start_byte": 250,
+      "written_name": "prefix"
+    },
+    {
+      "candidate_targets": [
+        "prefix"
+      ],
+      "enclosing_scope": "Logger.constructor",
+      "end_byte": 265,
+      "kind": "reference",
+      "start_byte": 259,
+      "written_name": "prefix"
+    },
+    {
+      "candidate_targets": [
+        "message"
+      ],
+      "enclosing_scope": "Logger",
+      "end_byte": 289,
+      "kind": "reference",
+      "start_byte": 282,
+      "written_name": "message"
+    },
+    {
+      "candidate_targets": [
+        "log"
+      ],
+      "enclosing_scope": "Logger.log",
+      "end_byte": 312,
+      "kind": "call",
+      "start_byte": 309,
+      "written_name": "log"
+    },
+    {
+      "candidate_targets": [
+        "console"
+      ],
+      "enclosing_scope": "Logger.log",
+      "end_byte": 308,
+      "kind": "reference",
+      "start_byte": 301,
+      "written_name": "console"
+    },
+    {
+      "candidate_targets": [
+        "prefix"
+      ],
+      "enclosing_scope": "Logger.log",
+      "end_byte": 324,
+      "kind": "reference",
+      "start_byte": 318,
+      "written_name": "prefix"
+    },
+    {
+      "candidate_targets": [
+        "message"
+      ],
+      "enclosing_scope": "Logger.log",
+      "end_byte": 341,
+      "kind": "reference",
+      "start_byte": 334,
+      "written_name": "message"
+    },
+    {
+      "candidate_targets": [
+        "calculateSum"
+      ],
+      "end_byte": 388,
+      "kind": "reference",
+      "start_byte": 376,
+      "written_name": "calculateSum"
+    },
+    {
+      "candidate_targets": [
+        "Logger"
+      ],
+      "end_byte": 413,
+      "kind": "reference",
+      "start_byte": 407,
+      "written_name": "Logger"
+    },
+    {
+      "candidate_targets": [
+        "VERSION"
+      ],
+      "end_byte": 440,
+      "kind": "reference",
+      "start_byte": 433,
+      "written_name": "VERSION"
+    },
+    {
+      "candidate_targets": [
+        "msg"
+      ],
+      "enclosing_scope": "formatMessage",
+      "end_byte": 485,
+      "kind": "reference",
+      "start_byte": 482,
+      "written_name": "msg"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "formatMessage",
+      "end_byte": 506,
+      "kind": "call",
+      "start_byte": 500,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "msg"
+      ],
+      "enclosing_scope": "formatMessage",
+      "end_byte": 510,
+      "kind": "reference",
+      "start_byte": 507,
+      "written_name": "msg"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 8,
+      "end_column": 9,
+      "end_line": 1,
+      "kind": "variable",
+      "name": "fs",
+      "qualified_name": "fs",
+      "signature": "fs",
+      "start_byte": 6,
+      "start_column": 7,
+      "start_line": 1
+    },
+    {
+      "end_byte": 38,
+      "end_column": 13,
+      "end_line": 2,
+      "kind": "variable",
+      "name": "join",
+      "qualified_name": "join",
+      "signature": "join",
+      "start_byte": 34,
+      "start_column": 9,
+      "start_line": 2
+    },
+    {
+      "end_byte": 60,
+      "end_column": 35,
+      "end_line": 2,
+      "kind": "variable",
+      "name": "pathResolve",
+      "qualified_name": "pathResolve",
+      "signature": "pathResolve",
+      "start_byte": 49,
+      "start_column": 24,
+      "start_line": 2
+    },
+    {
+      "end_byte": 94,
+      "end_column": 13,
+      "end_line": 3,
+      "kind": "variable",
+      "name": "config",
+      "qualified_name": "config",
+      "signature": "config",
+      "start_byte": 88,
+      "start_column": 7,
+      "start_line": 3
+    },
+    {
+      "end_byte": 132,
+      "end_column": 14,
+      "end_line": 5,
+      "kind": "variable",
+      "name": "VERSION",
+      "qualified_name": "VERSION",
+      "signature": "VERSION",
+      "start_byte": 125,
+      "start_column": 7,
+      "start_line": 5
+    },
+    {
+      "end_byte": 166,
+      "end_column": 22,
+      "end_line": 7,
+      "kind": "function",
+      "name": "calculateSum",
+      "qualified_name": "calculateSum",
+      "signature": "function calculateSum(a, b) ",
+      "start_byte": 154,
+      "start_column": 10,
+      "start_line": 7
+    },
+    {
+      "end_byte": 208,
+      "end_column": 13,
+      "end_line": 11,
+      "kind": "class",
+      "name": "Logger",
+      "qualified_name": "Logger",
+      "signature": "class Logger ",
+      "start_byte": 202,
+      "start_column": 7,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "Logger",
+      "end_byte": 226,
+      "end_column": 16,
+      "end_line": 12,
+      "kind": "method",
+      "name": "constructor",
+      "qualified_name": "Logger.constructor",
+      "signature": "constructor(prefix) ",
+      "start_byte": 215,
+      "start_column": 5,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "Logger",
+      "end_byte": 281,
+      "end_column": 8,
+      "end_line": 16,
+      "kind": "method",
+      "name": "log",
+      "qualified_name": "Logger.log",
+      "signature": "log(message) ",
+      "start_byte": 278,
+      "start_column": 5,
+      "start_line": 16
+    },
+    {
+      "end_byte": 373,
+      "end_column": 21,
+      "end_line": 21,
+      "kind": "variable",
+      "name": "calculateSum",
+      "qualified_name": "calculateSum",
+      "signature": "calculateSum",
+      "start_byte": 361,
+      "start_column": 9,
+      "start_line": 21
+    },
+    {
+      "end_byte": 404,
+      "end_column": 15,
+      "end_line": 22,
+      "kind": "variable",
+      "name": "Logger",
+      "qualified_name": "Logger",
+      "signature": "Logger",
+      "start_byte": 398,
+      "start_column": 9,
+      "start_line": 22
+    },
+    {
+      "end_byte": 430,
+      "end_column": 16,
+      "end_line": 23,
+      "kind": "variable",
+      "name": "VERSION",
+      "qualified_name": "VERSION",
+      "signature": "VERSION",
+      "start_byte": 423,
+      "start_column": 9,
+      "start_line": 23
+    },
+    {
+      "end_byte": 470,
+      "end_column": 29,
+      "end_line": 24,
+      "kind": "function",
+      "name": "formatMessage",
+      "qualified_name": "formatMessage",
+      "signature": "formatMessage",
+      "start_byte": 457,
+      "start_column": 16,
+      "start_line": 24
+    }
+  ]
+}

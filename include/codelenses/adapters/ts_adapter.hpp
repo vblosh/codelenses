@@ -4,7 +4,7 @@
 
 namespace codelenses::adapters {
 
-class TypeScriptAdapter final : public LanguageAdapter {
+class TypeScriptAdapter : public LanguageAdapter {
 public:
     using LanguageAdapter::parse;
 
@@ -21,9 +21,23 @@ public:
                                               const std::filesystem::path& file_path = {},
                                               const std::stop_token& stop_token = {}) override;
 
+    [[nodiscard]] Result<std::vector<HighlightToken>>
+    highlight(std::string_view source, const treesitter::Tree& tree) override;
+
+    [[nodiscard]] Result<std::vector<HighlightToken>> highlight(std::string_view source);
+
+    [[nodiscard]] static std::string_view javascript_highlighting_query() noexcept;
+    [[nodiscard]] static std::string_view highlighting_query() noexcept;
+    [[nodiscard]] static std::string_view tsx_highlighting_query() noexcept;
+
 private:
     Language lang_{Language::typescript};
     LanguageCapabilities capabilities_{};
+};
+
+class JavaScriptAdapter final : public TypeScriptAdapter {
+public:
+    explicit JavaScriptAdapter() : TypeScriptAdapter(Language::javascript) {}
 };
 
 } // namespace codelenses::adapters

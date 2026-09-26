@@ -1,0 +1,444 @@
+{
+  "declarations": [
+    {
+      "end_byte": 28,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "IRepository",
+      "start_byte": 17,
+      "symbol_name": "IRepository"
+    },
+    {
+      "enclosing_scope": "IRepository",
+      "end_byte": 73,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "IRepository.findById",
+      "start_byte": 65,
+      "symbol_name": "findById"
+    },
+    {
+      "enclosing_scope": "IRepository",
+      "end_byte": 105,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "IRepository.save",
+      "start_byte": 101,
+      "symbol_name": "save"
+    },
+    {
+      "end_byte": 154,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "MemoryRepository",
+      "start_byte": 138,
+      "symbol_name": "MemoryRepository"
+    },
+    {
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 233,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "MemoryRepository.items",
+      "start_byte": 228,
+      "symbol_name": "items"
+    },
+    {
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 271,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "MemoryRepository.findById",
+      "start_byte": 263,
+      "symbol_name": "findById"
+    },
+    {
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 346,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "MemoryRepository.save",
+      "start_byte": 342,
+      "symbol_name": "save"
+    },
+    {
+      "end_byte": 417,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "mapItem",
+      "start_byte": 410,
+      "symbol_name": "mapItem"
+    }
+  ],
+  "diagnostics": [],
+  "language": "TypeScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "IRepository",
+      "end_byte": 76,
+      "kind": "reference",
+      "start_byte": 74,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "K"
+      ],
+      "enclosing_scope": "IRepository",
+      "end_byte": 79,
+      "kind": "reference",
+      "start_byte": 78,
+      "written_name": "K"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "IRepository",
+      "end_byte": 83,
+      "kind": "reference",
+      "start_byte": 82,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "IRepository",
+      "end_byte": 110,
+      "kind": "reference",
+      "start_byte": 106,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "IRepository",
+      "end_byte": 113,
+      "kind": "reference",
+      "start_byte": 112,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "IRepository"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 207,
+      "kind": "implementation",
+      "start_byte": 196,
+      "written_name": "IRepository"
+    },
+    {
+      "candidate_targets": [
+        "Map"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 238,
+      "kind": "reference",
+      "start_byte": 235,
+      "written_name": "Map"
+    },
+    {
+      "candidate_targets": [
+        "K"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 240,
+      "kind": "reference",
+      "start_byte": 239,
+      "written_name": "K"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 243,
+      "kind": "reference",
+      "start_byte": 242,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "Map"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 254,
+      "kind": "call",
+      "start_byte": 251,
+      "written_name": "Map"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 274,
+      "kind": "reference",
+      "start_byte": 272,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "K"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 277,
+      "kind": "reference",
+      "start_byte": 276,
+      "written_name": "K"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 281,
+      "kind": "reference",
+      "start_byte": 280,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "get"
+      ],
+      "enclosing_scope": "MemoryRepository.findById",
+      "end_byte": 325,
+      "kind": "call",
+      "start_byte": 322,
+      "written_name": "get"
+    },
+    {
+      "candidate_targets": [
+        "items"
+      ],
+      "enclosing_scope": "MemoryRepository.findById",
+      "end_byte": 321,
+      "kind": "reference",
+      "start_byte": 316,
+      "written_name": "items"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "MemoryRepository.findById",
+      "end_byte": 328,
+      "kind": "reference",
+      "start_byte": 326,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 351,
+      "kind": "reference",
+      "start_byte": 347,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 354,
+      "kind": "reference",
+      "start_byte": 353,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "end_byte": 428,
+      "kind": "reference",
+      "start_byte": 424,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "end_byte": 431,
+      "kind": "reference",
+      "start_byte": 430,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "fn"
+      ],
+      "end_byte": 435,
+      "kind": "reference",
+      "start_byte": 433,
+      "written_name": "fn"
+    },
+    {
+      "candidate_targets": [
+        "arg"
+      ],
+      "end_byte": 441,
+      "kind": "reference",
+      "start_byte": 438,
+      "written_name": "arg"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "end_byte": 444,
+      "kind": "reference",
+      "start_byte": 443,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "R"
+      ],
+      "end_byte": 450,
+      "kind": "reference",
+      "start_byte": 449,
+      "written_name": "R"
+    },
+    {
+      "candidate_targets": [
+        "R"
+      ],
+      "end_byte": 454,
+      "kind": "reference",
+      "start_byte": 453,
+      "written_name": "R"
+    },
+    {
+      "candidate_targets": [
+        "fn"
+      ],
+      "enclosing_scope": "mapItem",
+      "end_byte": 470,
+      "kind": "call",
+      "start_byte": 468,
+      "written_name": "fn"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "mapItem",
+      "end_byte": 475,
+      "kind": "reference",
+      "start_byte": 471,
+      "written_name": "item"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 28,
+      "end_column": 29,
+      "end_line": 1,
+      "kind": "interface",
+      "name": "IRepository",
+      "qualified_name": "IRepository",
+      "signature": "interface IRepository<T, K extends string | number> ",
+      "start_byte": 17,
+      "start_column": 18,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "IRepository",
+      "end_byte": 73,
+      "end_column": 13,
+      "end_line": 2,
+      "kind": "method",
+      "name": "findById",
+      "qualified_name": "IRepository.findById",
+      "signature": "findById(id: K): T | undefined",
+      "start_byte": 65,
+      "start_column": 5,
+      "start_line": 2
+    },
+    {
+      "enclosing_scope": "IRepository",
+      "end_byte": 105,
+      "end_column": 9,
+      "end_line": 3,
+      "kind": "method",
+      "name": "save",
+      "qualified_name": "IRepository.save",
+      "signature": "save(item: T): void",
+      "start_byte": 101,
+      "start_column": 5,
+      "start_line": 3
+    },
+    {
+      "end_byte": 154,
+      "end_column": 30,
+      "end_line": 6,
+      "kind": "class",
+      "name": "MemoryRepository",
+      "qualified_name": "MemoryRepository",
+      "signature": "class MemoryRepository<T, K extends string | number> implements IRepository<T, K> ",
+      "start_byte": 138,
+      "start_column": 14,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 233,
+      "end_column": 18,
+      "end_line": 7,
+      "kind": "variable",
+      "name": "items",
+      "qualified_name": "MemoryRepository.items",
+      "signature": "items",
+      "start_byte": 228,
+      "start_column": 13,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 271,
+      "end_column": 13,
+      "end_line": 9,
+      "kind": "method",
+      "name": "findById",
+      "qualified_name": "MemoryRepository.findById",
+      "signature": "findById(id: K): T | undefined ",
+      "start_byte": 263,
+      "start_column": 5,
+      "start_line": 9
+    },
+    {
+      "enclosing_scope": "MemoryRepository",
+      "end_byte": 346,
+      "end_column": 9,
+      "end_line": 13,
+      "kind": "method",
+      "name": "save",
+      "qualified_name": "MemoryRepository.save",
+      "signature": "save(item: T): void ",
+      "start_byte": 342,
+      "start_column": 5,
+      "start_line": 13
+    },
+    {
+      "end_byte": 417,
+      "end_column": 24,
+      "end_line": 18,
+      "kind": "function",
+      "name": "mapItem",
+      "qualified_name": "mapItem",
+      "signature": "function mapItem<T, R>(item: T, fn: (arg: T) => R): R ",
+      "start_byte": 410,
+      "start_column": 17,
+      "start_line": 18
+    }
+  ]
+}

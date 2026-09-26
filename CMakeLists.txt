@@ -63,6 +63,28 @@ codelenses_add_tree_sitter_grammar(
     GIT_TAG v0.23.6
 )
 
+# JavaScript grammar baseline
+codelenses_add_tree_sitter_grammar(
+    NAME javascript
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-javascript.git
+    GIT_TAG v0.23.1
+)
+
+# TypeScript grammar baseline
+codelenses_add_tree_sitter_grammar(
+    NAME typescript
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-typescript.git
+    GIT_TAG v0.23.2
+    SUBDIR typescript
+)
+
+# TSX grammar baseline (shares repository with typescript)
+codelenses_add_tree_sitter_grammar(
+    NAME tsx
+    SOURCE_DIR "${treesitter_grammar_typescript_SOURCE_DIR}"
+    SUBDIR tsx
+)
+
 # Core library
 set(CODELENSES_CORE_SOURCES
     src/app/config.cpp
@@ -126,6 +148,9 @@ target_link_libraries(codelenses_core PUBLIC
     codelenses_grammar_cpp
     codelenses_grammar_c_sharp
     codelenses_grammar_python
+    codelenses_grammar_javascript
+    codelenses_grammar_typescript
+    codelenses_grammar_tsx
 )
 
 codelenses_set_compiler_warnings(codelenses_core)

@@ -1,0 +1,351 @@
+{
+  "declarations": [
+    {
+      "end_byte": 12,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "React",
+      "start_byte": 7,
+      "symbol_name": "React"
+    },
+    {
+      "end_byte": 56,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "ButtonProps",
+      "start_byte": 45,
+      "symbol_name": "ButtonProps"
+    },
+    {
+      "enclosing_scope": "ButtonProps",
+      "end_byte": 68,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "ButtonProps.title",
+      "start_byte": 63,
+      "symbol_name": "title"
+    },
+    {
+      "enclosing_scope": "ButtonProps",
+      "end_byte": 89,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "ButtonProps.onClick",
+      "start_byte": 82,
+      "symbol_name": "onClick"
+    },
+    {
+      "end_byte": 134,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "CustomButton",
+      "start_byte": 122,
+      "symbol_name": "CustomButton"
+    },
+    {
+      "end_byte": 244,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "Feed",
+      "start_byte": 240,
+      "symbol_name": "Feed"
+    },
+    {
+      "end_byte": 276,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "label",
+      "start_byte": 271,
+      "symbol_name": "label"
+    },
+    {
+      "end_byte": 338,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "App",
+      "start_byte": 335,
+      "symbol_name": "App"
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 364,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "App.handleClick",
+      "start_byte": 353,
+      "symbol_name": "handleClick"
+    }
+  ],
+  "diagnostics": [],
+  "language": "TypeScript",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "react"
+      ],
+      "end_byte": 25,
+      "kind": "import",
+      "start_byte": 18,
+      "written_name": "react"
+    },
+    {
+      "candidate_targets": [
+        "props"
+      ],
+      "end_byte": 140,
+      "kind": "reference",
+      "start_byte": 135,
+      "written_name": "props"
+    },
+    {
+      "candidate_targets": [
+        "ButtonProps"
+      ],
+      "end_byte": 153,
+      "kind": "reference",
+      "start_byte": 142,
+      "written_name": "ButtonProps"
+    },
+    {
+      "candidate_targets": [
+        "props"
+      ],
+      "enclosing_scope": "CustomButton",
+      "end_byte": 190,
+      "kind": "reference",
+      "start_byte": 185,
+      "written_name": "props"
+    },
+    {
+      "candidate_targets": [
+        "onClick"
+      ],
+      "enclosing_scope": "CustomButton",
+      "end_byte": 198,
+      "kind": "reference",
+      "start_byte": 191,
+      "written_name": "onClick"
+    },
+    {
+      "candidate_targets": [
+        "props"
+      ],
+      "enclosing_scope": "CustomButton",
+      "end_byte": 206,
+      "kind": "reference",
+      "start_byte": 201,
+      "written_name": "props"
+    },
+    {
+      "candidate_targets": [
+        "title"
+      ],
+      "enclosing_scope": "CustomButton",
+      "end_byte": 212,
+      "kind": "reference",
+      "start_byte": 207,
+      "written_name": "title"
+    },
+    {
+      "candidate_targets": [
+        "Header"
+      ],
+      "end_byte": 259,
+      "kind": "reference",
+      "start_byte": 253,
+      "written_name": "Header"
+    },
+    {
+      "candidate_targets": [
+        "props"
+      ],
+      "end_byte": 267,
+      "kind": "reference",
+      "start_byte": 262,
+      "written_name": "props"
+    },
+    {
+      "candidate_targets": [
+        "props"
+      ],
+      "end_byte": 301,
+      "kind": "reference",
+      "start_byte": 296,
+      "written_name": "props"
+    },
+    {
+      "candidate_targets": [
+        "label"
+      ],
+      "end_byte": 307,
+      "kind": "reference",
+      "start_byte": 302,
+      "written_name": "label"
+    },
+    {
+      "candidate_targets": [
+        "log"
+      ],
+      "enclosing_scope": "App.handleClick",
+      "end_byte": 394,
+      "kind": "call",
+      "start_byte": 391,
+      "written_name": "log"
+    },
+    {
+      "candidate_targets": [
+        "console"
+      ],
+      "enclosing_scope": "App.handleClick",
+      "end_byte": 390,
+      "kind": "reference",
+      "start_byte": 383,
+      "written_name": "console"
+    },
+    {
+      "candidate_targets": [
+        "Feed.Header",
+        "Feed"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 488,
+      "kind": "call",
+      "start_byte": 477,
+      "written_name": "Feed.Header"
+    },
+    {
+      "candidate_targets": [
+        "CustomButton"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 533,
+      "kind": "call",
+      "start_byte": 521,
+      "written_name": "CustomButton"
+    },
+    {
+      "candidate_targets": [
+        "handleClick"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 571,
+      "kind": "reference",
+      "start_byte": 560,
+      "written_name": "handleClick"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 12,
+      "end_column": 13,
+      "end_line": 1,
+      "kind": "variable",
+      "name": "React",
+      "qualified_name": "React",
+      "signature": "import React",
+      "start_byte": 7,
+      "start_column": 8,
+      "start_line": 1
+    },
+    {
+      "end_byte": 56,
+      "end_column": 29,
+      "end_line": 3,
+      "kind": "interface",
+      "name": "ButtonProps",
+      "qualified_name": "ButtonProps",
+      "signature": "interface ButtonProps ",
+      "start_byte": 45,
+      "start_column": 18,
+      "start_line": 3
+    },
+    {
+      "enclosing_scope": "ButtonProps",
+      "end_byte": 68,
+      "end_column": 10,
+      "end_line": 4,
+      "kind": "field",
+      "name": "title",
+      "qualified_name": "ButtonProps.title",
+      "signature": "title",
+      "start_byte": 63,
+      "start_column": 5,
+      "start_line": 4
+    },
+    {
+      "enclosing_scope": "ButtonProps",
+      "end_byte": 89,
+      "end_column": 12,
+      "end_line": 5,
+      "kind": "field",
+      "name": "onClick",
+      "qualified_name": "ButtonProps.onClick",
+      "signature": "onClick",
+      "start_byte": 82,
+      "start_column": 5,
+      "start_line": 5
+    },
+    {
+      "end_byte": 134,
+      "end_column": 29,
+      "end_line": 8,
+      "kind": "function",
+      "name": "CustomButton",
+      "qualified_name": "CustomButton",
+      "signature": "function CustomButton(props: ButtonProps) ",
+      "start_byte": 122,
+      "start_column": 17,
+      "start_line": 8
+    },
+    {
+      "end_byte": 244,
+      "end_column": 18,
+      "end_line": 12,
+      "kind": "variable",
+      "name": "Feed",
+      "qualified_name": "Feed",
+      "signature": "Feed",
+      "start_byte": 240,
+      "start_column": 14,
+      "start_line": 12
+    },
+    {
+      "end_byte": 276,
+      "end_column": 28,
+      "end_line": 13,
+      "kind": "field",
+      "name": "label",
+      "qualified_name": "label",
+      "signature": "label",
+      "start_byte": 271,
+      "start_column": 23,
+      "start_line": 13
+    },
+    {
+      "end_byte": 338,
+      "end_column": 20,
+      "end_line": 16,
+      "kind": "function",
+      "name": "App",
+      "qualified_name": "App",
+      "signature": "function App() ",
+      "start_byte": 335,
+      "start_column": 17,
+      "start_line": 16
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 364,
+      "end_column": 22,
+      "end_line": 17,
+      "kind": "function",
+      "name": "handleClick",
+      "qualified_name": "App.handleClick",
+      "signature": "handleClick = () => ",
+      "start_byte": 353,
+      "start_column": 11,
+      "start_line": 17
+    }
+  ]
+}

@@ -76,7 +76,7 @@ Language language_from_extension(std::string_view extension) {
         return Language::csharp;
     if (normalized == ".py" || normalized == ".pyi")
         return Language::python;
-    if (normalized == ".ts" || normalized == ".tsx")
+    if (normalized == ".ts" || normalized == ".tsx" || normalized == ".mts" || normalized == ".cts")
         return Language::typescript;
     if (normalized == ".js" || normalized == ".jsx" || normalized == ".mjs" ||
         normalized == ".cjs") {
@@ -107,9 +107,11 @@ Result<Language> language_from_string(std::string_view name) {
         return Language::csharp;
     if (normalized == "python" || normalized == "py")
         return Language::python;
-    if (normalized == "typescript" || normalized == "ts" || normalized == "tsx")
+    if (normalized == "typescript" || normalized == "ts" || normalized == "tsx" ||
+        normalized == "mts" || normalized == "cts")
         return Language::typescript;
-    if (normalized == "javascript" || normalized == "js" || normalized == "jsx")
+    if (normalized == "javascript" || normalized == "js" || normalized == "jsx" ||
+        normalized == "mjs" || normalized == "cjs")
         return Language::javascript;
     if (normalized == "go")
         return Language::go;

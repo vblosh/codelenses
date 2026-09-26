@@ -5,6 +5,7 @@
 #include "codelenses/adapters/csharp_adapter.hpp"
 #include "codelenses/adapters/go_adapter.hpp"
 #include "codelenses/adapters/java_adapter.hpp"
+#include "codelenses/adapters/js_adapter.hpp"
 #include "codelenses/adapters/python_adapter.hpp"
 #include "codelenses/adapters/shell_adapter.hpp"
 #include "codelenses/adapters/ts_adapter.hpp"
@@ -47,7 +48,7 @@ AdapterRegistry& default_adapter_registry() {
         registry.register_adapter(std::make_unique<CSharpAdapter>());
         registry.register_adapter(std::make_unique<PythonAdapter>());
         registry.register_adapter(std::make_unique<TypeScriptAdapter>(Language::typescript));
-        registry.register_adapter(std::make_unique<TypeScriptAdapter>(Language::javascript));
+        registry.register_adapter(std::make_unique<JavaScriptAdapter>());
         registry.register_adapter(std::make_unique<GoAdapter>());
         registry.register_adapter(std::make_unique<JavaAdapter>());
         registry.register_adapter(std::make_unique<ShellAdapter>(Language::shell));

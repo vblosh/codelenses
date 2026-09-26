@@ -165,15 +165,15 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H5 TypeScript/TSX adapter
 
-- [ ] H5-01 Extract imports/exports, types, interfaces, classes, enums, functions, variables.
-- [ ] H5-02 Extract JSX components and references.
-- [ ] H5-03 Add fixtures for aliases, re-exports, generics, and TSX.
+- [x] H5-01 Extract imports/exports, types, interfaces, classes, enums, functions, variables.
+- [x] H5-02 Extract JSX components and references.
+- [x] H5-03 Add fixtures for aliases, re-exports, generics, and TSX.
 
 ### H6 JavaScript/JSX adapter
 
-- [ ] H6-01 Extract imports/exports, classes, functions, variables, methods.
-- [ ] H6-02 Extract JSX component references and calls.
-- [ ] H6-03 Add fixtures for CommonJS, ES modules, dynamic properties, and JSX.
+- [x] H6-01 Extract imports/exports, classes, functions, variables, methods.
+- [x] H6-02 Extract JSX component references and calls.
+- [x] H6-03 Add fixtures for CommonJS, ES modules, dynamic properties, and JSX.
 
 ### H7 Go adapter
 
