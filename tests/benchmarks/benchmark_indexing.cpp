@@ -67,7 +67,8 @@ struct IndexingBenchmarkFixture {
 
 } // namespace
 
-TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance (I-06)", "[benchmark][indexing]") {
+TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance (I-06)",
+          "[benchmark][indexing]") {
     IndexingBenchmarkFixture fixture;
 
     SECTION("1. Cold Indexing Performance and Throughput Thresholds") {
@@ -92,7 +93,8 @@ TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance
         double elapsed_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
         double files_per_sec = (fixture.num_synthetic_files / (elapsed_ms / 1000.0));
 
-        std::cout << "\n[BENCHMARK I-06] Cold Indexing (" << fixture.num_synthetic_files << " files):\n"
+        std::cout << "\n[BENCHMARK I-06] Cold Indexing (" << fixture.num_synthetic_files
+                  << " files):\n"
                   << "  - Duration: " << elapsed_ms << " ms\n"
                   << "  - Throughput: " << files_per_sec << " files/sec\n"
                   << "  - Total symbols: " << db->symbols().list_by_workspace(ws_id).size() << "\n";
@@ -136,9 +138,11 @@ TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance
                   << "  - Cold Duration: " << cold_ms << " ms\n"
                   << "  - Inc Duration: " << inc_ms << " ms\n"
                   << "  - Speedup Ratio: " << speedup << "x\n"
-                  << "  - Files Skipped: " << inc_res->files_skipped << " / " << fixture.num_synthetic_files << "\n";
+                  << "  - Files Skipped: " << inc_res->files_skipped << " / "
+                  << fixture.num_synthetic_files << "\n";
 
-        // Regression threshold: Incremental no-op should take < 300 ms and be substantially faster than cold
+        // Regression threshold: Incremental no-op should take < 300 ms and be substantially faster
+        // than cold
         CHECK(inc_ms < 300.0);
         CHECK(speedup >= 1.5);
     }
@@ -233,7 +237,8 @@ TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance
             REQUIRE(inc_res.has_value());
             double inc_ms = std::chrono::duration<double, std::milli>(inc_t1 - inc_t0).count();
 
-            std::cout << "[BENCHMARK I-06] Sample Workspace (" << cold_res->files_total << " polyglot files):\n"
+            std::cout << "[BENCHMARK I-06] Sample Workspace (" << cold_res->files_total
+                      << " polyglot files):\n"
                       << "  - Cold Duration: " << cold_ms << " ms\n"
                       << "  - Incremental Duration: " << inc_ms << " ms\n"
                       << "  - Speedup: " << (cold_ms / std::max(0.1, inc_ms)) << "x\n";

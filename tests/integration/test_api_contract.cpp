@@ -128,7 +128,8 @@ struct ApiContractFixture {
 
 } // namespace
 
-TEST_CASE("API Contract: Temporary SQLite database and persistence lifecycle (I-02)", "[contract][sqlite]") {
+TEST_CASE("API Contract: Temporary SQLite database and persistence lifecycle (I-02)",
+          "[contract][sqlite]") {
     ApiContractFixture fixture;
 
     SECTION("Temporary SQLite database file is created on disk with WAL mode enabled") {
@@ -148,22 +149,24 @@ TEST_CASE("API Contract: Temporary SQLite database and persistence lifecycle (I-
             {"rootPath", fixture.workspace_root.string()},
             {"name", "Persisted Workspace"},
         };
-        auto post_res = fixture.client->Post("/api/v1/workspaces", create_body.dump(), "application/json");
+        auto post_res =
+            fixture.client->Post("/api/v1/workspaces", create_body.dump(), "application/json");
         REQUIRE(post_res != nullptr);
         REQUIRE(post_res->status == 201);
         auto post_json = nlohmann::json::parse(post_res->body);
         int64_t ws_id = post_json["id"].get<int64_t>();
 
         // Index the workspace
-        auto idx_res = fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index",
-                                            "{}", "application/json");
+        auto idx_res = fixture.client->Post(
+            "/api/v1/workspaces/" + std::to_string(ws_id) + "/index", "{}", "application/json");
         REQUIRE(idx_res != nullptr);
         REQUIRE(idx_res->status == 202);
         int64_t job_id = nlohmann::json::parse(idx_res->body)["id"].get<int64_t>();
         fixture.wait_for_job(job_id);
 
         // Verify status before restart
-        auto status_before = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+        auto status_before =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
         REQUIRE(status_before != nullptr);
         auto sb_json = nlohmann::json::parse(status_before->body);
         int64_t file_count_before = sb_json["fileCount"].get<int64_t>();
@@ -187,7 +190,8 @@ TEST_CASE("API Contract: Temporary SQLite database and persistence lifecycle (I-
         auto ws_json = nlohmann::json::parse(ws_res->body);
         CHECK(ws_json["name"] == "Persisted Workspace");
 
-        auto status_after = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+        auto status_after =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
         REQUIRE(status_after != nullptr);
         REQUIRE(status_after->status == 200);
         auto sa_json = nlohmann::json::parse(status_after->body);
@@ -196,7 +200,8 @@ TEST_CASE("API Contract: Temporary SQLite database and persistence lifecycle (I-
     }
 }
 
-TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts (I-02)", "[contract][api]") {
+TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts (I-02)",
+          "[contract][api]") {
     ApiContractFixture fixture;
 
     SECTION("1. Health and Version contract") {
@@ -238,7 +243,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(err["requestId"] == "req-contract-test-42");
 
         // Malformed JSON body returns 400 with invalid_json code
-        auto bad_json_res = fixture.client->Post("/api/v1/workspaces", "{invalid json syntax", "application/json");
+        auto bad_json_res =
+            fixture.client->Post("/api/v1/workspaces", "{invalid json syntax", "application/json");
         REQUIRE(bad_json_res != nullptr);
         CHECK(bad_json_res->status == 400);
         auto bad_json_obj = nlohmann::json::parse(bad_json_res->body);
@@ -283,7 +289,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
             {"include", {"src/**", "include/**", "*.md"}},
             {"exclude", {".git/**"}},
         };
-        auto ws_res = fixture.client->Post("/api/v1/workspaces", create_body.dump(), "application/json");
+        auto ws_res =
+            fixture.client->Post("/api/v1/workspaces", create_body.dump(), "application/json");
         REQUIRE(ws_res != nullptr);
         REQUIRE(ws_res->status == 201);
         auto ws_json = nlohmann::json::parse(ws_res->body);
@@ -313,10 +320,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(get_json["id"] == ws_id);
 
         // PATCH /workspaces/{id}
-        nlohmann::json patch_body = {
-            {"name", "Updated Contract Workspace"},
-            {"compileCommandsPath", "compile_commands.json"}
-        };
+        nlohmann::json patch_body = {{"name", "Updated Contract Workspace"},
+                                     {"compileCommandsPath", "compile_commands.json"}};
         auto patch_res = fixture.client->Patch("/api/v1/workspaces/" + std::to_string(ws_id),
                                                patch_body.dump(), "application/json");
         REQUIRE(patch_res != nullptr);
@@ -326,7 +331,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(patch_json["compileCommandsPath"] == "compile_commands.json");
 
         // GET /workspaces/{id}/compile-commands
-        auto cdb_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/compile-commands");
+        auto cdb_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                           "/compile-commands");
         REQUIRE(cdb_res != nullptr);
         CHECK(cdb_res->status == 200);
         auto cdb_json = nlohmann::json::parse(cdb_res->body);
@@ -335,8 +341,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
 
         // POST /workspaces/{id}/index
         nlohmann::json index_req = {{"jobType", "full"}};
-        auto index_res = fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index",
-                                              index_req.dump(), "application/json");
+        auto index_res =
+            fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index",
+                                 index_req.dump(), "application/json");
         REQUIRE(index_res != nullptr);
         CHECK(index_res->status == 202);
         auto job_json = nlohmann::json::parse(index_res->body);
@@ -358,7 +365,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(cancel_res->status == 200);
 
         // GET /workspaces/{id}/status
-        auto status_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+        auto status_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
         REQUIRE(status_res != nullptr);
         CHECK(status_res->status == 200);
         auto status_json = nlohmann::json::parse(status_res->body);
@@ -367,7 +375,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(status_json["symbolCount"].get<int64_t>() >= 2);
 
         // GET /workspaces/{id}/tree
-        auto tree_root_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree");
+        auto tree_root_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree");
         REQUIRE(tree_root_res != nullptr);
         CHECK(tree_root_res->status == 200);
         auto tree_root_json = nlohmann::json::parse(tree_root_res->body);
@@ -376,7 +385,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(tree_root_json["entries"].size() >= 2);
 
         // GET /workspaces/{id}/tree?path=src
-        auto tree_src_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
+        auto tree_src_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
         REQUIRE(tree_src_res != nullptr);
         CHECK(tree_src_res->status == 200);
         auto tree_src_json = nlohmann::json::parse(tree_src_res->body);
@@ -398,8 +408,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(file_json["sizeBytes"].get<int64_t>() > 0);
 
         // GET /workspaces/{id}/files/{fileId}/content
-        auto content_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                               "/files/" + std::to_string(calc_file_id) + "/content");
+        auto content_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/content");
         REQUIRE(content_res != nullptr);
         CHECK(content_res->status == 200);
         auto content_json = nlohmann::json::parse(content_res->body);
@@ -408,9 +419,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(content_json["content"].get<std::string>().find("int compute") != std::string::npos);
 
         // Line-bounded content query
-        auto slice_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                             "/files/" + std::to_string(calc_file_id) +
-                                             "/content?startLine=1&endLine=3");
+        auto slice_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/content?startLine=1&endLine=3");
         REQUIRE(slice_res != nullptr);
         CHECK(slice_res->status == 200);
         auto slice_json = nlohmann::json::parse(slice_res->body);
@@ -418,8 +429,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(slice_json["endLine"] == 3);
 
         // GET /workspaces/{id}/files/{fileId}/compile-command
-        auto file_cmd_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                                "/files/" + std::to_string(calc_file_id) + "/compile-command");
+        auto file_cmd_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/compile-command");
         REQUIRE(file_cmd_res != nullptr);
         CHECK(file_cmd_res->status == 200);
         auto file_cmd_json = nlohmann::json::parse(file_cmd_res->body);
@@ -437,8 +449,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(hl_json["tokens"].is_array());
 
         // GET /workspaces/{id}/files/{fileId}/symbols
-        auto file_syms_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                                 "/files/" + std::to_string(calc_file_id) + "/symbols");
+        auto file_syms_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/symbols");
         REQUIRE(file_syms_res != nullptr);
         CHECK(file_syms_res->status == 200);
         auto file_syms_json = nlohmann::json::parse(file_syms_res->body);
@@ -446,8 +459,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(file_syms_json["total"].get<int64_t>() >= 2);
 
         // GET /workspaces/{id}/files/{fileId}/outline
-        auto outline_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                               "/files/" + std::to_string(calc_file_id) + "/outline");
+        auto outline_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/outline");
         REQUIRE(outline_res != nullptr);
         CHECK(outline_res->status == 200);
         auto outline_json = nlohmann::json::parse(outline_res->body);
@@ -455,8 +469,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(outline_json["outline"].is_array());
 
         // GET /workspaces/{id}/files/{fileId}/occurrences
-        auto occ_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                           "/files/" + std::to_string(calc_file_id) + "/occurrences");
+        auto occ_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/occurrences");
         REQUIRE(occ_res != nullptr);
         CHECK(occ_res->status == 200);
         auto occ_json = nlohmann::json::parse(occ_res->body);
@@ -464,7 +479,8 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(occ_json["occurrences"].is_array());
 
         // GET /workspaces/{id}/diagnostics
-        auto ws_diags_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/diagnostics");
+        auto ws_diags_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/diagnostics");
         REQUIRE(ws_diags_res != nullptr);
         CHECK(ws_diags_res->status == 200);
         auto ws_diags_json = nlohmann::json::parse(ws_diags_res->body);
@@ -472,8 +488,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(ws_diags_json["diagnostics"].is_array());
 
         // GET /workspaces/{id}/files/{fileId}/diagnostics
-        auto file_diags_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                                  "/files/" + std::to_string(calc_file_id) + "/diagnostics");
+        auto file_diags_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(calc_file_id) + "/diagnostics");
         REQUIRE(file_diags_res != nullptr);
         CHECK(file_diags_res->status == 200);
         auto file_diags_json = nlohmann::json::parse(file_diags_res->body);
@@ -511,8 +528,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(sym_det_json["symbol"]["name"] == "compute");
 
         // GET /workspaces/{id}/symbols/{symbolId}/definitions
-        auto defs_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                            "/symbols/" + std::to_string(compute_sym_id) + "/definitions");
+        auto defs_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                                std::to_string(compute_sym_id) + "/definitions");
         REQUIRE(defs_res != nullptr);
         CHECK(defs_res->status == 200);
         auto defs_json = nlohmann::json::parse(defs_res->body);
@@ -521,8 +539,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(defs_json["total"].get<int64_t>() >= 1);
 
         // GET /workspaces/{id}/symbols/{symbolId}/references
-        auto refs_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                            "/symbols/" + std::to_string(compute_sym_id) + "/references");
+        auto refs_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                                std::to_string(compute_sym_id) + "/references");
         REQUIRE(refs_res != nullptr);
         CHECK(refs_res->status == 200);
         auto refs_json = nlohmann::json::parse(refs_res->body);
@@ -530,8 +549,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(refs_json.contains("total"));
 
         // GET /workspaces/{id}/symbols/{symbolId}/callers
-        auto callers_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                               "/symbols/" + std::to_string(compute_sym_id) + "/callers");
+        auto callers_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                                std::to_string(compute_sym_id) + "/callers");
         REQUIRE(callers_res != nullptr);
         CHECK(callers_res->status == 200);
         auto callers_json = nlohmann::json::parse(callers_res->body);
@@ -539,8 +559,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(callers_json["callers"].is_array());
 
         // GET /workspaces/{id}/symbols/{symbolId}/callees
-        auto callees_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                               "/symbols/" + std::to_string(compute_sym_id) + "/callees");
+        auto callees_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                                std::to_string(compute_sym_id) + "/callees");
         REQUIRE(callees_res != nullptr);
         CHECK(callees_res->status == 200);
         auto callees_json = nlohmann::json::parse(callees_res->body);
@@ -548,8 +569,9 @@ TEST_CASE("API Contract: Complete Section 6 Endpoint Schemas and Error Contracts
         CHECK(callees_json["callees"].is_array());
 
         // GET /workspaces/{id}/symbols/{symbolId}/graph
-        auto graph_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                             "/symbols/" + std::to_string(compute_sym_id) + "/graph?depth=2");
+        auto graph_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols/" +
+                                std::to_string(compute_sym_id) + "/graph?depth=2");
         REQUIRE(graph_res != nullptr);
         CHECK(graph_res->status == 200);
         auto graph_json = nlohmann::json::parse(graph_res->body);

@@ -83,7 +83,8 @@ struct SecurityTestFixture {
 
         // 4. Binary file disguised as source (.c extension with null bytes and invalid UTF-8)
         std::ofstream bin_c(workspace_root / "src" / "fake_binary.c", std::ios::binary);
-        const char bin_bytes[] = {'\x00', '\x01', '\x02', '\xFF', '\xFE', '\x00', '\x00', '\x7F', 'E', 'L', 'F'};
+        const char bin_bytes[] = {'\x00', '\x01', '\x02', '\xFF', '\xFE', '\x00',
+                                  '\x00', '\x7F', 'E',    'L',    'F'};
         bin_c.write(bin_bytes, sizeof(bin_bytes));
         bin_c.close();
 
@@ -252,19 +253,22 @@ TEST_CASE("Hostile-path and security containment validation (I-04)", "[security]
         REQUIRE(canonical_root.has_value());
 
         // Check relative traversal
-        auto outside_res = filesystem::resolve_workspace_path(*canonical_root, "../outside/secret.txt");
+        auto outside_res =
+            filesystem::resolve_workspace_path(*canonical_root, "../outside/secret.txt");
         CHECK(!outside_res.has_value());
 
         // Check symlink escape resolution
         if (fs::exists(fixture.workspace_root / "symlink_escape")) {
-            auto symlink_res = filesystem::resolve_workspace_path(*canonical_root, "symlink_escape/secret.txt");
+            auto symlink_res =
+                filesystem::resolve_workspace_path(*canonical_root, "symlink_escape/secret.txt");
             CHECK(!symlink_res.has_value());
         }
 
         // Direct containment check
         CHECK(!filesystem::is_contained_in(*canonical_root, fixture.outside_dir));
         CHECK(!filesystem::is_contained_in(*canonical_root, fixture.outside_dir / "secret.txt"));
-        CHECK(filesystem::is_contained_in(*canonical_root, fixture.workspace_root / "src" / "valid.c"));
+        CHECK(filesystem::is_contained_in(*canonical_root,
+                                          fixture.workspace_root / "src" / "valid.c"));
     }
 
     SECTION("Cross-workspace file isolation prevents accessing foreign workspace resources") {
@@ -295,15 +299,18 @@ TEST_CASE("Hostile-path and security containment validation (I-04)", "[security]
         int64_t ws_b_id = nlohmann::json::parse(res_b->body)["id"].get<int64_t>();
 
         // Index both
-        auto idx_a = fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_a_id) + "/index", "{}", "application/json");
-        auto idx_b = fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_b_id) + "/index", "{}", "application/json");
+        auto idx_a = fixture.client->Post(
+            "/api/v1/workspaces/" + std::to_string(ws_a_id) + "/index", "{}", "application/json");
+        auto idx_b = fixture.client->Post(
+            "/api/v1/workspaces/" + std::to_string(ws_b_id) + "/index", "{}", "application/json");
         REQUIRE(idx_a != nullptr);
         REQUIRE(idx_b != nullptr);
         fixture.wait_for_job(nlohmann::json::parse(idx_a->body)["id"].get<int64_t>());
         fixture.wait_for_job(nlohmann::json::parse(idx_b->body)["id"].get<int64_t>());
 
         // Find file ID in Workspace B
-        auto tree_b = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_b_id) + "/tree");
+        auto tree_b =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_b_id) + "/tree");
         REQUIRE(tree_b != nullptr);
         auto tb_json = nlohmann::json::parse(tree_b->body);
         REQUIRE(!tb_json["entries"].empty());
@@ -315,19 +322,21 @@ TEST_CASE("Hostile-path and security containment validation (I-04)", "[security]
         REQUIRE(cross_file != nullptr);
         CHECK(cross_file->status == 404);
 
-        auto cross_content = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_a_id) +
-                                                "/files/" + std::to_string(file_b_id) + "/content");
+        auto cross_content =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_a_id) + "/files/" +
+                                std::to_string(file_b_id) + "/content");
         REQUIRE(cross_content != nullptr);
         CHECK(cross_content->status == 404);
 
         auto cross_syms = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_a_id) +
-                                             "/symbols?fileId=" + std::to_string(file_b_id));
+                                              "/symbols?fileId=" + std::to_string(file_b_id));
         REQUIRE(cross_syms != nullptr);
         CHECK(cross_syms->status == 404);
     }
 }
 
-TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[security][malformed]") {
+TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)",
+          "[security][malformed]") {
     SecurityTestFixture fixture;
 
     // Create workspace with malformed files
@@ -362,7 +371,7 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
     SECTION("Valid files in the same workspace are properly parsed and indexed") {
         // Query symbols for valid_func in valid.c
         auto sym_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                          "/symbols?query=valid_func");
+                                           "/symbols?query=valid_func");
         REQUIRE(sym_res != nullptr);
         CHECK(sym_res->status == 200);
         auto sym_json = nlohmann::json::parse(sym_res->body);
@@ -371,7 +380,7 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
 
         // Query symbols for valid_python in valid.py
         auto py_sym_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                             "/symbols?query=valid_python");
+                                              "/symbols?query=valid_python");
         REQUIRE(py_sym_res != nullptr);
         CHECK(py_sym_res->status == 200);
         auto py_sym_json = nlohmann::json::parse(py_sym_res->body);
@@ -380,7 +389,8 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
     }
 
     SECTION("Binary file disguised with .c extension is detected and safely handled") {
-        auto tree_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
+        auto tree_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
         REQUIRE(tree_res != nullptr);
         auto tree_json = nlohmann::json::parse(tree_res->body);
 
@@ -402,8 +412,9 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
         CHECK(file_json["isBinary"] == true);
 
         // Content request returns is_binary = true
-        auto content_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                               "/files/" + std::to_string(bin_file_id) + "/content");
+        auto content_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(bin_file_id) + "/content");
         REQUIRE(content_res != nullptr);
         CHECK(content_res->status == 200);
         auto content_json = nlohmann::json::parse(content_res->body);
@@ -411,7 +422,8 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
     }
 
     SECTION("Empty and whitespace-only files are indexed cleanly with 0 symbols") {
-        auto tree_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
+        auto tree_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
         REQUIRE(tree_res != nullptr);
         auto tree_json = nlohmann::json::parse(tree_res->body);
 
@@ -428,8 +440,9 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
         REQUIRE(ws_file_id > 0);
 
         // Symbols in empty file
-        auto empty_syms = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                              "/files/" + std::to_string(empty_file_id) + "/symbols");
+        auto empty_syms =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(empty_file_id) + "/symbols");
         REQUIRE(empty_syms != nullptr);
         CHECK(empty_syms->status == 200);
         CHECK(nlohmann::json::parse(empty_syms->body)["total"] == 0);
@@ -443,7 +456,8 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
     }
 
     SECTION("Minified single-line and deeply nested files do not crash the server") {
-        auto tree_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
+        auto tree_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
         REQUIRE(tree_res != nullptr);
         auto tree_json = nlohmann::json::parse(tree_res->body);
 
@@ -460,8 +474,9 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
         REQUIRE(deep_file_id > 0);
 
         // Minified file content can be retrieved without buffer overflow
-        auto mini_content = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                                "/files/" + std::to_string(mini_file_id) + "/content");
+        auto mini_content =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                std::to_string(mini_file_id) + "/content");
         REQUIRE(mini_content != nullptr);
         CHECK(mini_content->status == 200);
         auto mini_json = nlohmann::json::parse(mini_content->body);
@@ -477,7 +492,8 @@ TEST_CASE("Malformed-source resilience and parser error diagnostics (I-04)", "[s
     }
 
     SECTION("Parser diagnostics are stored for broken files") {
-        auto diags_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/diagnostics");
+        auto diags_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/diagnostics");
         REQUIRE(diags_res != nullptr);
         CHECK(diags_res->status == 200);
         auto diags_json = nlohmann::json::parse(diags_res->body);

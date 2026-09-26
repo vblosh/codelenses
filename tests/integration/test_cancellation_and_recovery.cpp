@@ -137,8 +137,9 @@ TEST_CASE("Pipeline cancellation and database integrity (I-05)", "[pipeline][can
     SECTION("Cancelling an active indexing job leaves workspace in idle status and DB consistent") {
         // Trigger full indexing
         nlohmann::json idx_req = {{"jobType", "full"}};
-        auto post_idx = fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index",
-                                             idx_req.dump(), "application/json");
+        auto post_idx =
+            fixture.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index",
+                                 idx_req.dump(), "application/json");
         REQUIRE(post_idx != nullptr);
         REQUIRE(post_idx->status == 202);
         int64_t job_id = nlohmann::json::parse(post_idx->body)["id"].get<int64_t>();
@@ -159,7 +160,8 @@ TEST_CASE("Pipeline cancellation and database integrity (I-05)", "[pipeline][can
         CHECK((job_st == "cancelled" || job_st == "completed"));
 
         // Workspace status must be idle
-        auto ws_status_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+        auto ws_status_res =
+            fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
         REQUIRE(ws_status_res != nullptr);
         auto status_json = nlohmann::json::parse(ws_status_res->body);
         CHECK(status_json["status"] == "idle");
@@ -175,7 +177,8 @@ TEST_CASE("Pipeline cancellation and database integrity (I-05)", "[pipeline][can
     }
 }
 
-TEST_CASE("Restart recovery and incremental catch-up after cancellation (I-05)", "[pipeline][recovery]") {
+TEST_CASE("Restart recovery and incremental catch-up after cancellation (I-05)",
+          "[pipeline][recovery]") {
     RecoveryFixture fixture;
 
     // 1. Create workspace
@@ -194,11 +197,13 @@ TEST_CASE("Restart recovery and incremental catch-up after cancellation (I-05)",
     int64_t first_job_id = nlohmann::json::parse(idx_res->body)["id"].get<int64_t>();
 
     // Cancel job
-    fixture.client->Post("/api/v1/jobs/" + std::to_string(first_job_id) + "/cancel", "", "application/json");
+    fixture.client->Post("/api/v1/jobs/" + std::to_string(first_job_id) + "/cancel", "",
+                         "application/json");
     fixture.wait_for_job(first_job_id);
 
     // Record partially indexed file count
-    auto status_mid = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+    auto status_mid =
+        fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
     REQUIRE(status_mid != nullptr);
     int64_t files_mid = nlohmann::json::parse(status_mid->body)["fileCount"].get<int64_t>();
 
@@ -237,18 +242,21 @@ TEST_CASE("Restart recovery and incremental catch-up after cancellation (I-05)",
     CHECK(files_skipped + files_processed >= 40);
 
     // 5. Final workspace status verifies all 40 files and symbols are present
-    auto final_status = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+    auto final_status =
+        fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
     REQUIRE(final_status != nullptr);
     auto fs_json = nlohmann::json::parse(final_status->body);
     CHECK(fs_json["fileCount"].get<int64_t>() >= 40);
     CHECK(fs_json["symbolCount"].get<int64_t>() >= 80); // 2 functions per file * 40 files
 
     // Verify symbol from file 0 and file 39 are both searchable
-    auto sym0_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols?query=worker_0");
+    auto sym0_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                        "/symbols?query=worker_0");
     REQUIRE(sym0_res != nullptr);
     CHECK(nlohmann::json::parse(sym0_res->body)["total"].get<int64_t>() >= 1);
 
-    auto sym39_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols?query=worker_39");
+    auto sym39_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                         "/symbols?query=worker_39");
     REQUIRE(sym39_res != nullptr);
     CHECK(nlohmann::json::parse(sym39_res->body)["total"].get<int64_t>() >= 1);
 }
@@ -271,7 +279,8 @@ TEST_CASE("Transaction rollback prevents partial state corruption (I-05)", "[pip
     int64_t job_id = nlohmann::json::parse(idx_res->body)["id"].get<int64_t>();
     fixture.wait_for_job(job_id);
 
-    auto before_status = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+    auto before_status =
+        fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
     REQUIRE(before_status != nullptr);
     int64_t before_syms = nlohmann::json::parse(before_status->body)["symbolCount"].get<int64_t>();
 
@@ -279,9 +288,12 @@ TEST_CASE("Transaction rollback prevents partial state corruption (I-05)", "[pip
     {
         Transaction tx(fixture.db->connection(), TransactionType::immediate);
         fixture.db->connection().execute(
-            "INSERT INTO symbol (workspace_id, file_id, symbol_key, name, kind, language, is_definition, "
+            "INSERT INTO symbol (workspace_id, file_id, symbol_key, name, kind, language, "
+            "is_definition, "
             "start_byte, end_byte, start_line, start_column, end_line, end_column) "
-            "VALUES (" + std::to_string(ws_id) + ", 1, 'orphan_key', 'orphan_sym', 'function', 'c', 1, 0, 10, 0, 0, 1, 0);");
+            "VALUES (" +
+            std::to_string(ws_id) +
+            ", 1, 'orphan_key', 'orphan_sym', 'function', 'c', 1, 0, 10, 0, 0, 1, 0);");
         // Intentionally NOT calling tx.commit() -> destructor will roll back!
     }
 
@@ -289,13 +301,15 @@ TEST_CASE("Transaction rollback prevents partial state corruption (I-05)", "[pip
     fixture.restart_server();
 
     // Verify symbol count was NOT corrupted by the aborted transaction
-    auto after_status = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+    auto after_status =
+        fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
     REQUIRE(after_status != nullptr);
     int64_t after_syms = nlohmann::json::parse(after_status->body)["symbolCount"].get<int64_t>();
     CHECK(after_syms == before_syms);
 
     // Orphan symbol must not exist
-    auto orphan_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/symbols?query=orphan_sym");
+    auto orphan_res = fixture.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                          "/symbols?query=orphan_sym");
     REQUIRE(orphan_res != nullptr);
     CHECK(nlohmann::json::parse(orphan_res->body)["total"].get<int64_t>() == 0);
 }

@@ -292,4 +292,3 @@ TEST_CASE("Sample configuration file is valid and parses successfully (I-09)", "
     CHECK_FALSE(config.server.workspace_policy.default_ignores.empty());
     CHECK_FALSE(config.server.workspace_policy.forbidden_roots.empty());
 }
-

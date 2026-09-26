@@ -209,7 +209,7 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 - [x] I-08 Add memory and database-size measurements for representative repositories.
 - [x] I-09 Add release packaging and sample configuration.
 - [x] I-10 Document limitations and language-specific resolution behavior.
-- [ ] I-11 Define regression suite required before each release.
+- [x] I-11 Define regression suite required before each release.
 
 **Done when:** the acceptance criteria in `requirements.md` pass on a repeatable sample and performance regressions have thresholds.
 

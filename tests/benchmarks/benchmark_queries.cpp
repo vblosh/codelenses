@@ -72,7 +72,8 @@ struct QueryBenchmarkFixture {
         std::ofstream caller_f(workspace_root / "src" / "caller_service.c");
         caller_f << "int target_base_function(int a) { return a * 10; }\n";
         for (int i = 0; i < 20; ++i) {
-            caller_f << "int caller_hub_" << i << "() { return target_base_function(" << i << "); }\n";
+            caller_f << "int caller_hub_" << i << "() { return target_base_function(" << i
+                     << "); }\n";
         }
         caller_f.close();
 
@@ -82,20 +83,23 @@ struct QueryBenchmarkFixture {
         pipeline = std::make_unique<index::IndexingPipeline>(*db);
         service = std::make_unique<ApiService>(*db, *pipeline);
 
-        workspace_id = service->create_workspace(CreateWorkspaceRequest{
-            .root_path = workspace_root.string(),
-            .name = "Query Benchmark Workspace",
-            .include_patterns = {},
-            .exclude_patterns = {},
-            .default_ignores = {},
-        }).id;
+        workspace_id = service
+                           ->create_workspace(CreateWorkspaceRequest{
+                               .root_path = workspace_root.string(),
+                               .name = "Query Benchmark Workspace",
+                               .include_patterns = {},
+                               .exclude_patterns = {},
+                               .default_ignores = {},
+                           })
+                           .id;
 
         // Perform cold indexing to populate database
         auto index_res = pipeline->run_indexing(workspace_id, "full", true);
         REQUIRE(index_res.has_value());
 
         // Gather indexed file IDs and symbol IDs
-        auto syms = service->list_symbols(workspace_id, std::nullopt, std::nullopt, std::nullopt, std::nullopt, 200, 0);
+        auto syms = service->list_symbols(workspace_id, std::nullopt, std::nullopt, std::nullopt,
+                                          std::nullopt, 200, 0);
         for (const auto& s : syms.items) {
             symbol_ids.push_back(s.id);
         }
@@ -134,7 +138,8 @@ double measure_avg_time_ms(int iterations, Fn&& fn) {
 
 } // namespace
 
-TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and References (I-07)", "[benchmark][queries]") {
+TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and References (I-07)",
+          "[benchmark][queries]") {
     QueryBenchmarkFixture fixture;
     REQUIRE(fixture.workspace_id > 0);
     REQUIRE(!fixture.symbol_ids.empty());
@@ -158,8 +163,10 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
         double nested_ops_sec = 1000.0 / std::max(0.001, nested_avg_ms);
 
         std::cout << "\n[BENCHMARK I-07] Tree Expansion Performance:\n"
-                  << "  - Root expansion latency: " << root_avg_ms << " ms (" << root_ops_sec << " ops/sec)\n"
-                  << "  - Nested expansion latency: " << nested_avg_ms << " ms (" << nested_ops_sec << " ops/sec)\n";
+                  << "  - Root expansion latency: " << root_avg_ms << " ms (" << root_ops_sec
+                  << " ops/sec)\n"
+                  << "  - Nested expansion latency: " << nested_avg_ms << " ms (" << nested_ops_sec
+                  << " ops/sec)\n";
 
         // Regression threshold: tree query must execute in under 10ms
         CHECK(root_avg_ms < 10.0);
@@ -171,8 +178,9 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Line-range retrieval: 50 lines from middle of 5,000 line file
         double range_50_ms = measure_avg_time_ms(iters, [&] {
-            auto content = fixture.service->get_file_content(fixture.workspace_id, fixture.large_file_id,
-                                                             2500, 2550, std::nullopt, std::nullopt);
+            auto content =
+                fixture.service->get_file_content(fixture.workspace_id, fixture.large_file_id, 2500,
+                                                  2550, std::nullopt, std::nullopt);
             CHECK(content.total_lines >= 50);
             CHECK(content.start_line == 2500);
             CHECK(content.end_line == 2550);
@@ -180,15 +188,17 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Line-range retrieval: 500 lines
         double range_500_ms = measure_avg_time_ms(iters, [&] {
-            auto content = fixture.service->get_file_content(fixture.workspace_id, fixture.large_file_id,
-                                                             1000, 1500, std::nullopt, std::nullopt);
+            auto content =
+                fixture.service->get_file_content(fixture.workspace_id, fixture.large_file_id, 1000,
+                                                  1500, std::nullopt, std::nullopt);
             CHECK(content.total_lines >= 500);
         });
 
         // Full 5,000 lines retrieval
         double full_ms = measure_avg_time_ms(iters, [&] {
-            auto content = fixture.service->get_file_content(fixture.workspace_id, fixture.large_file_id,
-                                                             std::nullopt, std::nullopt, std::nullopt, std::nullopt);
+            auto content = fixture.service->get_file_content(
+                fixture.workspace_id, fixture.large_file_id, std::nullopt, std::nullopt,
+                std::nullopt, std::nullopt);
             CHECK(content.total_lines >= 5000);
         });
 
@@ -197,7 +207,8 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
                   << "  - 500-line range latency: " << range_500_ms << " ms\n"
                   << "  - Full file (5,000 lines) latency: " << full_ms << " ms\n";
 
-        // Regression threshold: range retrieval on 5,000 lines must execute under 50ms in debug build
+        // Regression threshold: range retrieval on 5,000 lines must execute under 50ms in debug
+        // build
         CHECK(range_50_ms < 50.0);
         CHECK(range_500_ms < 50.0);
         CHECK(full_ms < 50.0);
@@ -208,8 +219,9 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Prefix / Substring list_symbols search
         double sym_search_ms = measure_avg_time_ms(iters, [&] {
-            auto res = fixture.service->list_symbols(fixture.workspace_id, "compute_step_1",
-                                                     std::nullopt, std::nullopt, std::nullopt, 20, 0);
+            auto res =
+                fixture.service->list_symbols(fixture.workspace_id, "compute_step_1", std::nullopt,
+                                              std::nullopt, std::nullopt, 20, 0);
             CHECK(res.total >= 1);
         });
 
@@ -221,8 +233,9 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Paginated symbol search (page 1 vs page 5)
         double paged_sym_ms = measure_avg_time_ms(iters, [&] {
-            auto res = fixture.service->list_symbols(fixture.workspace_id, std::nullopt,
-                                                     std::nullopt, std::nullopt, std::nullopt, 50, 100);
+            auto res =
+                fixture.service->list_symbols(fixture.workspace_id, std::nullopt, std::nullopt,
+                                              std::nullopt, std::nullopt, 50, 100);
             CHECK(res.items.size() <= 50);
         });
 
@@ -230,8 +243,10 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
         double fts_ops_sec = 1000.0 / std::max(0.001, fts_sym_ms);
 
         std::cout << "[BENCHMARK I-07] Symbol Search Performance:\n"
-                  << "  - Name search latency: " << sym_search_ms << " ms (" << search_ops_sec << " ops/sec)\n"
-                  << "  - FTS symbol search latency: " << fts_sym_ms << " ms (" << fts_ops_sec << " ops/sec)\n"
+                  << "  - Name search latency: " << sym_search_ms << " ms (" << search_ops_sec
+                  << " ops/sec)\n"
+                  << "  - FTS symbol search latency: " << fts_sym_ms << " ms (" << fts_ops_sec
+                  << " ops/sec)\n"
                   << "  - Paginated list latency: " << paged_sym_ms << " ms\n";
 
         // Regression threshold: symbol lookups must execute under 60-100ms in debug build
@@ -261,7 +276,8 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // References query
         double refs_ms = measure_avg_time_ms(iters, [&] {
-            auto refs = fixture.service->get_symbol_references(fixture.workspace_id, target_sym_id, 50, 0);
+            auto refs =
+                fixture.service->get_symbol_references(fixture.workspace_id, target_sym_id, 50, 0);
             CHECK(refs.limit == 50);
         });
 
@@ -279,7 +295,8 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Relationship Graph expansion (depth=2)
         double graph_ms = measure_avg_time_ms(iters, [&] {
-            auto graph = fixture.service->get_symbol_graph(fixture.workspace_id, target_sym_id, 2, 50, 100, {});
+            auto graph = fixture.service->get_symbol_graph(fixture.workspace_id, target_sym_id, 2,
+                                                           50, 100, {});
             CHECK(graph.root_symbol_id == target_sym_id);
         });
 
@@ -290,7 +307,8 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
                   << "  - Callees query latency: " << callees_ms << " ms\n"
                   << "  - Graph traversal (depth 2) latency: " << graph_ms << " ms\n";
 
-        // Regression thresholds: All navigation queries must execute in under 20-30ms in debug build
+        // Regression thresholds: All navigation queries must execute in under 20-30ms in debug
+        // build
         CHECK(detail_ms < 20.0);
         CHECK(refs_ms < 20.0);
         CHECK(callers_ms < 20.0);

@@ -6,14 +6,13 @@
 #include <string>
 #include <vector>
 
-#include <sys/resource.h>
-#include <unistd.h>
-
 #include "codelenses/db/database.hpp"
 #include "codelenses/db/statement.hpp"
 #include "codelenses/index/indexer.hpp"
 #include "codelenses/server/service.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <sys/resource.h>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace codelenses;
@@ -115,7 +114,8 @@ struct FootprintFixture {
 
 } // namespace
 
-TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)", "[benchmark][footprint]") {
+TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)",
+          "[benchmark][footprint]") {
     FootprintFixture fixture;
 
     SECTION("1. Footprint on Polyglot Sample Workspace") {
@@ -130,13 +130,15 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)", "
             index::IndexingPipeline pipeline(*db);
             ApiService service(*db, pipeline);
 
-            int64_t ws_id = service.create_workspace(CreateWorkspaceRequest{
-                .root_path = fixture.sample_workspace_root.string(),
-                .name = "Sample Polyglot Footprint",
-                .include_patterns = {},
-                .exclude_patterns = {},
-                .default_ignores = {},
-            }).id;
+            int64_t ws_id = service
+                                .create_workspace(CreateWorkspaceRequest{
+                                    .root_path = fixture.sample_workspace_root.string(),
+                                    .name = "Sample Polyglot Footprint",
+                                    .include_patterns = {},
+                                    .exclude_patterns = {},
+                                    .default_ignores = {},
+                                })
+                                .id;
 
             auto index_res = pipeline.run_indexing(ws_id, "full", true);
             REQUIRE(index_res.has_value());
@@ -149,24 +151,33 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)", "
             (void)checkpoint.step();
 
             uintmax_t db_bytes = fs::file_size(db_file);
-            double expansion_ratio = static_cast<double>(db_bytes) / static_cast<double>(std::max(1UL, source_bytes));
+            double expansion_ratio =
+                static_cast<double>(db_bytes) / static_cast<double>(std::max(1UL, source_bytes));
 
             auto st = service.get_workspace_status(ws_id);
 
             std::cout << "\n[BENCHMARK I-08] Sample Polyglot Workspace Footprint:\n"
                       << "  - Files Indexed: " << st.file_count << "\n"
                       << "  - Symbols Extracted: " << st.symbol_count << "\n"
-                      << "  - Source Size: " << (static_cast<double>(source_bytes) / 1024.0) << " KB\n"
-                      << "  - Database Size: " << (static_cast<double>(db_bytes) / 1024.0) << " KB\n"
+                      << "  - Source Size: " << (static_cast<double>(source_bytes) / 1024.0)
+                      << " KB\n"
+                      << "  - Database Size: " << (static_cast<double>(db_bytes) / 1024.0)
+                      << " KB\n"
                       << "  - Storage Expansion Ratio: " << expansion_ratio << "x\n"
-                      << "  - Baseline RSS: " << (static_cast<double>(rss_before_kb) / 1024.0) << " MB\n"
-                      << "  - Post-Index RSS: " << (static_cast<double>(rss_after_kb) / 1024.0) << " MB\n"
+                      << "  - Baseline RSS: " << (static_cast<double>(rss_before_kb) / 1024.0)
+                      << " MB\n"
+                      << "  - Post-Index RSS: " << (static_cast<double>(rss_after_kb) / 1024.0)
+                      << " MB\n"
                       << "  - Peak RSS: " << (static_cast<double>(peak_rss_kb) / 1024.0) << " MB\n"
-                      << "  - Net RSS Growth: " << (static_cast<double>(rss_after_kb) - static_cast<double>(rss_before_kb)) / 1024.0 << " MB\n";
+                      << "  - Net RSS Growth: "
+                      << (static_cast<double>(rss_after_kb) - static_cast<double>(rss_before_kb)) /
+                             1024.0
+                      << " MB\n";
 
-            // Storage threshold: small sample workspace with SQLite schema pages stays well under 5 MB
+            // Storage threshold: small sample workspace with SQLite schema pages stays well under 5
+            // MB
             CHECK(db_bytes < 5UL * 1024UL * 1024UL); // Under 5 MB
-            CHECK(expansion_ratio < 30.0); // Ratio bounded accounting for fixed schema tables
+            CHECK(expansion_ratio < 30.0);       // Ratio bounded accounting for fixed schema tables
             CHECK(peak_rss_kb < 500UL * 1024UL); // Peak under 500 MB
         }
     }
@@ -182,13 +193,15 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)", "
         index::IndexingPipeline pipeline(*db);
         ApiService service(*db, pipeline);
 
-        int64_t ws_id = service.create_workspace(CreateWorkspaceRequest{
-            .root_path = fixture.workspace_root.string(),
-            .name = "Scaled Repo Footprint",
-            .include_patterns = {},
-            .exclude_patterns = {},
-            .default_ignores = {},
-        }).id;
+        int64_t ws_id = service
+                            .create_workspace(CreateWorkspaceRequest{
+                                .root_path = fixture.workspace_root.string(),
+                                .name = "Scaled Repo Footprint",
+                                .include_patterns = {},
+                                .exclude_patterns = {},
+                                .default_ignores = {},
+                            })
+                            .id;
 
         auto index_res = pipeline.run_indexing(ws_id, "full", true);
         REQUIRE(index_res.has_value());
@@ -200,11 +213,18 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)", "
         (void)checkpoint.step();
 
         uintmax_t db_bytes = fs::file_size(db_file);
-        double expansion_ratio = static_cast<double>(db_bytes) / static_cast<double>(std::max(1UL, source_bytes));
+        double expansion_ratio =
+            static_cast<double>(db_bytes) / static_cast<double>(std::max(1UL, source_bytes));
 
         auto st = service.get_workspace_status(ws_id);
-        double bytes_per_symbol = (st.symbol_count > 0) ? (static_cast<double>(db_bytes) / static_cast<double>(st.symbol_count)) : 0.0;
-        double bytes_per_file = (st.file_count > 0) ? (static_cast<double>(db_bytes) / static_cast<double>(st.file_count)) : 0.0;
+        double bytes_per_symbol =
+            (st.symbol_count > 0)
+                ? (static_cast<double>(db_bytes) / static_cast<double>(st.symbol_count))
+                : 0.0;
+        double bytes_per_file =
+            (st.file_count > 0)
+                ? (static_cast<double>(db_bytes) / static_cast<double>(st.file_count))
+                : 0.0;
 
         std::cout << "[BENCHMARK I-08] Scaled Repository Footprint (100 files):\n"
                   << "  - Files Indexed: " << st.file_count << "\n"
@@ -214,15 +234,17 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)", "
                   << "  - Storage Expansion Ratio: " << expansion_ratio << "x\n"
                   << "  - Storage Per File: " << (bytes_per_file / 1024.0) << " KB/file\n"
                   << "  - Storage Per Symbol: " << bytes_per_symbol << " bytes/symbol\n"
-                  << "  - Baseline RSS: " << (static_cast<double>(rss_before_kb) / 1024.0) << " MB\n"
-                  << "  - Post-Index RSS: " << (static_cast<double>(rss_after_kb) / 1024.0) << " MB\n"
+                  << "  - Baseline RSS: " << (static_cast<double>(rss_before_kb) / 1024.0)
+                  << " MB\n"
+                  << "  - Post-Index RSS: " << (static_cast<double>(rss_after_kb) / 1024.0)
+                  << " MB\n"
                   << "  - Peak RSS: " << (static_cast<double>(peak_rss_kb) / 1024.0) << " MB\n";
 
         // Verification thresholds
         CHECK(st.file_count == 100);
         CHECK(st.symbol_count >= 200);
         CHECK(db_bytes < 20UL * 1024UL * 1024UL); // Under 20 MB for 100 files
-        CHECK(bytes_per_symbol < 5000.0); // Under 5 KB per indexed symbol
-        CHECK(peak_rss_kb < 500UL * 1024UL); // Peak memory under 500 MB
+        CHECK(bytes_per_symbol < 5000.0);         // Under 5 KB per indexed symbol
+        CHECK(peak_rss_kb < 500UL * 1024UL);      // Peak memory under 500 MB
     }
 }
