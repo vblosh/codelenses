@@ -16,6 +16,7 @@ set(UNIT_TEST_SOURCES
     unit/test_cpp_adapter.cpp
     unit/test_csharp_adapter.cpp
     unit/test_python_adapter.cpp
+    integration/test_sample_workspace.cpp
 )
 
 add_executable(codelenses_unit_tests

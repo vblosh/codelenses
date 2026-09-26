@@ -1,0 +1,3 @@
+# CodeLenses ignore patterns
+temp_cache/
+*.bak

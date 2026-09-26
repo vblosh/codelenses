@@ -1,0 +1,17 @@
+[
+  {
+    "directory": ".",
+    "command": "/usr/bin/gcc -c -I./c/include -I./c/src c/src/processor.c",
+    "file": "c/src/processor.c"
+  },
+  {
+    "directory": ".",
+    "command": "/usr/bin/gcc -c -I./c/include -I./c/src c/src/math_utils.c",
+    "file": "c/src/math_utils.c"
+  },
+  {
+    "directory": ".",
+    "command": "/usr/bin/g++ -std=c++20 -c -I./cpp/include cpp/src/pipeline.cpp",
+    "file": "cpp/src/pipeline.cpp"
+  }
+]

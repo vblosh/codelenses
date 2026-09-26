@@ -1,0 +1,7 @@
+# Git ignore patterns for sample workspace
+node_modules/
+dist/
+build/
+*.log
+*.tmp
+ignored_dir/

@@ -1,0 +1,15 @@
+{
+  "appName": "SamplePolyglotPlatform",
+  "version": "1.0.0",
+  "environment": "production",
+  "features": {
+    "telemetry": true,
+    "fastFiltering": true,
+    "billing": true,
+    "auth": true
+  },
+  "metrics": {
+    "bufferCapacity": 1024,
+    "defaultSamplingRateMs": 500
+  }
+}

@@ -16,6 +16,7 @@ vcpkg_installed/
 *.swp
 *~
 compile_commands.json
+!sample_workspace/compile_commands.json
 .cache/
 
 # Databases & local run artifacts
