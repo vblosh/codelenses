@@ -79,6 +79,9 @@ codelenses_add_tree_sitter_grammar(
 )
 
 # TSX grammar baseline (shares repository with typescript)
+if(NOT DEFINED treesitter_grammar_typescript_SOURCE_DIR OR "${treesitter_grammar_typescript_SOURCE_DIR}" STREQUAL "")
+    message(FATAL_ERROR "tsx grammar requires treesitter_grammar_typescript_SOURCE_DIR to be defined; register 'typescript' grammar before 'tsx'")
+endif()
 codelenses_add_tree_sitter_grammar(
     NAME tsx
     SOURCE_DIR "${treesitter_grammar_typescript_SOURCE_DIR}"

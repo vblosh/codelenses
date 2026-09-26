@@ -1411,6 +1411,14 @@ void process_assignment_expression(treesitter::Node node, ASTContext& ctx) {
     }
 
     if (left.type() == "member_expression") {
+        if (left.text(ctx.source) == "module.exports") {
+            mark_all_identifiers_handled(left, ctx);
+            if (!right.is_null()) {
+                walk_node(right, ctx);
+            }
+            return;
+        }
+
         treesitter::Node prop = left.child_by_field_name("property");
         treesitter::Node obj = left.child_by_field_name("object");
 
@@ -1501,12 +1509,6 @@ void process_assignment_expression(treesitter::Node node, ASTContext& ctx) {
                     return;
                 }
             }
-        }
-    } else if (left.type() == "member_expression" && left.text(ctx.source) == "module.exports") {
-        mark_all_identifiers_handled(left, ctx);
-        if (!right.is_null()) {
-            walk_node(right, ctx);
-            return;
         }
     }
 
@@ -1826,6 +1828,10 @@ std::string_view TypeScriptAdapter::javascript_highlighting_query() noexcept {
 (regex) @regexp
 (number) @number
 
+; Classes
+(class_declaration name: (identifier) @class)
+(class name: (identifier) @class)
+
 ; Functions & Methods
 (function_declaration name: (identifier) @function)
 (function_expression name: (identifier) @function)
@@ -1836,7 +1842,11 @@ std::string_view TypeScriptAdapter::javascript_highlighting_query() noexcept {
 (call_expression function: (identifier) @function)
 (call_expression function: (member_expression property: (property_identifier) @method))
 
-; Variables
+; Variables & Parameters
+(formal_parameters (identifier) @parameter)
+(formal_parameters (assignment_pattern left: (identifier) @parameter))
+(formal_parameters (rest_pattern (identifier) @parameter))
+(arrow_function parameter: (identifier) @parameter)
 (variable_declarator name: (identifier) @variable)
 
 ; Properties
@@ -2277,9 +2287,16 @@ Result<std::vector<HighlightToken>> TypeScriptAdapter::highlight(std::string_vie
     return tokens;
 }
 
-Result<std::vector<HighlightToken>> TypeScriptAdapter::highlight(std::string_view source) {
+Result<std::vector<HighlightToken>>
+TypeScriptAdapter::highlight(std::string_view source, const std::filesystem::path& file_path) {
     treesitter::Parser parser;
-    const auto* ts_lang = (lang_ == Language::javascript)
+    auto ext = file_path.extension().string();
+    for (char& c : ext) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    const bool is_tsx = (ext == ".tsx" || ext == ".jsx");
+    const auto* ts_lang = is_tsx ? treesitter::grammar_for_tsx()
+                        : (lang_ == Language::javascript)
                               ? treesitter::grammar_for_language(Language::javascript)
                               : treesitter::grammar_for_language(Language::typescript);
     if (ts_lang == nullptr) {

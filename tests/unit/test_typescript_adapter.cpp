@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "codelenses/adapters/adapter.hpp"
+#include "codelenses/adapters/js_adapter.hpp"
 #include "codelenses/adapters/registry.hpp"
 #include "codelenses/adapters/ts_adapter.hpp"
 #include "codelenses/language.hpp"
@@ -89,7 +90,7 @@ TEST_CASE("H5-01: TypeScript adapter grammar registration, capabilities, and pro
     CHECK(caps.structs == CapabilityStatus::unavailable);
     CHECK(caps.packages == CapabilityStatus::unavailable);
 
-    TypeScriptAdapter js_adapter(Language::javascript);
+    JavaScriptAdapter js_adapter;
     REQUIRE(js_adapter.language() == Language::javascript);
     REQUIRE(js_adapter.name() == "JavaScriptAdapter");
     CHECK(js_adapter.capabilities().templates == CapabilityStatus::unavailable);

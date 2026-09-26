@@ -13,7 +13,7 @@ public:
 
     [[nodiscard]] Language language() const noexcept override { return lang_; }
     [[nodiscard]] std::string_view name() const noexcept override {
-        return lang_ == Language::javascript ? "JavaScriptAdapter" : "TypeScriptAdapter";
+        return "TypeScriptAdapter";
     }
     [[nodiscard]] const LanguageCapabilities& capabilities() const noexcept override;
 
@@ -24,7 +24,8 @@ public:
     [[nodiscard]] Result<std::vector<HighlightToken>>
     highlight(std::string_view source, const treesitter::Tree& tree) override;
 
-    [[nodiscard]] Result<std::vector<HighlightToken>> highlight(std::string_view source);
+    [[nodiscard]] Result<std::vector<HighlightToken>>
+    highlight(std::string_view source, const std::filesystem::path& file_path = {});
 
     [[nodiscard]] static std::string_view javascript_highlighting_query() noexcept;
     [[nodiscard]] static std::string_view highlighting_query() noexcept;
@@ -33,11 +34,6 @@ public:
 private:
     Language lang_{Language::typescript};
     LanguageCapabilities capabilities_{};
-};
-
-class JavaScriptAdapter final : public TypeScriptAdapter {
-public:
-    explicit JavaScriptAdapter() : TypeScriptAdapter(Language::javascript) {}
 };
 
 } // namespace codelenses::adapters

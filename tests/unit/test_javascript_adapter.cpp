@@ -251,6 +251,28 @@ export default function runMain() {
         }
     }
     CHECK(found_base_heritage);
+
+    // 6. Bare module.exports = { ... } does not emit module/exports reference occurrences
+    std::string_view bare_export_source = R"(
+const config = { a: 1 };
+module.exports = {
+    config: config
+};
+)";
+    auto bare_res = adapter.parse(bare_export_source, "bare_export.js");
+    REQUIRE(bare_res.has_value());
+    REQUIRE(bare_res->status == worker::CompletionStatus::complete);
+
+    bool found_module_ref = false;
+    bool found_exports_ref = false;
+    for (const auto& occ : bare_res->occurrences) {
+        if (occ.written_name == "module")
+            found_module_ref = true;
+        if (occ.written_name == "exports")
+            found_exports_ref = true;
+    }
+    CHECK_FALSE(found_module_ref);
+    CHECK_FALSE(found_exports_ref);
 }
 
 TEST_CASE("H6-02: JSX component references and calls in JavaScript/JSX",
@@ -384,6 +406,8 @@ class Service {
         auto num_idx = legend.token_type_index("number");
         auto fn_idx = legend.token_type_index("function");
         auto op_idx = legend.token_type_index("operator");
+        auto class_idx = legend.token_type_index("class");
+        auto param_idx = legend.token_type_index("parameter");
 
         REQUIRE(kw_idx.has_value());
         REQUIRE(comment_idx.has_value());
@@ -391,6 +415,8 @@ class Service {
         REQUIRE(num_idx.has_value());
         REQUIRE(fn_idx.has_value());
         REQUIRE(op_idx.has_value());
+        REQUIRE(class_idx.has_value());
+        REQUIRE(param_idx.has_value());
 
         bool found_keyword = false;
         bool found_comment = false;
@@ -398,6 +424,8 @@ class Service {
         bool found_number = false;
         bool found_function = false;
         bool found_operator = false;
+        bool found_class = false;
+        bool found_parameter = false;
 
         for (const auto& tok : tokens) {
             if (tok.token_type == *kw_idx)
@@ -412,6 +440,10 @@ class Service {
                 found_function = true;
             if (tok.token_type == *op_idx)
                 found_operator = true;
+            if (tok.token_type == *class_idx)
+                found_class = true;
+            if (tok.token_type == *param_idx)
+                found_parameter = true;
         }
 
         CHECK(found_keyword);
@@ -420,6 +452,36 @@ class Service {
         CHECK(found_number);
         CHECK(found_function);
         CHECK(found_operator);
+        CHECK(found_class);
+        CHECK(found_parameter);
+    }
+
+    SECTION("Highlight convenience overload routes case-insensitively via file_path") {
+        std::string_view jsx_source = R"(
+export function Widget() {
+    return <button className="btn">Click</button>;
+}
+)";
+        auto hl_res = adapter.highlight(jsx_source, "Widget.JSX");
+        REQUIRE(hl_res.has_value());
+        REQUIRE_FALSE(hl_res->empty());
+
+        const auto& legend = HighlightLegend::default_legend();
+        auto kw_idx = legend.token_type_index("keyword");
+        auto prop_idx = legend.token_type_index("property");
+        REQUIRE(kw_idx.has_value());
+        REQUIRE(prop_idx.has_value());
+
+        bool found_kw = false;
+        bool found_prop = false;
+        for (const auto& tok : *hl_res) {
+            if (tok.token_type == *kw_idx)
+                found_kw = true;
+            if (tok.token_type == *prop_idx)
+                found_prop = true;
+        }
+        CHECK(found_kw);
+        CHECK(found_prop);
     }
 
     SECTION("JSX highlighting tokens") {
