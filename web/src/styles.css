@@ -569,6 +569,22 @@ html, body {
   border-radius: 2px;
 }
 
+.code-viewer .symbol-token.symbol-selected,
+.code-viewer .symbol-selected {
+  background-color: rgba(59, 130, 246, 0.45) !important;
+  outline: 2px solid #60a5fa !important;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+  font-weight: 600;
+}
+
+.code-viewer .symbol-token.symbol-occurrence-selected,
+.code-viewer .symbol-occurrence-selected {
+  background-color: rgba(59, 130, 246, 0.22) !important;
+  outline: 1px dashed rgba(96, 165, 250, 0.6) !important;
+  border-radius: 2px;
+}
+
 /* Large file banner */
 .range-loading-banner {
   background-color: rgba(245, 158, 11, 0.1);

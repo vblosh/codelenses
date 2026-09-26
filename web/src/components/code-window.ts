@@ -5,6 +5,7 @@ import type {
   DiagnosticItem,
   OccurrenceDto,
   FileCompileCommandDto,
+  SymbolOutlineNodeDto,
 } from "../types";
 import type { StateStore } from "../state";
 import { api } from "../api";
@@ -42,6 +43,7 @@ export class CodeWindowComponent {
   private currentContent: FileContentDto | null = null;
   private currentHighlights: HighlightResponseDto | null = null;
   private currentOccurrences: OccurrenceDto[] = [];
+  private currentOutline: SymbolOutlineNodeDto[] = [];
   private currentDiagnostics: DiagnosticItem[] = [];
   private currentCompileCommand: FileCompileCommandDto | null = null;
 
@@ -51,6 +53,7 @@ export class CodeWindowComponent {
     content: FileContentDto;
     highlights: HighlightResponseDto | null;
     occurrences: OccurrenceDto[];
+    outline: SymbolOutlineNodeDto[];
     compileCommand: FileCompileCommandDto | null;
   }>();
 
@@ -139,6 +142,9 @@ export class CodeWindowComponent {
           this.scrollToLine(line);
         }
       }
+      if (changedKeys.includes("selectedSymbolId") || changedKeys.includes("selectedLine")) {
+        this.updateSelectedSymbol();
+      }
       if (changedKeys.includes("workspaceId")) {
         this.fileCache.clear();
       }
@@ -173,6 +179,7 @@ export class CodeWindowComponent {
       this.currentContent = cached.content;
       this.currentHighlights = cached.highlights;
       this.currentOccurrences = cached.occurrences;
+      this.currentOutline = cached.outline || [];
       this.currentCompileCommand = cached.compileCommand;
       this.isRangePaged = false;
       this.currentStartLine = 0;
@@ -204,6 +211,7 @@ export class CodeWindowComponent {
       if (selLine !== null) {
         this.scrollToLine(selLine);
       }
+      this.updateSelectedSymbol();
       return;
     }
 
@@ -268,7 +276,7 @@ export class CodeWindowComponent {
       this.isRangePaged = isLargeFile;
       this.currentStartLine = pageStartLine;
 
-      // 4. Concurrently fetch Content, Tree-sitter Highlights, Occurrences, and Compile Command
+      // 4. Concurrently fetch Content, Tree-sitter Highlights, Occurrences, Outline, and Compile Command
       const contentPromise = isLargeFile
         ? api.getFileContent(
             wsId,
@@ -280,12 +288,14 @@ export class CodeWindowComponent {
 
       const highlightsPromise = api.getFileHighlights(wsId, fileId).catch(() => null);
       const occurrencesPromise = api.getFileOccurrences(wsId, fileId).catch(() => null);
+      const outlinePromise = api.getFileOutline(wsId, fileId).catch(() => null);
       const compileCommandPromise = api.getFileCompileCommand(wsId, fileId).catch(() => null);
 
-      const [contentRes, highlightsRes, occurrencesRes, compileRes] = await Promise.all([
+      const [contentRes, highlightsRes, occurrencesRes, outlineRes, compileRes] = await Promise.all([
         contentPromise,
         highlightsPromise,
         occurrencesPromise,
+        outlinePromise,
         compileCommandPromise,
       ]);
 
@@ -302,6 +312,7 @@ export class CodeWindowComponent {
       this.currentContent = contentRes;
       this.currentHighlights = highlightsRes;
       this.currentOccurrences = occurrencesRes?.occurrences || [];
+      this.currentOutline = outlineRes?.outline || [];
       this.currentCompileCommand = compileRes;
 
       if (compileRes?.hasCompileCommand && compileRes.compileCommand) {
@@ -319,6 +330,7 @@ export class CodeWindowComponent {
           content: contentRes,
           highlights: highlightsRes,
           occurrences: occurrencesRes?.occurrences || [],
+          outline: outlineRes?.outline || [],
           compileCommand: compileRes,
         });
       }
@@ -337,6 +349,7 @@ export class CodeWindowComponent {
       if (selLine !== null) {
         this.scrollToLine(selLine);
       }
+      this.updateSelectedSymbol();
     } catch (err: any) {
       if (requestId === this.loadRequestId) {
         this.viewerContainer.innerHTML = `
@@ -454,11 +467,17 @@ export class CodeWindowComponent {
         const text = span.textContent?.trim();
         if (!text) return;
 
-        const matchedOcc = occs.find((o) => o.name === text);
+        let matchedOcc = occs.find((o) => o.name === text);
+        if (!matchedOcc) {
+          matchedOcc = occs.find((o) => o.name && (text === o.name || text.includes(o.name)));
+        }
+
+        const symbolId = matchedOcc?.symbolId ?? this.findSymbolIdForName(text);
+
         if (matchedOcc) {
           span.classList.add("symbol-token");
-          if (matchedOcc.symbolId) {
-            span.dataset.symbolId = String(matchedOcc.symbolId);
+          if (symbolId != null) {
+            span.dataset.symbolId = String(symbolId);
           }
           span.dataset.symbolName = matchedOcc.name;
         } else {
@@ -478,34 +497,66 @@ export class CodeWindowComponent {
           if (!isNonSymbol && /^[$_a-zA-Z\xA0-\uFFFF][$_a-zA-Z0-9\xA0-\uFFFF]*$/.test(text)) {
             span.classList.add("symbol-token");
             span.dataset.symbolName = text;
+            if (symbolId != null) {
+              span.dataset.symbolId = String(symbolId);
+            }
           }
         }
       });
 
-      // When user clicks a token span in a line with occurrences
-      if (occs.length > 0) {
-        lineElem.addEventListener("click", (e) => {
-          const target = e.target as HTMLElement;
-          if (
-            target.classList.contains("tok") ||
-            target.classList.contains("symbol-token") ||
-            target.tagName === "SPAN"
-          ) {
-            const clickedText = target.dataset.symbolName || target.textContent?.trim();
-            if (clickedText) {
-              const matchedOcc = occs.find((o) => o.name === clickedText);
-              if (matchedOcc && matchedOcc.symbolId) {
+      // When user clicks anywhere inside the code line
+      lineElem.addEventListener("click", (e) => {
+        const target = (e.target as HTMLElement).closest<HTMLElement>(
+          ".symbol-token, [data-symbol-id], [data-symbol-name], .tok, span"
+        );
+        if (target && lineElem.contains(target) && target.closest(".line-content")) {
+          const clickedText = target.dataset.symbolName || target.textContent?.trim();
+          if (clickedText) {
+            const isNonSymbol =
+              target.classList.contains("tok-keyword") ||
+              target.classList.contains("tok-operator") ||
+              target.classList.contains("tok-string") ||
+              target.classList.contains("tok-number") ||
+              target.classList.contains("tok-comment") ||
+              target.classList.contains("hljs-keyword") ||
+              target.classList.contains("hljs-operator") ||
+              target.classList.contains("hljs-string") ||
+              target.classList.contains("hljs-number") ||
+              target.classList.contains("hljs-comment");
+
+            if (!isNonSymbol) {
+              let symId: number | null = target.dataset.symbolId
+                ? parseInt(target.dataset.symbolId, 10)
+                : null;
+              if (symId === null || isNaN(symId)) {
+                const matchedOcc = occs.find((o) => o.name === clickedText);
+                symId = matchedOcc?.symbolId ?? this.findSymbolIdForName(clickedText);
+              }
+
+              if (symId != null && !isNaN(symId)) {
                 e.stopPropagation();
                 this.suppressScrollForLine = lineNum;
-                this.store.selectSymbol(matchedOcc.symbolId, lineNum);
+                this.store.selectSymbol(symId, lineNum);
+                this.updateSelectedSymbol();
                 if (this.callbacks.onSymbolClick) {
-                  this.callbacks.onSymbolClick(matchedOcc.symbolId, lineNum);
+                  this.callbacks.onSymbolClick(symId, lineNum);
                 }
+                return;
+              } else if (
+                target.classList.contains("symbol-token") ||
+                /^[$_a-zA-Z\xA0-\uFFFF][$_a-zA-Z0-9\xA0-\uFFFF]*$/.test(clickedText)
+              ) {
+                // Known symbol or identifier token without backend ID
+                e.stopPropagation();
+                this.suppressScrollForLine = lineNum;
+                this.store.selectLine(lineNum);
+                this.selectSymbolByName(clickedText, target);
+                return;
               }
             }
           }
-        });
-      }
+        }
+      });
     });
   }
 
@@ -596,23 +647,186 @@ export class CodeWindowComponent {
     return false;
   }
 
+  private findOutlineNodeById(
+    nodes: SymbolOutlineNodeDto[],
+    id: number
+  ): SymbolOutlineNodeDto | null {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children && node.children.length > 0) {
+        const found = this.findOutlineNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private findOutlineNodeByName(
+    nodes: SymbolOutlineNodeDto[],
+    name: string
+  ): SymbolOutlineNodeDto | null {
+    for (const node of nodes) {
+      if (node.name === name) return node;
+      if (node.children && node.children.length > 0) {
+        const found = this.findOutlineNodeByName(node.children, name);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private findSymbolIdForName(name: string): number | null {
+    if (!name) return null;
+
+    if (this.currentOccurrences && this.currentOccurrences.length > 0) {
+      const def = this.currentOccurrences.find(
+        (o) =>
+          o.name === name &&
+          o.symbolId != null &&
+          (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
+      );
+      if (def && def.symbolId != null) return def.symbolId;
+
+      const anyOcc = this.currentOccurrences.find(
+        (o) => o.name === name && o.symbolId != null
+      );
+      if (anyOcc && anyOcc.symbolId != null) return anyOcc.symbolId;
+    }
+
+    if (this.currentOutline && this.currentOutline.length > 0) {
+      const node = this.findOutlineNodeByName(this.currentOutline, name);
+      if (node) return node.id;
+    }
+
+    return null;
+  }
+
+  updateSelectedSymbol(): void {
+    this.viewerContainer
+      .querySelectorAll(".symbol-selected, .symbol-occurrence-selected")
+      .forEach((el) => {
+        el.classList.remove("symbol-selected", "symbol-occurrence-selected");
+      });
+
+    const state = this.store.getState();
+    const selSymbolId = state.selectedSymbolId;
+    if (selSymbolId === null) {
+      return;
+    }
+
+    let symName: string | null = null;
+    const occ =
+      this.currentOccurrences.find(
+        (o) =>
+          o.symbolId === selSymbolId &&
+          (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
+      ) ||
+      this.currentOccurrences.find((o) => o.symbolId === selSymbolId);
+
+    if (occ) {
+      symName = occ.name;
+    } else if (this.currentOutline.length > 0) {
+      const outlineNode = this.findOutlineNodeById(this.currentOutline, selSymbolId);
+      if (outlineNode) {
+        symName = outlineNode.name;
+      }
+    }
+
+    const matches: HTMLElement[] = [];
+    const idMatches = this.viewerContainer.querySelectorAll<HTMLElement>(
+      `[data-symbol-id="${escapeCssAttr(String(selSymbolId))}"]`
+    );
+    idMatches.forEach((el) => matches.push(el));
+
+    if (symName) {
+      const nameMatches = this.viewerContainer.querySelectorAll<HTMLElement>(
+        `[data-symbol-name="${escapeCssAttr(symName)}"]`
+      );
+      nameMatches.forEach((el) => {
+        if (!matches.includes(el)) {
+          matches.push(el);
+        }
+      });
+    }
+
+    if (matches.length === 0) {
+      return;
+    }
+
+    const selLine = state.selectedLine;
+    let primaryElem: HTMLElement | null = null;
+
+    if (selLine !== null) {
+      primaryElem =
+        matches.find((el) => {
+          const lineParent = el.closest(".code-line") as HTMLElement | null;
+          return lineParent && lineParent.dataset.line === String(selLine);
+        }) || null;
+    }
+
+    if (!primaryElem) {
+      primaryElem = matches[0];
+    }
+
+    primaryElem.classList.add("symbol-selected");
+
+    for (const el of matches) {
+      if (el !== primaryElem) {
+        el.classList.add("symbol-occurrence-selected");
+      }
+    }
+  }
+
+  private selectSymbolByName(name: string, primaryTarget?: HTMLElement): void {
+    this.viewerContainer
+      .querySelectorAll(".symbol-selected, .symbol-occurrence-selected")
+      .forEach((el) => {
+        el.classList.remove("symbol-selected", "symbol-occurrence-selected");
+      });
+
+    if (!name) return;
+
+    const matches = this.viewerContainer.querySelectorAll<HTMLElement>(
+      `[data-symbol-name="${escapeCssAttr(name)}"]`
+    );
+    matches.forEach((el) => {
+      if (el === primaryTarget) {
+        el.classList.add("symbol-selected");
+      } else {
+        el.classList.add("symbol-occurrence-selected");
+      }
+    });
+
+    if (primaryTarget && !primaryTarget.classList.contains("symbol-selected")) {
+      primaryTarget.classList.add("symbol-selected");
+    }
+  }
+
   private resolveSelectedOrSymbolLine(): number | null {
     const state = this.store.getState();
     if (state.selectedLine !== null) {
       return state.selectedLine;
     }
-    if (state.selectedSymbolId !== null && this.currentOccurrences.length > 0) {
-      const occ =
-        this.currentOccurrences.find(
-          (o) =>
-            o.symbolId === state.selectedSymbolId &&
-            (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
-        ) ||
-        this.currentOccurrences.find(
-          (o) => o.symbolId === state.selectedSymbolId
-        );
-      if (occ) {
-        return occ.range.start.line;
+    if (state.selectedSymbolId !== null) {
+      if (this.currentOccurrences.length > 0) {
+        const occ =
+          this.currentOccurrences.find(
+            (o) =>
+              o.symbolId === state.selectedSymbolId &&
+              (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
+          ) ||
+          this.currentOccurrences.find(
+            (o) => o.symbolId === state.selectedSymbolId
+          );
+        if (occ) {
+          return occ.range.start.line;
+        }
+      }
+      if (this.currentOutline.length > 0) {
+        const node = this.findOutlineNodeById(this.currentOutline, state.selectedSymbolId);
+        if (node && node.range?.start?.line) {
+          return node.range.start.line;
+        }
       }
     }
     return null;
@@ -703,6 +917,7 @@ export class CodeWindowComponent {
     this.currentContent = null;
     this.currentHighlights = null;
     this.currentOccurrences = [];
+    this.currentOutline = [];
     this.currentCompileCommand = null;
     this.pathElem.textContent = "No file open";
     this.langBadge.style.display = "none";

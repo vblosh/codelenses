@@ -597,6 +597,135 @@ describe("Frontend components", () => {
       elem.querySelector(".code-viewer-container")!.dispatchEvent(new MouseEvent("mouseleave"));
       expect(barSpan!.classList.contains("symbol-hovered")).toBe(false);
     });
+
+    it("selects symbol and marks occurrences when clicked in code window", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValueOnce({
+        id: 15,
+        workspaceId: 1,
+        path: "/src/calc.cpp",
+        relativePath: "src/calc.cpp",
+        name: "calc.cpp",
+        language: "cpp",
+        encoding: "utf-8",
+        sizeBytes: 60,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValueOnce({
+        fileId: 15,
+        path: "src/calc.cpp",
+        content: "int foo = 1;\nint bar = 2;\nreturn foo;",
+        totalSizeBytes: 60,
+        totalLines: 3,
+        startLine: 0,
+        endLine: 2,
+        startByte: 0,
+        endByte: 60,
+        isBinary: false,
+        contentHash: "hashcalc",
+      });
+      vi.spyOn(api, "getFileHighlights").mockResolvedValueOnce({
+        fileId: 15,
+        legend: { tokenTypes: ["keyword", "variable"] },
+        tokens: [
+          { line: 0, startColumn: 0, length: 3, tokenType: 0 },
+          { line: 0, startColumn: 4, length: 3, tokenType: 1 },
+          { line: 1, startColumn: 0, length: 3, tokenType: 0 },
+          { line: 1, startColumn: 4, length: 3, tokenType: 1 },
+          { line: 2, startColumn: 0, length: 6, tokenType: 0 },
+          { line: 2, startColumn: 7, length: 3, tokenType: 1 },
+        ],
+      });
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValueOnce({
+        fileId: 15,
+        occurrences: [
+          {
+            id: 1,
+            workspaceId: 1,
+            fileId: 15,
+            symbolId: 50,
+            occurrenceKind: "definition",
+            name: "foo",
+            range: { start: { line: 1, column: 4, byte: 4 }, end: { line: 1, column: 7, byte: 7 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+          {
+            id: 2,
+            workspaceId: 1,
+            fileId: 15,
+            symbolId: 60,
+            occurrenceKind: "definition",
+            name: "bar",
+            range: { start: { line: 2, column: 4, byte: 17 }, end: { line: 2, column: 7, byte: 20 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+          {
+            id: 3,
+            workspaceId: 1,
+            fileId: 15,
+            symbolId: 50,
+            occurrenceKind: "reference",
+            name: "foo",
+            range: { start: { line: 3, column: 7, byte: 33 }, end: { line: 3, column: 10, byte: 36 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+        ],
+        total: 3,
+      });
+
+      const onSymbolClick = vi.fn();
+      const codeWindow = new CodeWindowComponent(store, { onSymbolClick });
+      await codeWindow.loadFile(15);
+
+      const elem = codeWindow.getElement();
+      const fooSpans = elem.querySelectorAll<HTMLElement>('.code-line span[data-symbol-name="foo"]');
+      const barSpan = elem.querySelector<HTMLElement>('.code-line span[data-symbol-name="bar"]');
+
+      expect(fooSpans.length).toBe(2);
+      expect(barSpan).not.toBeNull();
+
+      // Click on the first "foo" symbol
+      fooSpans[0].click();
+
+      // Symbol is selected in store
+      expect(store.getState().selectedSymbolId).toBe(50);
+      expect(store.getState().selectedLine).toBe(1);
+      expect(onSymbolClick).toHaveBeenCalledWith(50, 1);
+
+      // In the DOM, fooSpans[0] is marked as symbol-selected, fooSpans[1] is marked as symbol-occurrence-selected
+      expect(fooSpans[0].classList.contains("symbol-selected")).toBe(true);
+      expect(fooSpans[1].classList.contains("symbol-occurrence-selected")).toBe(true);
+      expect(barSpan?.classList.contains("symbol-selected")).toBe(false);
+
+      // Mouseleave should not clear selected symbol
+      elem.querySelector(".code-viewer-container")!.dispatchEvent(new MouseEvent("mouseleave"));
+      expect(fooSpans[0].classList.contains("symbol-selected")).toBe(true);
+      expect(fooSpans[1].classList.contains("symbol-occurrence-selected")).toBe(true);
+
+      // Now click on "bar"
+      barSpan!.click();
+      expect(store.getState().selectedSymbolId).toBe(60);
+      expect(store.getState().selectedLine).toBe(2);
+      expect(onSymbolClick).toHaveBeenCalledWith(60, 2);
+
+      // foo selection is cleared, bar is selected
+      expect(barSpan!.classList.contains("symbol-selected")).toBe(true);
+      expect(fooSpans[0].classList.contains("symbol-selected")).toBe(false);
+      expect(fooSpans[1].classList.contains("symbol-occurrence-selected")).toBe(false);
+
+      // External store update also selects the symbol in code window
+      store.selectSymbol(50, 3);
+      expect(fooSpans[1].classList.contains("symbol-selected")).toBe(true);
+      expect(fooSpans[0].classList.contains("symbol-occurrence-selected")).toBe(true);
+      expect(barSpan!.classList.contains("symbol-selected")).toBe(false);
+    });
   });
 
   describe("OutlineComponent", () => {
