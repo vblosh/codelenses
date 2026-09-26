@@ -266,3 +266,30 @@ TEST_CASE("CLI argument parser handles commands and flags", "[config][cli]") {
         REQUIRE(result.message.find("Unknown argument") != std::string::npos);
     }
 }
+
+TEST_CASE("Sample configuration file is valid and parses successfully (I-09)", "[config][sample]") {
+    std::filesystem::path sample_path = "config/codelenses.sample.json";
+    if (!std::filesystem::exists(sample_path)) {
+        sample_path = "../../config/codelenses.sample.json";
+    }
+    REQUIRE(std::filesystem::exists(sample_path));
+
+    auto config = codelenses::AppConfig::from_json_file(sample_path);
+    auto err = config.validate();
+    REQUIRE_FALSE(err.has_value());
+
+    CHECK(config.server.host == "127.0.0.1");
+    CHECK(config.server.port == 8080);
+    CHECK(config.server.db_path == "codelenses.db");
+    CHECK(config.server.log_level == "info");
+    CHECK(config.server.worker_threads == 4);
+    CHECK(config.server.enable_cors == true);
+    CHECK(config.server.static_dir == "web/dist");
+    CHECK(config.server.workspace_policy.allow_external_symlinks == false);
+    CHECK(config.server.workspace_policy.max_file_size_bytes == 33554432);
+    CHECK(config.server.workspace_policy.default_page_size == 50);
+    CHECK(config.server.workspace_policy.max_page_size == 200);
+    CHECK_FALSE(config.server.workspace_policy.default_ignores.empty());
+    CHECK_FALSE(config.server.workspace_policy.forbidden_roots.empty());
+}
+

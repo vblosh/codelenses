@@ -1,0 +1,41 @@
+# CodeLenses ignore rules (.codelensignore)
+# Syntax follows standard gitignore patterns.
+
+# VCS directories
+.git/
+.svn/
+.hg/
+
+# Build artifacts & dependencies
+build/
+dist/
+bin/
+obj/
+node_modules/
+vendor/
+target/
+__pycache__/
+*.pyc
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database & caches
+*.db
+*.db-wal
+*.db-shm
+.cache/
+.codelenses/
+
+# Large generated or binary assets
+*.tar
+*.tar.gz
+*.zip
+*.iso
+*.so
+*.dylib
+*.dll
+*.exe

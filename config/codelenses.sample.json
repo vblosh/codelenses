@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "db_path": "codelenses.db",
+    "initial_workspace": null,
+    "log_level": "info",
+    "worker_threads": 4,
+    "enable_cors": true,
+    "static_dir": "web/dist",
+    "workspace_policy": {
+      "allow_external_symlinks": false,
+      "max_file_size_bytes": 33554432,
+      "default_page_size": 50,
+      "max_page_size": 200,
+      "default_ignores": [
+        ".git",
+        "node_modules",
+        "build",
+        "dist",
+        "target",
+        "vendor",
+        ".codelens",
+        ".codelenses",
+        ".cache"
+      ],
+      "allowed_roots": [],
+      "forbidden_roots": [
+        "/",
+        "/etc",
+        "/proc",
+        "/sys",
+        "/dev",
+        "/boot",
+        "/root",
+        "/bin",
+        "/sbin",
+        "/usr/bin",
+        "/lib",
+        "/usr/lib",
+        "/run",
+        "/var/run"
+      ]
+    }
+  }
+}

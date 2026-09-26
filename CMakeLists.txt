@@ -148,3 +148,62 @@ if(CODELENSES_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# Installation and Release Packaging (I-09)
+include(GNUInstallDirs)
+
+install(TARGETS codelenses
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(TARGETS codelenses_core
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY include/codelenses
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/web/dist")
+    install(DIRECTORY web/dist/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/codelenses/web
+    )
+endif()
+
+install(FILES
+    config/codelenses.sample.json
+    config/codelenses.service
+    config/.codelensignore.sample
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/codelenses
+)
+
+install(FILES README.md
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+# CPack configuration
+set(CPACK_PACKAGE_NAME "codelenses")
+set(CPACK_PACKAGE_VENDOR "CodeLenses")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local-first code indexer and browser backend")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_CONTACT "support@codelenses.local")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_GENERATOR "TGZ;STGZ;DEB")
+set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "CodeLenses Maintainers <support@codelenses.local>")
+set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.34), libsqlite3-0 (>= 3.35.0)")
+set(CPACK_SOURCE_IGNORE_FILES
+    "/.git/"
+    "/build/"
+    "node_modules"
+    "\\\\.db$"
+    "\\\\.db-wal$"
+    "\\\\.db-shm$"
+)
+include(CPack)
+

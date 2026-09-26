@@ -1,0 +1,30 @@
+[Unit]
+Description=CodeLenses Local Code Indexer and Browser Service
+After=network.target
+
+[Service]
+Type=simple
+User=codelenses
+Group=codelenses
+WorkingDirectory=/var/lib/codelenses
+ExecStart=/usr/local/bin/codelenses --config /etc/codelenses/codelenses.json
+Restart=always
+RestartSec=5s
+
+# Security sandboxing
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/codelenses
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
