@@ -106,6 +106,8 @@ struct OccurrenceFact {
     DisplayRange display_range{};
     std::optional<std::string> enclosing_scope;
     std::vector<std::string> candidate_targets;
+    double confidence{1.0};
+    std::optional<std::string> metadata_json{std::nullopt};
 
     friend bool operator==(const OccurrenceFact&, const OccurrenceFact&) = default;
 };

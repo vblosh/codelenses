@@ -100,6 +100,12 @@ inline nlohmann::json adapter_result_to_json(const adapters::AdapterResult& resu
         if (occ.enclosing_scope.has_value()) {
             o["enclosing_scope"] = *occ.enclosing_scope;
         }
+        if (occ.confidence < 1.0) {
+            o["confidence"] = occ.confidence;
+        }
+        if (occ.metadata_json.has_value()) {
+            o["metadata_json"] = *occ.metadata_json;
+        }
         occs_json.push_back(std::move(o));
     }
 

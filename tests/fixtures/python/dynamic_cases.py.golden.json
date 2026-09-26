@@ -1,0 +1,196 @@
+{
+  "declarations": [
+    {
+      "end_byte": 244,
+      "is_definition": true,
+      "kind": "module",
+      "qualified_name": "dynamic_cases",
+      "start_byte": 0,
+      "symbol_name": "dynamic_cases"
+    },
+    {
+      "end_byte": 18,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "handle_dynamic",
+      "start_byte": 4,
+      "symbol_name": "handle_dynamic"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Python",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 47,
+      "kind": "reference",
+      "start_byte": 43,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "event.header.name",
+        "name"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 67,
+      "kind": "reference",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"event.header\"}",
+      "start_byte": 50,
+      "written_name": "event.header.name"
+    },
+    {
+      "candidate_targets": [
+        "timestamp"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 81,
+      "kind": "reference",
+      "start_byte": 72,
+      "written_name": "timestamp"
+    },
+    {
+      "candidate_targets": [
+        "event.header.timestamp",
+        "timestamp"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 106,
+      "kind": "reference",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"event.header\"}",
+      "start_byte": 84,
+      "written_name": "event.header.timestamp"
+    },
+    {
+      "candidate_targets": [
+        "payload"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 118,
+      "kind": "reference",
+      "start_byte": 111,
+      "written_name": "payload"
+    },
+    {
+      "candidate_targets": [
+        "event.payload",
+        "payload"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 134,
+      "kind": "reference",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"event\"}",
+      "start_byte": 121,
+      "written_name": "event.payload"
+    },
+    {
+      "candidate_targets": [
+        "result"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 145,
+      "kind": "reference",
+      "start_byte": 139,
+      "written_name": "result"
+    },
+    {
+      "candidate_targets": [
+        "dispatcher.dispatch",
+        "dispatch"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 167,
+      "kind": "call",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"dispatcher\"}",
+      "start_byte": 148,
+      "written_name": "dispatcher.dispatch"
+    },
+    {
+      "candidate_targets": [
+        "event"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 173,
+      "kind": "reference",
+      "start_byte": 168,
+      "written_name": "event"
+    },
+    {
+      "candidate_targets": [
+        "fallback"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 187,
+      "kind": "reference",
+      "start_byte": 179,
+      "written_name": "fallback"
+    },
+    {
+      "candidate_targets": [
+        "dispatcher.default_handler",
+        "default_handler"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 216,
+      "kind": "call",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"dispatcher\"}",
+      "start_byte": 190,
+      "written_name": "dispatcher.default_handler"
+    },
+    {
+      "candidate_targets": [
+        "payload"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 224,
+      "kind": "reference",
+      "start_byte": 217,
+      "written_name": "payload"
+    },
+    {
+      "candidate_targets": [
+        "result"
+      ],
+      "enclosing_scope": "handle_dynamic",
+      "end_byte": 243,
+      "kind": "reference",
+      "start_byte": 237,
+      "written_name": "result"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 244,
+      "end_column": 1,
+      "end_line": 8,
+      "kind": "module",
+      "name": "dynamic_cases",
+      "qualified_name": "dynamic_cases",
+      "signature": "module dynamic_cases",
+      "start_byte": 0,
+      "start_column": 1,
+      "start_line": 1
+    },
+    {
+      "end_byte": 18,
+      "end_column": 19,
+      "end_line": 1,
+      "kind": "function",
+      "name": "handle_dynamic",
+      "qualified_name": "handle_dynamic",
+      "signature": "def handle_dynamic(dispatcher, event)",
+      "start_byte": 4,
+      "start_column": 5,
+      "start_line": 1
+    }
+  ]
+}

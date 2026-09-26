@@ -1,0 +1,425 @@
+{
+  "declarations": [
+    {
+      "end_byte": 499,
+      "is_definition": true,
+      "kind": "module",
+      "qualified_name": "nested_scopes",
+      "start_byte": 0,
+      "symbol_name": "nested_scopes"
+    },
+    {
+      "end_byte": 15,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Container",
+      "start_byte": 6,
+      "symbol_name": "Container"
+    },
+    {
+      "enclosing_scope": "Container",
+      "end_byte": 29,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "Container.category",
+      "start_byte": 21,
+      "symbol_name": "category"
+    },
+    {
+      "enclosing_scope": "Container",
+      "end_byte": 63,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Container.NestedItem",
+      "start_byte": 53,
+      "symbol_name": "NestedItem"
+    },
+    {
+      "enclosing_scope": "Container.NestedItem",
+      "end_byte": 85,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Container.NestedItem.__init__",
+      "start_byte": 77,
+      "symbol_name": "__init__"
+    },
+    {
+      "enclosing_scope": "Container.NestedItem",
+      "end_byte": 154,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Container.NestedItem.get_name",
+      "start_byte": 146,
+      "symbol_name": "get_name"
+    },
+    {
+      "enclosing_scope": "Container",
+      "end_byte": 218,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Container.create_item",
+      "start_byte": 207,
+      "symbol_name": "create_item"
+    },
+    {
+      "end_byte": 309,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "build_multiplier",
+      "start_byte": 293,
+      "symbol_name": "build_multiplier"
+    },
+    {
+      "enclosing_scope": "build_multiplier",
+      "end_byte": 357,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "build_multiplier.multiply",
+      "start_byte": 349,
+      "symbol_name": "multiply"
+    },
+    {
+      "enclosing_scope": "build_multiplier.multiply",
+      "end_byte": 398,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "build_multiplier.multiply.inner_step",
+      "start_byte": 388,
+      "symbol_name": "inner_step"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Python",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "str"
+      ],
+      "enclosing_scope": "Container.NestedItem",
+      "end_byte": 101,
+      "kind": "reference",
+      "start_byte": 98,
+      "written_name": "str"
+    },
+    {
+      "candidate_targets": [
+        "NestedItem.name",
+        "self.name",
+        "name"
+      ],
+      "confidence": 0.9,
+      "enclosing_scope": "Container.NestedItem.__init__",
+      "end_byte": 125,
+      "kind": "reference",
+      "metadata_json": "{\"receiver\":\"self\",\"is_attribute\":true}",
+      "start_byte": 116,
+      "written_name": "self.name"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "Container.NestedItem.__init__",
+      "end_byte": 132,
+      "kind": "reference",
+      "start_byte": 128,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "str"
+      ],
+      "enclosing_scope": "Container.NestedItem",
+      "end_byte": 167,
+      "kind": "reference",
+      "start_byte": 164,
+      "written_name": "str"
+    },
+    {
+      "candidate_targets": [
+        "NestedItem.name",
+        "self.name",
+        "name"
+      ],
+      "confidence": 0.9,
+      "enclosing_scope": "Container.NestedItem.get_name",
+      "end_byte": 197,
+      "kind": "reference",
+      "metadata_json": "{\"receiver\":\"self\",\"is_attribute\":true}",
+      "start_byte": 188,
+      "written_name": "self.name"
+    },
+    {
+      "candidate_targets": [
+        "str"
+      ],
+      "enclosing_scope": "Container",
+      "end_byte": 234,
+      "kind": "reference",
+      "start_byte": 231,
+      "written_name": "str"
+    },
+    {
+      "candidate_targets": [
+        "NestedItem"
+      ],
+      "enclosing_scope": "Container",
+      "end_byte": 249,
+      "kind": "reference",
+      "start_byte": 239,
+      "written_name": "NestedItem"
+    },
+    {
+      "candidate_targets": [
+        "Container.NestedItem",
+        "self.NestedItem",
+        "NestedItem"
+      ],
+      "enclosing_scope": "Container.create_item",
+      "end_byte": 281,
+      "kind": "call",
+      "metadata_json": "{\"receiver\":\"self\",\"is_method\":true}",
+      "start_byte": 266,
+      "written_name": "self.NestedItem"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "Container.create_item",
+      "end_byte": 286,
+      "kind": "reference",
+      "start_byte": 282,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "int"
+      ],
+      "end_byte": 321,
+      "kind": "reference",
+      "start_byte": 318,
+      "written_name": "int"
+    },
+    {
+      "candidate_targets": [
+        "offset"
+      ],
+      "enclosing_scope": "build_multiplier",
+      "end_byte": 334,
+      "kind": "reference",
+      "start_byte": 328,
+      "written_name": "offset"
+    },
+    {
+      "candidate_targets": [
+        "int"
+      ],
+      "enclosing_scope": "build_multiplier",
+      "end_byte": 366,
+      "kind": "reference",
+      "start_byte": 363,
+      "written_name": "int"
+    },
+    {
+      "candidate_targets": [
+        "int"
+      ],
+      "enclosing_scope": "build_multiplier",
+      "end_byte": 374,
+      "kind": "reference",
+      "start_byte": 371,
+      "written_name": "int"
+    },
+    {
+      "candidate_targets": [
+        "int"
+      ],
+      "enclosing_scope": "build_multiplier.multiply",
+      "end_byte": 407,
+      "kind": "reference",
+      "start_byte": 404,
+      "written_name": "int"
+    },
+    {
+      "candidate_targets": [
+        "val"
+      ],
+      "enclosing_scope": "build_multiplier.multiply.inner_step",
+      "end_byte": 431,
+      "kind": "reference",
+      "start_byte": 428,
+      "written_name": "val"
+    },
+    {
+      "candidate_targets": [
+        "factor"
+      ],
+      "enclosing_scope": "build_multiplier.multiply.inner_step",
+      "end_byte": 440,
+      "kind": "reference",
+      "start_byte": 434,
+      "written_name": "factor"
+    },
+    {
+      "candidate_targets": [
+        "offset"
+      ],
+      "enclosing_scope": "build_multiplier.multiply.inner_step",
+      "end_byte": 449,
+      "kind": "reference",
+      "start_byte": 443,
+      "written_name": "offset"
+    },
+    {
+      "candidate_targets": [
+        "inner_step"
+      ],
+      "enclosing_scope": "build_multiplier.multiply",
+      "end_byte": 475,
+      "kind": "call",
+      "start_byte": 465,
+      "written_name": "inner_step"
+    },
+    {
+      "candidate_targets": [
+        "multiply"
+      ],
+      "enclosing_scope": "build_multiplier",
+      "end_byte": 498,
+      "kind": "reference",
+      "start_byte": 490,
+      "written_name": "multiply"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 499,
+      "end_column": 1,
+      "end_line": 23,
+      "kind": "module",
+      "name": "nested_scopes",
+      "qualified_name": "nested_scopes",
+      "signature": "module nested_scopes",
+      "start_byte": 0,
+      "start_column": 1,
+      "start_line": 1
+    },
+    {
+      "end_byte": 15,
+      "end_column": 16,
+      "end_line": 1,
+      "kind": "class",
+      "name": "Container",
+      "qualified_name": "Container",
+      "signature": "class Container",
+      "start_byte": 6,
+      "start_column": 7,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "Container",
+      "end_byte": 29,
+      "end_column": 13,
+      "end_line": 2,
+      "kind": "variable",
+      "name": "category",
+      "qualified_name": "Container.category",
+      "signature": "category",
+      "start_byte": 21,
+      "start_column": 5,
+      "start_line": 2
+    },
+    {
+      "enclosing_scope": "Container",
+      "end_byte": 63,
+      "end_column": 21,
+      "end_line": 4,
+      "kind": "class",
+      "name": "NestedItem",
+      "qualified_name": "Container.NestedItem",
+      "signature": "class NestedItem",
+      "start_byte": 53,
+      "start_column": 11,
+      "start_line": 4
+    },
+    {
+      "enclosing_scope": "Container.NestedItem",
+      "end_byte": 85,
+      "end_column": 21,
+      "end_line": 5,
+      "kind": "method",
+      "name": "__init__",
+      "qualified_name": "Container.NestedItem.__init__",
+      "signature": "def __init__(self, name: str)",
+      "start_byte": 77,
+      "start_column": 13,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "Container.NestedItem",
+      "end_byte": 154,
+      "end_column": 21,
+      "end_line": 8,
+      "kind": "method",
+      "name": "get_name",
+      "qualified_name": "Container.NestedItem.get_name",
+      "signature": "def get_name(self) -> str",
+      "start_byte": 146,
+      "start_column": 13,
+      "start_line": 8
+    },
+    {
+      "enclosing_scope": "Container",
+      "end_byte": 218,
+      "end_column": 20,
+      "end_line": 11,
+      "kind": "method",
+      "name": "create_item",
+      "qualified_name": "Container.create_item",
+      "signature": "def create_item(self, name: str) -> NestedItem",
+      "start_byte": 207,
+      "start_column": 9,
+      "start_line": 11
+    },
+    {
+      "end_byte": 309,
+      "end_column": 21,
+      "end_line": 14,
+      "kind": "function",
+      "name": "build_multiplier",
+      "qualified_name": "build_multiplier",
+      "signature": "def build_multiplier(factor: int)",
+      "start_byte": 293,
+      "start_column": 5,
+      "start_line": 14
+    },
+    {
+      "enclosing_scope": "build_multiplier",
+      "end_byte": 357,
+      "end_column": 17,
+      "end_line": 17,
+      "kind": "function",
+      "name": "multiply",
+      "qualified_name": "build_multiplier.multiply",
+      "signature": "def multiply(val: int) -> int",
+      "start_byte": 349,
+      "start_column": 9,
+      "start_line": 17
+    },
+    {
+      "enclosing_scope": "build_multiplier.multiply",
+      "end_byte": 398,
+      "end_column": 23,
+      "end_line": 18,
+      "kind": "function",
+      "name": "inner_step",
+      "qualified_name": "build_multiplier.multiply.inner_step",
+      "signature": "def inner_step() -> int",
+      "start_byte": 388,
+      "start_column": 13,
+      "start_line": 18
+    }
+  ]
+}

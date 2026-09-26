@@ -201,8 +201,9 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                     .end_line = static_cast<int64_t>(occ.display_range.end_line),
                     .end_column = static_cast<int64_t>(occ.display_range.end_column),
                 },
-            .confidence = 1.0,
+            .confidence = occ.confidence,
             .resolution = "unresolved",
+            .metadata_json = occ.metadata_json,
         };
 
         // If occurrence matches a symbol declared in the same file, link it
@@ -223,7 +224,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                 .reference_kind = (occ.kind == worker::FactKind::call) ? "call" : "reference",
                 .range = db_occ.range,
                 .resolution = db_occ.resolution,
-                .confidence = 1.0,
+                .confidence = occ.confidence,
+                .metadata_json = occ.metadata_json,
             };
 
             // Link source_symbol_id if occurrence has enclosing_scope

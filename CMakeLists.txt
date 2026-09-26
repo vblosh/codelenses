@@ -56,6 +56,13 @@ codelenses_add_tree_sitter_grammar(
     GIT_TAG v0.23.1
 )
 
+# Python grammar baseline
+codelenses_add_tree_sitter_grammar(
+    NAME python
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-python.git
+    GIT_TAG v0.23.6
+)
+
 # Core library
 set(CODELENSES_CORE_SOURCES
     src/app/config.cpp
@@ -118,6 +125,7 @@ target_link_libraries(codelenses_core PUBLIC
     codelenses_grammar_c
     codelenses_grammar_cpp
     codelenses_grammar_c_sharp
+    codelenses_grammar_python
 )
 
 codelenses_set_compiler_warnings(codelenses_core)

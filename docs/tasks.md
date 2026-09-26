@@ -159,9 +159,9 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H4 Python adapter
 
-- [ ] H4-01 Extract modules, imports, aliases, classes, functions, methods, decorators.
-- [ ] H4-02 Extract calls and attribute references with confidence metadata.
-- [ ] H4-03 Add fixtures for relative imports, aliases, nested scopes, and dynamic cases.
+- [x] H4-01 Extract modules, imports, aliases, classes, functions, methods, decorators.
+- [x] H4-02 Extract calls and attribute references with confidence metadata.
+- [x] H4-03 Add fixtures for relative imports, aliases, nested scopes, and dynamic cases.
 
 ### H5 TypeScript/TSX adapter
 

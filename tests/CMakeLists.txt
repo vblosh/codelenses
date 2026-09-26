@@ -15,6 +15,7 @@ set(UNIT_TEST_SOURCES
     unit/test_c_adapter.cpp
     unit/test_cpp_adapter.cpp
     unit/test_csharp_adapter.cpp
+    unit/test_python_adapter.cpp
 )
 
 add_executable(codelenses_unit_tests
@@ -27,6 +28,7 @@ target_link_libraries(codelenses_unit_tests PRIVATE
     codelenses_grammar_c
     codelenses_grammar_cpp
     codelenses_grammar_c_sharp
+    codelenses_grammar_python
 )
 
 target_compile_definitions(codelenses_unit_tests PRIVATE

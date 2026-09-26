@@ -1,0 +1,293 @@
+{
+  "declarations": [
+    {
+      "end_byte": 219,
+      "is_definition": true,
+      "kind": "module",
+      "qualified_name": "aliases",
+      "start_byte": 0,
+      "symbol_name": "aliases"
+    },
+    {
+      "end_byte": 18,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "np",
+      "start_byte": 16,
+      "symbol_name": "np"
+    },
+    {
+      "end_byte": 40,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "osp",
+      "start_byte": 37,
+      "symbol_name": "osp"
+    },
+    {
+      "end_byte": 77,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "square_root",
+      "start_byte": 66,
+      "symbol_name": "square_root"
+    },
+    {
+      "end_byte": 92,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "cosine",
+      "start_byte": 86,
+      "symbol_name": "cosine"
+    },
+    {
+      "end_byte": 128,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "dt",
+      "start_byte": 126,
+      "symbol_name": "dt"
+    },
+    {
+      "end_byte": 146,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "compute_dist",
+      "start_byte": 134,
+      "symbol_name": "compute_dist"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Python",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "numpy"
+      ],
+      "end_byte": 12,
+      "kind": "import",
+      "start_byte": 7,
+      "written_name": "numpy"
+    },
+    {
+      "candidate_targets": [
+        "os.path",
+        "os"
+      ],
+      "end_byte": 33,
+      "kind": "import",
+      "start_byte": 26,
+      "written_name": "os.path"
+    },
+    {
+      "candidate_targets": [
+        "math.sqrt",
+        "sqrt"
+      ],
+      "end_byte": 62,
+      "kind": "import",
+      "start_byte": 58,
+      "written_name": "sqrt"
+    },
+    {
+      "candidate_targets": [
+        "math.cos",
+        "cos"
+      ],
+      "end_byte": 82,
+      "kind": "import",
+      "start_byte": 79,
+      "written_name": "cos"
+    },
+    {
+      "candidate_targets": [
+        "datetime.datetime",
+        "datetime"
+      ],
+      "end_byte": 122,
+      "kind": "import",
+      "start_byte": 114,
+      "written_name": "datetime"
+    },
+    {
+      "candidate_targets": [
+        "val"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 161,
+      "kind": "reference",
+      "start_byte": 158,
+      "written_name": "val"
+    },
+    {
+      "candidate_targets": [
+        "np.array",
+        "array"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "compute_dist",
+      "end_byte": 172,
+      "kind": "call",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"np\"}",
+      "start_byte": 164,
+      "written_name": "np.array"
+    },
+    {
+      "candidate_targets": [
+        "x"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 175,
+      "kind": "reference",
+      "start_byte": 174,
+      "written_name": "x"
+    },
+    {
+      "candidate_targets": [
+        "y"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 178,
+      "kind": "reference",
+      "start_byte": 177,
+      "written_name": "y"
+    },
+    {
+      "candidate_targets": [
+        "square_root"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 203,
+      "kind": "call",
+      "start_byte": 192,
+      "written_name": "square_root"
+    },
+    {
+      "candidate_targets": [
+        "x"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 205,
+      "kind": "reference",
+      "start_byte": 204,
+      "written_name": "x"
+    },
+    {
+      "candidate_targets": [
+        "x"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 209,
+      "kind": "reference",
+      "start_byte": 208,
+      "written_name": "x"
+    },
+    {
+      "candidate_targets": [
+        "y"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 213,
+      "kind": "reference",
+      "start_byte": 212,
+      "written_name": "y"
+    },
+    {
+      "candidate_targets": [
+        "y"
+      ],
+      "enclosing_scope": "compute_dist",
+      "end_byte": 217,
+      "kind": "reference",
+      "start_byte": 216,
+      "written_name": "y"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 219,
+      "end_column": 1,
+      "end_line": 9,
+      "kind": "module",
+      "name": "aliases",
+      "qualified_name": "aliases",
+      "signature": "module aliases",
+      "start_byte": 0,
+      "start_column": 1,
+      "start_line": 1
+    },
+    {
+      "end_byte": 18,
+      "end_column": 19,
+      "end_line": 1,
+      "kind": "type_alias",
+      "name": "np",
+      "qualified_name": "np",
+      "signature": "import numpy as np",
+      "start_byte": 16,
+      "start_column": 17,
+      "start_line": 1
+    },
+    {
+      "end_byte": 40,
+      "end_column": 22,
+      "end_line": 2,
+      "kind": "type_alias",
+      "name": "osp",
+      "qualified_name": "osp",
+      "signature": "import os.path as osp",
+      "start_byte": 37,
+      "start_column": 19,
+      "start_line": 2
+    },
+    {
+      "end_byte": 77,
+      "end_column": 37,
+      "end_line": 3,
+      "kind": "type_alias",
+      "name": "square_root",
+      "qualified_name": "square_root",
+      "signature": "from math import sqrt as square_root",
+      "start_byte": 66,
+      "start_column": 26,
+      "start_line": 3
+    },
+    {
+      "end_byte": 92,
+      "end_column": 52,
+      "end_line": 3,
+      "kind": "type_alias",
+      "name": "cosine",
+      "qualified_name": "cosine",
+      "signature": "from math import cos as cosine",
+      "start_byte": 86,
+      "start_column": 46,
+      "start_line": 3
+    },
+    {
+      "end_byte": 128,
+      "end_column": 36,
+      "end_line": 4,
+      "kind": "type_alias",
+      "name": "dt",
+      "qualified_name": "dt",
+      "signature": "from datetime import datetime as dt",
+      "start_byte": 126,
+      "start_column": 34,
+      "start_line": 4
+    },
+    {
+      "end_byte": 146,
+      "end_column": 17,
+      "end_line": 6,
+      "kind": "function",
+      "name": "compute_dist",
+      "qualified_name": "compute_dist",
+      "signature": "def compute_dist(x, y)",
+      "start_byte": 134,
+      "start_column": 5,
+      "start_line": 6
+    }
+  ]
+}

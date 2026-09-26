@@ -1,0 +1,143 @@
+{
+  "declarations": [
+    {
+      "end_byte": 195,
+      "is_definition": true,
+      "kind": "module",
+      "qualified_name": "relative_imports",
+      "start_byte": 0,
+      "symbol_name": "relative_imports"
+    },
+    {
+      "end_byte": 130,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "ServiceWorker",
+      "start_byte": 117,
+      "symbol_name": "ServiceWorker"
+    },
+    {
+      "end_byte": 160,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "run_task",
+      "start_byte": 152,
+      "symbol_name": "run_task"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Python",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        ".config",
+        "config"
+      ],
+      "end_byte": 20,
+      "kind": "import",
+      "start_byte": 14,
+      "written_name": "config"
+    },
+    {
+      "candidate_targets": [
+        ".utils.helper",
+        "helper"
+      ],
+      "end_byte": 46,
+      "kind": "import",
+      "start_byte": 40,
+      "written_name": "helper"
+    },
+    {
+      "candidate_targets": [
+        "..parent.base_service",
+        "base_service"
+      ],
+      "end_byte": 80,
+      "kind": "import",
+      "start_byte": 68,
+      "written_name": "base_service"
+    },
+    {
+      "candidate_targets": [
+        "..core.worker.Worker",
+        "Worker"
+      ],
+      "end_byte": 113,
+      "kind": "import",
+      "start_byte": 107,
+      "written_name": "Worker"
+    },
+    {
+      "candidate_targets": [
+        ".*"
+      ],
+      "end_byte": 146,
+      "kind": "import",
+      "start_byte": 145,
+      "written_name": "*"
+    },
+    {
+      "candidate_targets": [
+        "helper"
+      ],
+      "enclosing_scope": "run_task",
+      "end_byte": 174,
+      "kind": "call",
+      "start_byte": 168,
+      "written_name": "helper"
+    },
+    {
+      "candidate_targets": [
+        "config.load",
+        "load"
+      ],
+      "confidence": 0.5,
+      "enclosing_scope": "run_task",
+      "end_byte": 192,
+      "kind": "call",
+      "metadata_json": "{\"dynamic\":true,\"receiver\":\"config\"}",
+      "start_byte": 181,
+      "written_name": "config.load"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 195,
+      "end_column": 1,
+      "end_line": 10,
+      "kind": "module",
+      "name": "relative_imports",
+      "qualified_name": "relative_imports",
+      "signature": "module relative_imports",
+      "start_byte": 0,
+      "start_column": 1,
+      "start_line": 1
+    },
+    {
+      "end_byte": 130,
+      "end_column": 50,
+      "end_line": 4,
+      "kind": "type_alias",
+      "name": "ServiceWorker",
+      "qualified_name": "ServiceWorker",
+      "signature": "from ..core.worker import Worker as ServiceWorker",
+      "start_byte": 117,
+      "start_column": 37,
+      "start_line": 4
+    },
+    {
+      "end_byte": 160,
+      "end_column": 13,
+      "end_line": 7,
+      "kind": "function",
+      "name": "run_task",
+      "qualified_name": "run_task",
+      "signature": "def run_task()",
+      "start_byte": 152,
+      "start_column": 5,
+      "start_line": 7
+    }
+  ]
+}
