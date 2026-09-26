@@ -212,7 +212,7 @@ export class OutlineComponent {
       );
       if (match) {
         match.classList.add("selected");
-        match.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+        match.scrollIntoView?.({ behavior: "auto", block: "nearest" });
       }
     }
   }

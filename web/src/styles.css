@@ -525,6 +525,28 @@ html, body {
   color: #e4e4e7;
 }
 
+/* Symbol tokens and hover / occurrence highlighting */
+.code-viewer .symbol-token {
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.08s ease, outline 0.08s ease;
+}
+
+.code-viewer .symbol-token:hover,
+.code-viewer .symbol-hovered {
+  background-color: rgba(59, 130, 246, 0.35) !important;
+  outline: 1px solid rgba(96, 165, 250, 0.7);
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+.code-viewer .symbol-highlighted {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  outline: 1px solid rgba(96, 165, 250, 0.4);
+  border-radius: 2px;
+}
+
 /* Large file banner */
 .range-loading-banner {
   background-color: rgba(245, 158, 11, 0.1);

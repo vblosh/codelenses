@@ -17,10 +17,18 @@ export interface CodeWindowCallbacks {
   onCompileClick?: () => void;
 }
 
+function escapeCssAttr(value: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+  return value.replace(/["\\]/g, "\\$&");
+}
+
 export class CodeWindowComponent {
   private element: HTMLElement;
   private store: StateStore;
   private callbacks: CodeWindowCallbacks;
+  private activeHoveredElement: HTMLElement | null = null;
 
   private pathElem!: HTMLElement;
   private langBadge!: HTMLElement;
@@ -51,6 +59,7 @@ export class CodeWindowComponent {
   private currentStartLine: number = 0; // 0-based for backend
   private pageSize: number = 1000;
   private loadRequestId: number = 0;
+  private suppressScrollForLine: number | null = null;
 
   constructor(store: StateStore, callbacks: CodeWindowCallbacks = {}) {
     this.store = store;
@@ -103,6 +112,8 @@ export class CodeWindowComponent {
   }
 
   private initEvents(): void {
+    this.initHoverEvents();
+
     this.compileBadge.addEventListener("click", () => {
       if (this.callbacks.onCompileClick) {
         this.callbacks.onCompileClick();
@@ -118,6 +129,15 @@ export class CodeWindowComponent {
       }
       if (changedKeys.includes("selectedLine") && state.selectedLine !== null) {
         this.scrollToLine(state.selectedLine);
+      } else if (
+        changedKeys.includes("selectedSymbolId") &&
+        state.selectedSymbolId !== null &&
+        !changedKeys.includes("selectedLine")
+      ) {
+        const line = this.resolveSelectedOrSymbolLine();
+        if (line !== null) {
+          this.scrollToLine(line);
+        }
       }
       if (changedKeys.includes("workspaceId")) {
         this.fileCache.clear();
@@ -180,7 +200,7 @@ export class CodeWindowComponent {
       this.renderCodeLines();
       this.renderTabs();
 
-      const selLine = this.store.getState().selectedLine;
+      const selLine = this.resolveSelectedOrSymbolLine();
       if (selLine !== null) {
         this.scrollToLine(selLine);
       }
@@ -312,8 +332,8 @@ export class CodeWindowComponent {
       // Render Code Lines
       this.renderCodeLines();
 
-      // Scroll to selected line if set
-      const selLine = this.store.getState().selectedLine;
+      // Scroll to selected line or symbol if set
+      const selLine = this.resolveSelectedOrSymbolLine();
       if (selLine !== null) {
         this.scrollToLine(selLine);
       }
@@ -398,52 +418,94 @@ export class CodeWindowComponent {
       diagnostics: this.currentDiagnostics,
       occurrences: this.currentOccurrences,
       onLineClick: (lineNum) => {
+        this.suppressScrollForLine = lineNum;
         this.store.selectLine(lineNum);
       },
     });
 
+    this.clearHoverHighlights();
     this.viewerContainer.innerHTML = "";
     this.viewerContainer.appendChild(viewer);
 
-    // Attach click events on occurrences inside code lines
+    // Attach click events and tag occurrences inside code lines
     this.attachOccurrenceClicks(viewer);
   }
 
   private attachOccurrenceClicks(viewer: HTMLElement): void {
-    if (!this.currentOccurrences || this.currentOccurrences.length === 0) return;
-
     // Build map from line number (1-based) to occurrences on that line
     const occByLine = new Map<number, OccurrenceDto[]>();
-    for (const occ of this.currentOccurrences) {
-      const line = occ.range.start.line; // 1-based for matching DOM data-line
-      const list = occByLine.get(line) || [];
-      list.push(occ);
-      occByLine.set(line, list);
+    if (this.currentOccurrences) {
+      for (const occ of this.currentOccurrences) {
+        const line = occ.range.start.line; // 1-based for matching DOM data-line
+        const list = occByLine.get(line) || [];
+        list.push(occ);
+        occByLine.set(line, list);
+      }
     }
 
     const lines = viewer.querySelectorAll<HTMLElement>(".code-line");
     lines.forEach((lineElem) => {
       const lineNum = parseInt(lineElem.dataset.line || "0", 10);
-      const occs = occByLine.get(lineNum);
-      if (!occs || occs.length === 0) return;
+      const occs = occByLine.get(lineNum) || [];
 
-      // When user clicks a token span in a line with occurrences
-      lineElem.addEventListener("click", (e) => {
-        const target = e.target as HTMLElement;
-        if (target.classList.contains("tok") || target.tagName === "SPAN") {
-          const clickedText = target.textContent?.trim();
-          if (clickedText) {
-            const matchedOcc = occs.find((o) => o.name === clickedText);
-            if (matchedOcc && matchedOcc.symbolId) {
-              e.stopPropagation();
-              this.store.selectSymbol(matchedOcc.symbolId, lineNum);
-              if (this.callbacks.onSymbolClick) {
-                this.callbacks.onSymbolClick(matchedOcc.symbolId, lineNum);
-              }
-            }
+      // Tag all symbol tokens on this line
+      const spans = lineElem.querySelectorAll<HTMLElement>(".line-content span");
+      spans.forEach((span) => {
+        const text = span.textContent?.trim();
+        if (!text) return;
+
+        const matchedOcc = occs.find((o) => o.name === text);
+        if (matchedOcc) {
+          span.classList.add("symbol-token");
+          if (matchedOcc.symbolId) {
+            span.dataset.symbolId = String(matchedOcc.symbolId);
+          }
+          span.dataset.symbolName = matchedOcc.name;
+        } else {
+          // Check if span is an identifier token from syntax highlighter
+          const isNonSymbol =
+            span.classList.contains("tok-keyword") ||
+            span.classList.contains("tok-operator") ||
+            span.classList.contains("tok-string") ||
+            span.classList.contains("tok-number") ||
+            span.classList.contains("tok-comment") ||
+            span.classList.contains("hljs-keyword") ||
+            span.classList.contains("hljs-operator") ||
+            span.classList.contains("hljs-string") ||
+            span.classList.contains("hljs-number") ||
+            span.classList.contains("hljs-comment");
+
+          if (!isNonSymbol && /^[$_a-zA-Z\xA0-\uFFFF][$_a-zA-Z0-9\xA0-\uFFFF]*$/.test(text)) {
+            span.classList.add("symbol-token");
+            span.dataset.symbolName = text;
           }
         }
       });
+
+      // When user clicks a token span in a line with occurrences
+      if (occs.length > 0) {
+        lineElem.addEventListener("click", (e) => {
+          const target = e.target as HTMLElement;
+          if (
+            target.classList.contains("tok") ||
+            target.classList.contains("symbol-token") ||
+            target.tagName === "SPAN"
+          ) {
+            const clickedText = target.dataset.symbolName || target.textContent?.trim();
+            if (clickedText) {
+              const matchedOcc = occs.find((o) => o.name === clickedText);
+              if (matchedOcc && matchedOcc.symbolId) {
+                e.stopPropagation();
+                this.suppressScrollForLine = lineNum;
+                this.store.selectSymbol(matchedOcc.symbolId, lineNum);
+                if (this.callbacks.onSymbolClick) {
+                  this.callbacks.onSymbolClick(matchedOcc.symbolId, lineNum);
+                }
+              }
+            }
+          }
+        });
+      }
     });
   }
 
@@ -474,11 +536,168 @@ export class CodeWindowComponent {
         el.classList.remove("selected");
       });
       lineElem.classList.add("selected");
-      lineElem.scrollIntoView?.({ behavior: "smooth", block: "center" });
+
+      // If user selected a visible line/symbol directly in the code window, or if the line is already visible, do not scroll
+      const isSuppressed = this.suppressScrollForLine === lineNumber;
+      this.suppressScrollForLine = null;
+      if (isSuppressed || this.isLineVisible(lineElem)) {
+        return;
+      }
+
+      // Instantly locate code in window a couple of lines above the selected symbol
+      const contextLines = 2;
+      const targetLineNumber = Math.max(1, lineNumber - contextLines);
+      const targetElem =
+        this.viewerContainer.querySelector<HTMLElement>(
+          `.code-line[data-line="${targetLineNumber}"]`
+        ) || lineElem;
+
+      if (targetLineNumber <= 1) {
+        this.viewerContainer.scrollTop = 0;
+      } else if (targetElem) {
+        let offsetTop = 0;
+        let el: HTMLElement | null = targetElem;
+        while (el && el !== this.viewerContainer) {
+          offsetTop += el.offsetTop;
+          el = el.offsetParent as HTMLElement | null;
+        }
+        this.viewerContainer.scrollTop = offsetTop;
+      }
+
+      targetElem.scrollIntoView?.({ behavior: "auto", block: "start", inline: "nearest" });
     }
   }
 
+  isLineVisible(lineElem: HTMLElement): boolean {
+    const containerRect = this.viewerContainer.getBoundingClientRect();
+    const lineRect = lineElem.getBoundingClientRect();
+    if (containerRect.height > 0) {
+      return (
+        lineRect.top >= containerRect.top - 2 &&
+        lineRect.bottom <= containerRect.bottom + 2
+      );
+    }
+
+    if (this.viewerContainer.clientHeight > 0) {
+      let offsetTop = 0;
+      let el: HTMLElement | null = lineElem;
+      while (el && el !== this.viewerContainer) {
+        offsetTop += el.offsetTop;
+        el = el.offsetParent as HTMLElement | null;
+      }
+      const lineH = lineElem.offsetHeight || 20;
+      return (
+        offsetTop >= this.viewerContainer.scrollTop &&
+        offsetTop + lineH <=
+          this.viewerContainer.scrollTop + this.viewerContainer.clientHeight
+      );
+    }
+
+    return false;
+  }
+
+  private resolveSelectedOrSymbolLine(): number | null {
+    const state = this.store.getState();
+    if (state.selectedLine !== null) {
+      return state.selectedLine;
+    }
+    if (state.selectedSymbolId !== null && this.currentOccurrences.length > 0) {
+      const occ =
+        this.currentOccurrences.find(
+          (o) =>
+            o.symbolId === state.selectedSymbolId &&
+            (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
+        ) ||
+        this.currentOccurrences.find(
+          (o) => o.symbolId === state.selectedSymbolId
+        );
+      if (occ) {
+        return occ.range.start.line;
+      }
+    }
+    return null;
+  }
+
+  private initHoverEvents(): void {
+    this.viewerContainer.addEventListener("mouseover", (e) => {
+      const target = (e.target as HTMLElement).closest<HTMLElement>(
+        ".symbol-token, .tok, span"
+      );
+      if (!target || !this.viewerContainer.contains(target)) return;
+      if (!target.closest(".line-content")) return;
+
+      const isSymbol =
+        target.classList.contains("symbol-token") ||
+        Boolean(target.dataset.symbolName) ||
+        Boolean(target.dataset.symbolId) ||
+        (target.classList.contains("tok") &&
+          !target.classList.contains("tok-keyword") &&
+          !target.classList.contains("tok-operator") &&
+          !target.classList.contains("tok-string") &&
+          !target.classList.contains("tok-number") &&
+          !target.classList.contains("tok-comment"));
+
+      if (!isSymbol) return;
+
+      if (this.activeHoveredElement === target) return;
+
+      this.clearHoverHighlights();
+      this.activeHoveredElement = target;
+
+      target.classList.add("symbol-hovered");
+
+      const symId = target.dataset.symbolId;
+      const symName = target.dataset.symbolName || target.textContent?.trim();
+
+      if (symId) {
+        const matches = this.viewerContainer.querySelectorAll<HTMLElement>(
+          `[data-symbol-id="${escapeCssAttr(symId)}"]`
+        );
+        matches.forEach((el) => {
+          if (el !== target) {
+            el.classList.add("symbol-highlighted");
+          }
+        });
+      } else if (symName) {
+        const matches = this.viewerContainer.querySelectorAll<HTMLElement>(
+          `[data-symbol-name="${escapeCssAttr(symName)}"]`
+        );
+        matches.forEach((el) => {
+          if (el !== target) {
+            el.classList.add("symbol-highlighted");
+          }
+        });
+      }
+    });
+
+    this.viewerContainer.addEventListener("mouseout", (e) => {
+      const related = e.relatedTarget as HTMLElement | null;
+      if (this.activeHoveredElement) {
+        if (!related || !this.activeHoveredElement.contains(related)) {
+          this.clearHoverHighlights();
+        }
+      }
+    });
+
+    this.viewerContainer.addEventListener("mouseleave", () => {
+      this.clearHoverHighlights();
+    });
+  }
+
+  private clearHoverHighlights(): void {
+    if (this.activeHoveredElement) {
+      this.activeHoveredElement.classList.remove("symbol-hovered");
+      this.activeHoveredElement = null;
+    }
+    this.viewerContainer
+      .querySelectorAll(".symbol-hovered, .symbol-highlighted")
+      .forEach((el) => {
+        el.classList.remove("symbol-hovered", "symbol-highlighted");
+      });
+  }
+
   private clearFile(): void {
+    this.clearHoverHighlights();
     ++this.loadRequestId;
     this.currentFile = null;
     this.currentContent = null;
@@ -543,6 +762,6 @@ export class CodeWindowComponent {
 
     // Scroll active tab into view
     const activeTabElem = this.tabsBar.querySelector<HTMLElement>(".code-tab.active");
-    activeTabElem?.scrollIntoView?.({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    activeTabElem?.scrollIntoView?.({ behavior: "auto", block: "nearest", inline: "nearest" });
   }
 }

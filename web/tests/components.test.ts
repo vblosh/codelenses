@@ -243,6 +243,360 @@ describe("Frontend components", () => {
       expect(store.getState().selectedFileId).toBeNull();
       expect(elem.querySelector(".file-path-text")?.textContent).toBe("No file open");
     });
+
+    it("instantly locates code a couple of lines above selected symbol without smooth scroll", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValueOnce({
+        id: 10,
+        workspaceId: 1,
+        path: "/src/main.cpp",
+        relativePath: "src/main.cpp",
+        name: "main.cpp",
+        language: "cpp",
+        encoding: "utf-8",
+        sizeBytes: 100,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValueOnce({
+        fileId: 10,
+        path: "src/main.cpp",
+        content: "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10",
+        totalSizeBytes: 100,
+        totalLines: 10,
+        startLine: 0,
+        endLine: 9,
+        startByte: 0,
+        endByte: 100,
+        isBinary: false,
+        contentHash: "hash123",
+      });
+      vi.spyOn(api, "getFileHighlights").mockResolvedValueOnce({
+        fileId: 10,
+        legend: { tokenTypes: [] },
+        tokens: [],
+      });
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValueOnce({
+        fileId: 10,
+        occurrences: [
+          {
+            id: 1,
+            workspaceId: 1,
+            fileId: 10,
+            symbolId: 99,
+            occurrenceKind: "definition",
+            name: "testSymbol",
+            range: { start: { line: 5, column: 0, byte: 0 }, end: { line: 5, column: 10, byte: 10 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+        ],
+        total: 1,
+      });
+
+      const codeWindow = new CodeWindowComponent(store);
+      await codeWindow.loadFile(10);
+
+      const elem = codeWindow.getElement();
+      const line5 = elem.querySelector('.code-line[data-line="5"]') as HTMLElement;
+      const line3 = elem.querySelector('.code-line[data-line="3"]') as HTMLElement;
+      expect(line5).not.toBeNull();
+      expect(line3).not.toBeNull();
+
+      // Mock scrollIntoView on lines
+      const scrollIntoViewSpies = new Map<HTMLElement, any>();
+      elem.querySelectorAll<HTMLElement>(".code-line").forEach((el) => {
+        const spy = vi.fn();
+        el.scrollIntoView = spy;
+        scrollIntoViewSpies.set(el, spy);
+      });
+
+      // Mock offsetTop
+      Object.defineProperty(line3, "offsetTop", { value: 60, configurable: true });
+      Object.defineProperty(line5, "offsetTop", { value: 100, configurable: true });
+
+      // Scroll to line 5
+      codeWindow.scrollToLine(5);
+
+      // Verify line 5 is selected
+      expect(line5.classList.contains("selected")).toBe(true);
+
+      // Verify target element (line 3, couple lines above line 5) was scrolled into view with instant/auto behavior and block: "start"
+      const line3Spy = scrollIntoViewSpies.get(line3);
+      expect(line3Spy).toHaveBeenCalledWith(
+        expect.objectContaining({ behavior: "auto", block: "start" })
+      );
+      // Verify line 5 did NOT use smooth scroll or center
+      const line5Spy = scrollIntoViewSpies.get(line5);
+      expect(line5Spy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ behavior: "smooth" })
+      );
+
+      // Verify selecting line 1 scrolls to top (0)
+      const line1 = elem.querySelector('.code-line[data-line="1"]') as HTMLElement;
+      const viewerContainer = elem.querySelector(".code-viewer-container") as HTMLElement;
+      viewerContainer.scrollTop = 999;
+      codeWindow.scrollToLine(1);
+      expect(line1.classList.contains("selected")).toBe(true);
+      expect(line5.classList.contains("selected")).toBe(false);
+      expect(viewerContainer.scrollTop).toBe(0);
+
+      // Selecting symbol without explicit line navigates via occurrences
+      store.selectSymbol(99);
+      expect(line5.classList.contains("selected")).toBe(true);
+    });
+
+    it("does not scroll code window when user selects a visible symbol or clicks inside code window", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValueOnce({
+        id: 11,
+        workspaceId: 1,
+        path: "/src/main.cpp",
+        relativePath: "src/main.cpp",
+        name: "main.cpp",
+        language: "cpp",
+        encoding: "utf-8",
+        sizeBytes: 100,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValueOnce({
+        fileId: 11,
+        path: "src/main.cpp",
+        content: "int foo = 1;\nint bar = 2;\nint baz = 3;",
+        totalSizeBytes: 100,
+        totalLines: 3,
+        startLine: 0,
+        endLine: 2,
+        startByte: 0,
+        endByte: 100,
+        isBinary: false,
+        contentHash: "hash123",
+      });
+      vi.spyOn(api, "getFileHighlights").mockResolvedValueOnce({
+        fileId: 11,
+        legend: { tokenTypes: ["variable"] },
+        tokens: [],
+      });
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValueOnce({
+        fileId: 11,
+        occurrences: [
+          {
+            id: 2,
+            workspaceId: 1,
+            fileId: 11,
+            symbolId: 201,
+            occurrenceKind: "definition",
+            name: "bar",
+            range: { start: { line: 2, column: 4, byte: 17 }, end: { line: 2, column: 7, byte: 20 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+        ],
+        total: 1,
+      });
+
+      const onSymbolClick = vi.fn();
+      const codeWindow = new CodeWindowComponent(store, { onSymbolClick });
+      await codeWindow.loadFile(11);
+
+      const elem = codeWindow.getElement();
+      const viewerContainer = elem.querySelector(".code-viewer-container") as HTMLElement;
+      viewerContainer.scrollTop = 50;
+
+      const line2 = elem.querySelector('.code-line[data-line="2"]') as HTMLElement;
+      expect(line2).not.toBeNull();
+
+      // Spy on scrollIntoView for all lines
+      const scrollSpies: any[] = [];
+      elem.querySelectorAll<HTMLElement>(".code-line").forEach((el) => {
+        const spy = vi.fn();
+        el.scrollIntoView = spy;
+        scrollSpies.push(spy);
+      });
+
+      // Simulate clicking on the token span for "bar" inside line 2
+      // Wrap text in a span as highlightSource would
+      const tokenSpan = document.createElement("span");
+      tokenSpan.className = "tok";
+      tokenSpan.textContent = "bar";
+      line2.querySelector(".line-content")?.appendChild(tokenSpan);
+
+      tokenSpan.click();
+
+      // Symbol and line are selected
+      expect(store.getState().selectedSymbolId).toBe(201);
+      expect(store.getState().selectedLine).toBe(2);
+      expect(line2.classList.contains("selected")).toBe(true);
+
+      // Verify NO scroll occurred: scrollTop is unchanged and scrollIntoView was NOT called
+      expect(viewerContainer.scrollTop).toBe(50);
+      for (const spy of scrollSpies) {
+        expect(spy).not.toHaveBeenCalled();
+      }
+
+      // Also test isLineVisible: mock getBoundingClientRect
+      vi.spyOn(viewerContainer, "getBoundingClientRect").mockReturnValue({
+        top: 100,
+        bottom: 500,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 400,
+        x: 0,
+        y: 100,
+        toJSON: () => {},
+      });
+      vi.spyOn(line2, "getBoundingClientRect").mockReturnValue({
+        top: 150,
+        bottom: 170,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 20,
+        x: 0,
+        y: 150,
+        toJSON: () => {},
+      });
+
+      expect(codeWindow.isLineVisible(line2)).toBe(true);
+
+      // Calling scrollToLine on an already visible line does NOT scroll
+      codeWindow.scrollToLine(2);
+      expect(viewerContainer.scrollTop).toBe(50);
+      for (const spy of scrollSpies) {
+        expect(spy).not.toHaveBeenCalled();
+      }
+    });
+
+    it("highlights symbols and occurrences when hovered in code window", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValueOnce({
+        id: 12,
+        workspaceId: 1,
+        path: "/src/calc.cpp",
+        relativePath: "src/calc.cpp",
+        name: "calc.cpp",
+        language: "cpp",
+        encoding: "utf-8",
+        sizeBytes: 60,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValueOnce({
+        fileId: 12,
+        path: "src/calc.cpp",
+        content: "int foo = 1;\nint bar = 2;\nreturn foo;",
+        totalSizeBytes: 60,
+        totalLines: 3,
+        startLine: 0,
+        endLine: 2,
+        startByte: 0,
+        endByte: 60,
+        isBinary: false,
+        contentHash: "hashcalc",
+      });
+      vi.spyOn(api, "getFileHighlights").mockResolvedValueOnce({
+        fileId: 12,
+        legend: { tokenTypes: ["keyword", "variable"] },
+        tokens: [
+          { line: 0, startColumn: 0, length: 3, tokenType: 0 },
+          { line: 0, startColumn: 4, length: 3, tokenType: 1 },
+          { line: 1, startColumn: 0, length: 3, tokenType: 0 },
+          { line: 1, startColumn: 4, length: 3, tokenType: 1 },
+          { line: 2, startColumn: 0, length: 6, tokenType: 0 },
+          { line: 2, startColumn: 7, length: 3, tokenType: 1 },
+        ],
+      });
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValueOnce({
+        fileId: 12,
+        occurrences: [
+          {
+            id: 1,
+            workspaceId: 1,
+            fileId: 12,
+            symbolId: 50,
+            occurrenceKind: "definition",
+            name: "foo",
+            range: { start: { line: 1, column: 4, byte: 4 }, end: { line: 1, column: 7, byte: 7 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+          {
+            id: 2,
+            workspaceId: 1,
+            fileId: 12,
+            symbolId: 60,
+            occurrenceKind: "definition",
+            name: "bar",
+            range: { start: { line: 2, column: 4, byte: 17 }, end: { line: 2, column: 7, byte: 20 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+          {
+            id: 3,
+            workspaceId: 1,
+            fileId: 12,
+            symbolId: 50,
+            occurrenceKind: "reference",
+            name: "foo",
+            range: { start: { line: 3, column: 7, byte: 33 }, end: { line: 3, column: 10, byte: 36 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+        ],
+        total: 3,
+      });
+
+      const codeWindow = new CodeWindowComponent(store);
+      await codeWindow.loadFile(12);
+
+      const elem = codeWindow.getElement();
+      const fooSpans = elem.querySelectorAll<HTMLElement>('.code-line span[data-symbol-name="foo"]');
+      const barSpan = elem.querySelector<HTMLElement>('.code-line span[data-symbol-name="bar"]');
+
+      expect(fooSpans.length).toBe(2);
+      expect(barSpan).not.toBeNull();
+      expect(fooSpans[0].dataset.symbolId).toBe("50");
+      expect(fooSpans[1].dataset.symbolId).toBe("50");
+      expect(fooSpans[0].classList.contains("symbol-token")).toBe(true);
+
+      // Hover over the first "foo" symbol
+      fooSpans[0].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+
+      // First foo gets symbol-hovered
+      expect(fooSpans[0].classList.contains("symbol-hovered")).toBe(true);
+      // Other foo occurrence gets symbol-highlighted
+      expect(fooSpans[1].classList.contains("symbol-highlighted")).toBe(true);
+      // bar is unaffected
+      expect(barSpan?.classList.contains("symbol-hovered")).toBe(false);
+      expect(barSpan?.classList.contains("symbol-highlighted")).toBe(false);
+
+      // Move mouse away
+      fooSpans[0].dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+
+      expect(fooSpans[0].classList.contains("symbol-hovered")).toBe(false);
+      expect(fooSpans[1].classList.contains("symbol-highlighted")).toBe(false);
+
+      // Hover over "bar"
+      barSpan!.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      expect(barSpan!.classList.contains("symbol-hovered")).toBe(true);
+      expect(fooSpans[0].classList.contains("symbol-highlighted")).toBe(false);
+      expect(fooSpans[1].classList.contains("symbol-highlighted")).toBe(false);
+
+      // Mouse leave container clears all
+      elem.querySelector(".code-viewer-container")!.dispatchEvent(new MouseEvent("mouseleave"));
+      expect(barSpan!.classList.contains("symbol-hovered")).toBe(false);
+    });
   });
 
   describe("OutlineComponent", () => {
