@@ -200,7 +200,7 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 **Dependencies:** all relevant workstreams
 
 - [x] I-01 Create end-to-end sample workspace covering all languages.
-- [ ] I-02 Add API contract tests against a temporary SQLite database.
+- [x] I-02 Add API contract tests against a temporary SQLite database.
 - [ ] I-03 Add database migration tests from every supported schema version.
 - [ ] I-04 Add malformed-source and hostile-path security tests.
 - [ ] I-05 Add cancellation and restart recovery tests.
