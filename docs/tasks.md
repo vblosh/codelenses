@@ -205,7 +205,7 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 - [x] I-04 Add malformed-source and hostile-path security tests.
 - [x] I-05 Add cancellation and restart recovery tests.
 - [x] I-06 Benchmark cold indexing and incremental indexing separately.
-- [ ] I-07 Benchmark tree expansion, source range retrieval, symbol search, and reference queries.
+- [x] I-07 Benchmark tree expansion, source range retrieval, symbol search, and reference queries.
 - [ ] I-08 Add memory and database-size measurements for representative repositories.
 - [ ] I-09 Add release packaging and sample configuration.
 - [ ] I-10 Document limitations and language-specific resolution behavior.
