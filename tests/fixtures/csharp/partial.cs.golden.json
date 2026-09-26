@@ -1,0 +1,299 @@
+{
+  "declarations": [
+    {
+      "end_byte": 40,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "Services.Client",
+      "start_byte": 25,
+      "symbol_name": "Services.Client"
+    },
+    {
+      "enclosing_scope": "Services.Client",
+      "end_byte": 93,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Services.Client.ServiceClient",
+      "start_byte": 80,
+      "symbol_name": "ServiceClient"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 124,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Services.Client.ServiceClient._endpoint",
+      "start_byte": 115,
+      "symbol_name": "_endpoint"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 151,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Services.Client.ServiceClient.ServiceClient",
+      "start_byte": 138,
+      "symbol_name": "ServiceClient"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 263,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Services.Client.ServiceClient.OnInitialized",
+      "start_byte": 250,
+      "symbol_name": "OnInitialized"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 291,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Services.Client.ServiceClient.Connect",
+      "start_byte": 284,
+      "symbol_name": "Connect"
+    },
+    {
+      "enclosing_scope": "Services.Client",
+      "end_byte": 359,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Services.Client.ServiceClient",
+      "start_byte": 346,
+      "symbol_name": "ServiceClient"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 391,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Services.Client.ServiceClient.TimeoutSeconds",
+      "start_byte": 377,
+      "symbol_name": "TimeoutSeconds"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 437,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Services.Client.ServiceClient.OnInitialized",
+      "start_byte": 424,
+      "symbol_name": "OnInitialized"
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 503,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Services.Client.ServiceClient.SendPing",
+      "start_byte": 495,
+      "symbol_name": "SendPing"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C#",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "System"
+      ],
+      "end_byte": 12,
+      "kind": "import",
+      "start_byte": 6,
+      "written_name": "System"
+    },
+    {
+      "candidate_targets": [
+        "Serializable",
+        "SerializableAttribute"
+      ],
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 57,
+      "kind": "reference",
+      "start_byte": 45,
+      "written_name": "Serializable"
+    },
+    {
+      "candidate_targets": [
+        "_endpoint"
+      ],
+      "enclosing_scope": "Services.Client.ServiceClient.ServiceClient",
+      "end_byte": 188,
+      "kind": "reference",
+      "start_byte": 179,
+      "written_name": "_endpoint"
+    },
+    {
+      "candidate_targets": [
+        "endpoint"
+      ],
+      "enclosing_scope": "Services.Client.ServiceClient.ServiceClient",
+      "end_byte": 199,
+      "kind": "reference",
+      "start_byte": 191,
+      "written_name": "endpoint"
+    },
+    {
+      "candidate_targets": [
+        "OnInitialized"
+      ],
+      "enclosing_scope": "Services.Client.ServiceClient.ServiceClient",
+      "end_byte": 222,
+      "kind": "call",
+      "start_byte": 209,
+      "written_name": "OnInitialized"
+    },
+    {
+      "candidate_targets": [
+        "SendPing"
+      ],
+      "enclosing_scope": "Services.Client.ServiceClient.Connect",
+      "end_byte": 312,
+      "kind": "call",
+      "start_byte": 304,
+      "written_name": "SendPing"
+    },
+    {
+      "candidate_targets": [
+        "TimeoutSeconds"
+      ],
+      "enclosing_scope": "Services.Client.ServiceClient.OnInitialized",
+      "end_byte": 464,
+      "kind": "reference",
+      "start_byte": 450,
+      "written_name": "TimeoutSeconds"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 40,
+      "end_column": 26,
+      "end_line": 3,
+      "kind": "namespace",
+      "name": "Services.Client",
+      "qualified_name": "Services.Client",
+      "signature": "namespace Services.Client",
+      "start_byte": 25,
+      "start_column": 11,
+      "start_line": 3
+    },
+    {
+      "enclosing_scope": "Services.Client",
+      "end_byte": 93,
+      "end_column": 35,
+      "end_line": 6,
+      "kind": "class",
+      "name": "ServiceClient",
+      "qualified_name": "Services.Client.ServiceClient",
+      "signature": "[Serializable] public partial class ServiceClient",
+      "start_byte": 80,
+      "start_column": 22,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 124,
+      "end_column": 29,
+      "end_line": 7,
+      "kind": "field",
+      "name": "_endpoint",
+      "qualified_name": "Services.Client.ServiceClient._endpoint",
+      "signature": "private string _endpoint",
+      "start_byte": 115,
+      "start_column": 20,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 151,
+      "end_column": 25,
+      "end_line": 9,
+      "kind": "method",
+      "name": "ServiceClient",
+      "qualified_name": "Services.Client.ServiceClient.ServiceClient",
+      "signature": "public ServiceClient(string endpoint)",
+      "start_byte": 138,
+      "start_column": 12,
+      "start_line": 9
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 263,
+      "end_column": 31,
+      "end_line": 14,
+      "kind": "method",
+      "name": "OnInitialized",
+      "qualified_name": "Services.Client.ServiceClient.OnInitialized",
+      "signature": "partial void OnInitialized()",
+      "start_byte": 250,
+      "start_column": 18,
+      "start_line": 14
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 291,
+      "end_column": 24,
+      "end_line": 16,
+      "kind": "method",
+      "name": "Connect",
+      "qualified_name": "Services.Client.ServiceClient.Connect",
+      "signature": "public void Connect()",
+      "start_byte": 284,
+      "start_column": 17,
+      "start_line": 16
+    },
+    {
+      "enclosing_scope": "Services.Client",
+      "end_byte": 359,
+      "end_column": 35,
+      "end_line": 21,
+      "kind": "class",
+      "name": "ServiceClient",
+      "qualified_name": "Services.Client.ServiceClient",
+      "signature": "public partial class ServiceClient",
+      "start_byte": 346,
+      "start_column": 22,
+      "start_line": 21
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 391,
+      "end_column": 30,
+      "end_line": 22,
+      "kind": "field",
+      "name": "TimeoutSeconds",
+      "qualified_name": "Services.Client.ServiceClient.TimeoutSeconds",
+      "signature": "public int TimeoutSeconds",
+      "start_byte": 377,
+      "start_column": 16,
+      "start_line": 22
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 437,
+      "end_column": 31,
+      "end_line": 24,
+      "kind": "method",
+      "name": "OnInitialized",
+      "qualified_name": "Services.Client.ServiceClient.OnInitialized",
+      "signature": "partial void OnInitialized()",
+      "start_byte": 424,
+      "start_column": 18,
+      "start_line": 24
+    },
+    {
+      "enclosing_scope": "Services.Client.ServiceClient",
+      "end_byte": 503,
+      "end_column": 26,
+      "end_line": 28,
+      "kind": "method",
+      "name": "SendPing",
+      "qualified_name": "Services.Client.ServiceClient.SendPing",
+      "signature": "private void SendPing()",
+      "start_byte": 495,
+      "start_column": 18,
+      "start_line": 28
+    }
+  ]
+}

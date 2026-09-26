@@ -153,9 +153,9 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H3 C# adapter
 
-- [ ] H3-01 Extract namespaces, types, methods, properties, fields, using directives.
-- [ ] H3-02 Extract inheritance, interfaces, calls, and attributes.
-- [ ] H3-03 Add fixtures for generics and partial declarations.
+- [x] H3-01 Extract namespaces, types, methods, properties, fields, using directives.
+- [x] H3-02 Extract inheritance, interfaces, calls, and attributes.
+- [x] H3-03 Add fixtures for generics and partial declarations.
 
 ### H4 Python adapter
 

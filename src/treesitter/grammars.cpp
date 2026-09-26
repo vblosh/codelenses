@@ -3,10 +3,8 @@
 extern "C" {
 const TSLanguage* tree_sitter_c(void);
 const TSLanguage* tree_sitter_cpp(void);
+const TSLanguage* tree_sitter_c_sharp(void);
 #if defined(__GNUC__) || defined(__clang__)
-__attribute__((weak)) const TSLanguage* tree_sitter_c_sharp(void) {
-    return nullptr;
-}
 __attribute__((weak)) const TSLanguage* tree_sitter_python(void) {
     return nullptr;
 }
@@ -29,7 +27,6 @@ __attribute__((weak)) const TSLanguage* tree_sitter_bash(void) {
     return nullptr;
 }
 #else
-const TSLanguage* tree_sitter_c_sharp(void);
 const TSLanguage* tree_sitter_python(void);
 const TSLanguage* tree_sitter_typescript(void);
 const TSLanguage* tree_sitter_tsx(void);

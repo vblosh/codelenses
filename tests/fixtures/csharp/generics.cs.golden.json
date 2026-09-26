@@ -1,0 +1,729 @@
+{
+  "declarations": [
+    {
+      "end_byte": 74,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "Storage.Generic",
+      "start_byte": 59,
+      "symbol_name": "Storage.Generic"
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 102,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "Storage.Generic.IEntity",
+      "start_byte": 95,
+      "symbol_name": "IEntity"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.IEntity",
+      "end_byte": 122,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Storage.Generic.IEntity.Id",
+      "start_byte": 120,
+      "symbol_name": "Id"
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 168,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "Storage.Generic.IRepository",
+      "start_byte": 157,
+      "symbol_name": "IRepository"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 242,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.IRepository.GetById",
+      "start_byte": 235,
+      "symbol_name": "GetById"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 266,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.IRepository.Save",
+      "start_byte": 262,
+      "symbol_name": "Save"
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 304,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Storage.Generic.User",
+      "start_byte": 300,
+      "symbol_name": "User"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.User",
+      "end_byte": 339,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Storage.Generic.User.Id",
+      "start_byte": 337,
+      "symbol_name": "Id"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.User",
+      "end_byte": 376,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Storage.Generic.User.Name",
+      "start_byte": 372,
+      "symbol_name": "Name"
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 417,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Storage.Generic.Repository",
+      "start_byte": 407,
+      "symbol_name": "Repository"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 542,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Storage.Generic.Repository._items",
+      "start_byte": 536,
+      "symbol_name": "_items"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 566,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.Repository.Repository",
+      "start_byte": 556,
+      "symbol_name": "Repository"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 642,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.Repository.GetById",
+      "start_byte": 635,
+      "symbol_name": "GetById"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 705,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.Repository.Save",
+      "start_byte": 701,
+      "symbol_name": "Save"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 787,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.Repository.Transform",
+      "start_byte": 778,
+      "symbol_name": "Transform"
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 906,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Storage.Generic.Service",
+      "start_byte": 899,
+      "symbol_name": "Service"
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Service",
+      "end_byte": 932,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Storage.Generic.Service.Process",
+      "start_byte": 925,
+      "symbol_name": "Process"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C#",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "System"
+      ],
+      "end_byte": 12,
+      "kind": "import",
+      "start_byte": 6,
+      "written_name": "System"
+    },
+    {
+      "candidate_targets": [
+        "System.Collections.Generic"
+      ],
+      "end_byte": 46,
+      "kind": "import",
+      "start_byte": 20,
+      "written_name": "System.Collections.Generic"
+    },
+    {
+      "candidate_targets": [
+        "TKey"
+      ],
+      "enclosing_scope": "Storage.Generic.IEntity",
+      "end_byte": 119,
+      "kind": "reference",
+      "start_byte": 115,
+      "written_name": "TKey"
+    },
+    {
+      "candidate_targets": [
+        "IEntity<TKey>",
+        "IEntity"
+      ],
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 220,
+      "kind": "reference",
+      "start_byte": 207,
+      "written_name": "IEntity<TKey>"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 234,
+      "kind": "reference",
+      "start_byte": 227,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "TKey"
+      ],
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 247,
+      "kind": "reference",
+      "start_byte": 243,
+      "written_name": "TKey"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 274,
+      "kind": "reference",
+      "start_byte": 267,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "IEntity<int>",
+        "IEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.User",
+      "end_byte": 319,
+      "kind": "implementation",
+      "start_byte": 307,
+      "written_name": "IEntity<int>"
+    },
+    {
+      "candidate_targets": [
+        "IRepository<TEntity, TKey>",
+        "IRepository"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 461,
+      "kind": "implementation",
+      "start_byte": 435,
+      "written_name": "IRepository<TEntity, TKey>"
+    },
+    {
+      "candidate_targets": [
+        "IEntity<TKey>",
+        "IEntity"
+      ],
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 498,
+      "kind": "reference",
+      "start_byte": 485,
+      "written_name": "IEntity<TKey>"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 526,
+      "kind": "reference",
+      "start_byte": 522,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 534,
+      "kind": "reference",
+      "start_byte": 527,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "_items"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Repository",
+      "end_byte": 585,
+      "kind": "reference",
+      "start_byte": 579,
+      "written_name": "_items"
+    },
+    {
+      "candidate_targets": [
+        "List<TEntity>",
+        "List"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Repository",
+      "end_byte": 605,
+      "kind": "call",
+      "start_byte": 592,
+      "written_name": "List<TEntity>"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 634,
+      "kind": "reference",
+      "start_byte": 627,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "TKey"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 647,
+      "kind": "reference",
+      "start_byte": 643,
+      "written_name": "TKey"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 713,
+      "kind": "reference",
+      "start_byte": 706,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "_items"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Save",
+      "end_byte": 738,
+      "kind": "reference",
+      "start_byte": 732,
+      "written_name": "_items"
+    },
+    {
+      "candidate_targets": [
+        "_items.Add",
+        "Add"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Save",
+      "end_byte": 742,
+      "kind": "call",
+      "start_byte": 732,
+      "written_name": "_items.Add"
+    },
+    {
+      "candidate_targets": [
+        "entity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Save",
+      "end_byte": 749,
+      "kind": "reference",
+      "start_byte": 743,
+      "written_name": "entity"
+    },
+    {
+      "candidate_targets": [
+        "TResult"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 777,
+      "kind": "reference",
+      "start_byte": 770,
+      "written_name": "TResult"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 804,
+      "kind": "reference",
+      "start_byte": 797,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "Func"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 817,
+      "kind": "reference",
+      "start_byte": 813,
+      "written_name": "Func"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 825,
+      "kind": "reference",
+      "start_byte": 818,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "TResult"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 834,
+      "kind": "reference",
+      "start_byte": 827,
+      "written_name": "TResult"
+    },
+    {
+      "candidate_targets": [
+        "mapper"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Transform",
+      "end_byte": 867,
+      "kind": "call",
+      "start_byte": 861,
+      "written_name": "mapper"
+    },
+    {
+      "candidate_targets": [
+        "entity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Transform",
+      "end_byte": 874,
+      "kind": "reference",
+      "start_byte": 868,
+      "written_name": "entity"
+    },
+    {
+      "candidate_targets": [
+        "repo"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 953,
+      "kind": "reference",
+      "start_byte": 949,
+      "written_name": "repo"
+    },
+    {
+      "candidate_targets": [
+        "Repository<User, int>",
+        "Repository"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 981,
+      "kind": "call",
+      "start_byte": 960,
+      "written_name": "Repository<User, int>"
+    },
+    {
+      "candidate_targets": [
+        "user"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 1001,
+      "kind": "reference",
+      "start_byte": 997,
+      "written_name": "user"
+    },
+    {
+      "candidate_targets": [
+        "User"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 1012,
+      "kind": "call",
+      "start_byte": 1008,
+      "written_name": "User"
+    },
+    {
+      "candidate_targets": [
+        "repo"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 1028,
+      "kind": "reference",
+      "start_byte": 1024,
+      "written_name": "repo"
+    },
+    {
+      "candidate_targets": [
+        "repo.Save",
+        "Save"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 1033,
+      "kind": "call",
+      "start_byte": 1024,
+      "written_name": "repo.Save"
+    },
+    {
+      "candidate_targets": [
+        "user"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 1038,
+      "kind": "reference",
+      "start_byte": 1034,
+      "written_name": "user"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 74,
+      "end_column": 26,
+      "end_line": 4,
+      "kind": "namespace",
+      "name": "Storage.Generic",
+      "qualified_name": "Storage.Generic",
+      "signature": "namespace Storage.Generic",
+      "start_byte": 59,
+      "start_column": 11,
+      "start_line": 4
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 102,
+      "end_column": 25,
+      "end_line": 6,
+      "kind": "interface",
+      "name": "IEntity",
+      "qualified_name": "Storage.Generic.IEntity",
+      "signature": "public interface IEntity<TKey>",
+      "start_byte": 95,
+      "start_column": 18,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "Storage.Generic.IEntity",
+      "end_byte": 122,
+      "end_column": 12,
+      "end_line": 7,
+      "kind": "field",
+      "name": "Id",
+      "qualified_name": "Storage.Generic.IEntity.Id",
+      "signature": "TKey Id",
+      "start_byte": 120,
+      "start_column": 10,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 168,
+      "end_column": 29,
+      "end_line": 10,
+      "kind": "interface",
+      "name": "IRepository",
+      "qualified_name": "Storage.Generic.IRepository",
+      "signature": "public interface IRepository<TEntity, TKey> where TEntity : class, IEntity<TKey>",
+      "start_byte": 157,
+      "start_column": 18,
+      "start_line": 10
+    },
+    {
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 242,
+      "end_column": 20,
+      "end_line": 11,
+      "kind": "method",
+      "name": "GetById",
+      "qualified_name": "Storage.Generic.IRepository.GetById",
+      "signature": "TEntity GetById(TKey id)",
+      "start_byte": 235,
+      "start_column": 13,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "Storage.Generic.IRepository",
+      "end_byte": 266,
+      "end_column": 14,
+      "end_line": 12,
+      "kind": "method",
+      "name": "Save",
+      "qualified_name": "Storage.Generic.IRepository.Save",
+      "signature": "void Save(TEntity entity)",
+      "start_byte": 262,
+      "start_column": 10,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 304,
+      "end_column": 18,
+      "end_line": 15,
+      "kind": "class",
+      "name": "User",
+      "qualified_name": "Storage.Generic.User",
+      "signature": "public class User : IEntity<int>",
+      "start_byte": 300,
+      "start_column": 14,
+      "start_line": 15
+    },
+    {
+      "enclosing_scope": "Storage.Generic.User",
+      "end_byte": 339,
+      "end_column": 18,
+      "end_line": 16,
+      "kind": "field",
+      "name": "Id",
+      "qualified_name": "Storage.Generic.User.Id",
+      "signature": "public int Id",
+      "start_byte": 337,
+      "start_column": 16,
+      "start_line": 16
+    },
+    {
+      "enclosing_scope": "Storage.Generic.User",
+      "end_byte": 376,
+      "end_column": 23,
+      "end_line": 17,
+      "kind": "field",
+      "name": "Name",
+      "qualified_name": "Storage.Generic.User.Name",
+      "signature": "public string Name",
+      "start_byte": 372,
+      "start_column": 19,
+      "start_line": 17
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 417,
+      "end_column": 24,
+      "end_line": 20,
+      "kind": "class",
+      "name": "Repository",
+      "qualified_name": "Storage.Generic.Repository",
+      "signature": "public class Repository<TEntity, TKey> : IRepository<TEntity, TKey> where TEntity : class, IEntity<TKey>",
+      "start_byte": 407,
+      "start_column": 14,
+      "start_line": 20
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 542,
+      "end_column": 42,
+      "end_line": 21,
+      "kind": "field",
+      "name": "_items",
+      "qualified_name": "Storage.Generic.Repository._items",
+      "signature": "private readonly List<TEntity> _items",
+      "start_byte": 536,
+      "start_column": 36,
+      "start_line": 21
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 566,
+      "end_column": 22,
+      "end_line": 23,
+      "kind": "method",
+      "name": "Repository",
+      "qualified_name": "Storage.Generic.Repository.Repository",
+      "signature": "public Repository()",
+      "start_byte": 556,
+      "start_column": 12,
+      "start_line": 23
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 642,
+      "end_column": 27,
+      "end_line": 27,
+      "kind": "method",
+      "name": "GetById",
+      "qualified_name": "Storage.Generic.Repository.GetById",
+      "signature": "public TEntity GetById(TKey id)",
+      "start_byte": 635,
+      "start_column": 20,
+      "start_line": 27
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 705,
+      "end_column": 21,
+      "end_line": 31,
+      "kind": "method",
+      "name": "Save",
+      "qualified_name": "Storage.Generic.Repository.Save",
+      "signature": "public void Save(TEntity entity)",
+      "start_byte": 701,
+      "start_column": 17,
+      "start_line": 31
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Repository",
+      "end_byte": 787,
+      "end_column": 29,
+      "end_line": 35,
+      "kind": "method",
+      "name": "Transform",
+      "qualified_name": "Storage.Generic.Repository.Transform",
+      "signature": "public TResult Transform<TResult>(TEntity entity, Func<TEntity, TResult> mapper)",
+      "start_byte": 778,
+      "start_column": 20,
+      "start_line": 35
+    },
+    {
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 906,
+      "end_column": 21,
+      "end_line": 40,
+      "kind": "class",
+      "name": "Service",
+      "qualified_name": "Storage.Generic.Service",
+      "signature": "public class Service",
+      "start_byte": 899,
+      "start_column": 14,
+      "start_line": 40
+    },
+    {
+      "enclosing_scope": "Storage.Generic.Service",
+      "end_byte": 932,
+      "end_column": 24,
+      "end_line": 41,
+      "kind": "method",
+      "name": "Process",
+      "qualified_name": "Storage.Generic.Service.Process",
+      "signature": "public void Process()",
+      "start_byte": 925,
+      "start_column": 17,
+      "start_line": 41
+    }
+  ]
+}
