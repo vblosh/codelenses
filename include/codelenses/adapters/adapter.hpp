@@ -133,6 +133,29 @@ struct CompileCommandContext {
 
     friend bool operator==(const CompileCommandContext&, const CompileCommandContext&) = default;
 
+    struct ActiveDefine {
+        std::string name;
+        std::string value;
+        auto operator<=>(const ActiveDefine&) const = default;
+    };
+
+    [[nodiscard]] std::vector<ActiveDefine> active_defines() const {
+        std::vector<ActiveDefine> result;
+        for (const auto& def_arg : defines) {
+            if (def_arg.starts_with("-U")) {
+                std::string_view undef_name = std::string_view(def_arg).substr(2);
+                std::erase_if(result, [&](const ActiveDefine& m) { return m.name == undef_name; });
+            } else {
+                auto eq = def_arg.find('=');
+                std::string name = (eq != std::string::npos) ? def_arg.substr(0, eq) : def_arg;
+                std::string val = (eq != std::string::npos) ? def_arg.substr(eq + 1) : "1";
+                std::erase_if(result, [&](const ActiveDefine& m) { return m.name == name; });
+                result.push_back(ActiveDefine{.name = std::move(name), .value = std::move(val)});
+            }
+        }
+        return result;
+    }
+
     [[nodiscard]] bool has_define(std::string_view name) const {
         for (auto it = defines.rbegin(); it != defines.rend(); ++it) {
             if (it->starts_with("-U")) {

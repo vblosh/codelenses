@@ -1,0 +1,457 @@
+{
+  "declarations": [
+    {
+      "end_byte": 46,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "Core::Diagnostics",
+      "start_byte": 29,
+      "symbol_name": "Core::Diagnostics"
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics",
+      "end_byte": 62,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Core::Diagnostics::Logger",
+      "start_byte": 56,
+      "symbol_name": "Logger"
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 86,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Core::Diagnostics::Logger::info",
+      "start_byte": 82,
+      "symbol_name": "info"
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 125,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Core::Diagnostics::Logger::warn",
+      "start_byte": 121,
+      "symbol_name": "warn"
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 172,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Core::Diagnostics::Logger::info",
+      "start_byte": 168,
+      "symbol_name": "info"
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 218,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Core::Diagnostics::Logger::warn",
+      "start_byte": 214,
+      "symbol_name": "warn"
+    },
+    {
+      "end_byte": 300,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "V1",
+      "start_byte": 298,
+      "symbol_name": "V1"
+    },
+    {
+      "enclosing_scope": "V1",
+      "end_byte": 319,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "V1::legacy_init",
+      "start_byte": 308,
+      "symbol_name": "legacy_init"
+    },
+    {
+      "end_byte": 358,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "diag",
+      "start_byte": 354,
+      "symbol_name": "diag"
+    },
+    {
+      "end_byte": 423,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "INTERNAL_BUFFER_SIZE",
+      "start_byte": 403,
+      "symbol_name": "INTERNAL_BUFFER_SIZE"
+    },
+    {
+      "end_byte": 454,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "test_namespaces",
+      "start_byte": 439,
+      "symbol_name": "test_namespaces"
+    },
+    {
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 536,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "test_namespaces::log",
+      "start_byte": 533,
+      "symbol_name": "log"
+    },
+    {
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 609,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "test_namespaces::diag_log",
+      "start_byte": 601,
+      "symbol_name": "diag_log"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C++",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "end_byte": 17,
+      "kind": "include",
+      "start_byte": 9,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 104,
+      "kind": "reference",
+      "start_byte": 98,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 143,
+      "kind": "reference",
+      "start_byte": 137,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "Logger"
+      ],
+      "enclosing_scope": "Core::Diagnostics",
+      "end_byte": 166,
+      "kind": "reference",
+      "start_byte": 160,
+      "written_name": "Logger"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "Core::Diagnostics",
+      "end_byte": 190,
+      "kind": "reference",
+      "start_byte": 184,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "Logger"
+      ],
+      "enclosing_scope": "Core::Diagnostics",
+      "end_byte": 212,
+      "kind": "reference",
+      "start_byte": 206,
+      "written_name": "Logger"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "Core::Diagnostics",
+      "end_byte": 236,
+      "kind": "reference",
+      "start_byte": 230,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "Core::Diagnostics"
+      ],
+      "end_byte": 378,
+      "kind": "reference",
+      "start_byte": 361,
+      "written_name": "Core::Diagnostics"
+    },
+    {
+      "candidate_targets": [
+        "Core::Diagnostics",
+        "Diagnostics"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 496,
+      "kind": "reference",
+      "start_byte": 479,
+      "written_name": "Core::Diagnostics"
+    },
+    {
+      "candidate_targets": [
+        "std::string",
+        "string"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 519,
+      "kind": "reference",
+      "start_byte": 508,
+      "written_name": "std::string"
+    },
+    {
+      "candidate_targets": [
+        "Logger"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 532,
+      "kind": "reference",
+      "start_byte": 526,
+      "written_name": "Logger"
+    },
+    {
+      "candidate_targets": [
+        "log"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 545,
+      "kind": "reference",
+      "start_byte": 542,
+      "written_name": "log"
+    },
+    {
+      "candidate_targets": [
+        "info"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 550,
+      "kind": "call",
+      "start_byte": 546,
+      "written_name": "info"
+    },
+    {
+      "candidate_targets": [
+        "legacy_init"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 579,
+      "kind": "call",
+      "start_byte": 568,
+      "written_name": "legacy_init"
+    },
+    {
+      "candidate_targets": [
+        "Logger"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 600,
+      "kind": "reference",
+      "start_byte": 594,
+      "written_name": "Logger"
+    },
+    {
+      "candidate_targets": [
+        "diag_log"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 623,
+      "kind": "reference",
+      "start_byte": 615,
+      "written_name": "diag_log"
+    },
+    {
+      "candidate_targets": [
+        "warn"
+      ],
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 628,
+      "kind": "call",
+      "start_byte": 624,
+      "written_name": "warn"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 46,
+      "end_column": 28,
+      "end_line": 3,
+      "kind": "namespace",
+      "name": "Core::Diagnostics",
+      "qualified_name": "Core::Diagnostics",
+      "signature": "namespace Core::Diagnostics",
+      "start_byte": 29,
+      "start_column": 11,
+      "start_line": 3
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics",
+      "end_byte": 62,
+      "end_column": 13,
+      "end_line": 5,
+      "kind": "class",
+      "name": "Logger",
+      "qualified_name": "Core::Diagnostics::Logger",
+      "signature": "class Logger",
+      "start_byte": 56,
+      "start_column": 7,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 86,
+      "end_column": 14,
+      "end_line": 7,
+      "kind": "method",
+      "name": "info",
+      "qualified_name": "Core::Diagnostics::Logger::info",
+      "signature": "void info(const std::string& msg)",
+      "start_byte": 82,
+      "start_column": 10,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 125,
+      "end_column": 14,
+      "end_line": 8,
+      "kind": "method",
+      "name": "warn",
+      "qualified_name": "Core::Diagnostics::Logger::warn",
+      "signature": "void warn(const std::string& msg)",
+      "start_byte": 121,
+      "start_column": 10,
+      "start_line": 8
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 172,
+      "end_column": 18,
+      "end_line": 11,
+      "kind": "method",
+      "name": "info",
+      "qualified_name": "Core::Diagnostics::Logger::info",
+      "signature": "void Logger::info(const std::string& msg)",
+      "start_byte": 168,
+      "start_column": 14,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "Core::Diagnostics::Logger",
+      "end_byte": 218,
+      "end_column": 18,
+      "end_line": 13,
+      "kind": "method",
+      "name": "warn",
+      "qualified_name": "Core::Diagnostics::Logger::warn",
+      "signature": "void Logger::warn(const std::string& msg)",
+      "start_byte": 214,
+      "start_column": 14,
+      "start_line": 13
+    },
+    {
+      "end_byte": 300,
+      "end_column": 20,
+      "end_line": 17,
+      "kind": "namespace",
+      "name": "V1",
+      "qualified_name": "V1",
+      "signature": "namespace V1",
+      "start_byte": 298,
+      "start_column": 18,
+      "start_line": 17
+    },
+    {
+      "enclosing_scope": "V1",
+      "end_byte": 319,
+      "end_column": 17,
+      "end_line": 18,
+      "kind": "function",
+      "name": "legacy_init",
+      "qualified_name": "V1::legacy_init",
+      "signature": "void legacy_init()",
+      "start_byte": 308,
+      "start_column": 6,
+      "start_line": 18
+    },
+    {
+      "end_byte": 358,
+      "end_column": 15,
+      "end_line": 21,
+      "kind": "namespace",
+      "name": "diag",
+      "qualified_name": "diag",
+      "signature": "namespace diag = Core::Diagnostics;",
+      "start_byte": 354,
+      "start_column": 11,
+      "start_line": 21
+    },
+    {
+      "end_byte": 423,
+      "end_column": 31,
+      "end_line": 24,
+      "kind": "variable",
+      "name": "INTERNAL_BUFFER_SIZE",
+      "qualified_name": "INTERNAL_BUFFER_SIZE",
+      "signature": "const int INTERNAL_BUFFER_SIZE = 256",
+      "start_byte": 403,
+      "start_column": 11,
+      "start_line": 24
+    },
+    {
+      "end_byte": 454,
+      "end_column": 21,
+      "end_line": 27,
+      "kind": "function",
+      "name": "test_namespaces",
+      "qualified_name": "test_namespaces",
+      "signature": "void test_namespaces()",
+      "start_byte": 439,
+      "start_column": 6,
+      "start_line": 27
+    },
+    {
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 536,
+      "end_column": 15,
+      "end_line": 31,
+      "kind": "variable",
+      "name": "log",
+      "qualified_name": "test_namespaces::log",
+      "signature": "Logger log",
+      "start_byte": 533,
+      "start_column": 12,
+      "start_line": 31
+    },
+    {
+      "enclosing_scope": "test_namespaces",
+      "end_byte": 609,
+      "end_column": 26,
+      "end_line": 35,
+      "kind": "variable",
+      "name": "diag_log",
+      "qualified_name": "test_namespaces::diag_log",
+      "signature": "diag::Logger diag_log",
+      "start_byte": 601,
+      "start_column": 18,
+      "start_line": 35
+    }
+  ]
+}

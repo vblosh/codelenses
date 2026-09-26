@@ -1,0 +1,453 @@
+{
+  "declarations": [
+    {
+      "end_byte": 41,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "App",
+      "start_byte": 38,
+      "symbol_name": "App"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 61,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "App::Service::Service",
+      "start_byte": 54,
+      "symbol_name": "Service"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 159,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "App::Service::~Service",
+      "start_byte": 151,
+      "symbol_name": "~Service"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 193,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "App::Service::start",
+      "start_byte": 188,
+      "symbol_name": "start"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 274,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "App::Service::stop",
+      "start_byte": 270,
+      "symbol_name": "stop"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 349,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "App::Service::status",
+      "start_byte": 343,
+      "symbol_name": "status"
+    },
+    {
+      "end_byte": 423,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "run_application",
+      "start_byte": 408,
+      "symbol_name": "run_application"
+    },
+    {
+      "enclosing_scope": "run_application",
+      "end_byte": 446,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "run_application::s",
+      "start_byte": 445,
+      "symbol_name": "s"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C++",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "header_pair.hpp"
+      ],
+      "end_byte": 26,
+      "kind": "include",
+      "start_byte": 9,
+      "written_name": "header_pair.hpp"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 52,
+      "kind": "reference",
+      "start_byte": 45,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 73,
+      "kind": "reference",
+      "start_byte": 67,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "name_"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 87,
+      "kind": "reference",
+      "start_byte": 82,
+      "written_name": "name_"
+    },
+    {
+      "candidate_targets": [
+        "std::move",
+        "move"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 97,
+      "kind": "call",
+      "start_byte": 88,
+      "written_name": "std::move"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 102,
+      "kind": "reference",
+      "start_byte": 98,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "status_"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 113,
+      "kind": "reference",
+      "start_byte": 106,
+      "written_name": "status_"
+    },
+    {
+      "candidate_targets": [
+        "Stopped"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 136,
+      "kind": "reference",
+      "start_byte": 129,
+      "written_name": "Stopped"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 149,
+      "kind": "reference",
+      "start_byte": 142,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 159,
+      "kind": "reference",
+      "start_byte": 152,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 186,
+      "kind": "reference",
+      "start_byte": 179,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "status_"
+      ],
+      "enclosing_scope": "App::Service::start",
+      "end_byte": 209,
+      "kind": "reference",
+      "start_byte": 202,
+      "written_name": "status_"
+    },
+    {
+      "candidate_targets": [
+        "Running"
+      ],
+      "enclosing_scope": "App::Service::start",
+      "end_byte": 234,
+      "kind": "reference",
+      "start_byte": 227,
+      "written_name": "Running"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 268,
+      "kind": "reference",
+      "start_byte": 261,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "status_"
+      ],
+      "enclosing_scope": "App::Service::stop",
+      "end_byte": 290,
+      "kind": "reference",
+      "start_byte": 283,
+      "written_name": "status_"
+    },
+    {
+      "candidate_targets": [
+        "Stopped"
+      ],
+      "enclosing_scope": "App::Service::stop",
+      "end_byte": 315,
+      "kind": "reference",
+      "start_byte": 308,
+      "written_name": "Stopped"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 341,
+      "kind": "reference",
+      "start_byte": 334,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "ServiceStatus"
+      ],
+      "enclosing_scope": "App",
+      "end_byte": 333,
+      "kind": "reference",
+      "start_byte": 320,
+      "written_name": "ServiceStatus"
+    },
+    {
+      "candidate_targets": [
+        "status_"
+      ],
+      "enclosing_scope": "App::Service::status",
+      "end_byte": 378,
+      "kind": "reference",
+      "start_byte": 371,
+      "written_name": "status_"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 444,
+      "kind": "reference",
+      "start_byte": 437,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "s"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 468,
+      "kind": "reference",
+      "start_byte": 467,
+      "written_name": "s"
+    },
+    {
+      "candidate_targets": [
+        "start"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 474,
+      "kind": "call",
+      "start_byte": 469,
+      "written_name": "start"
+    },
+    {
+      "candidate_targets": [
+        "s"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 487,
+      "kind": "reference",
+      "start_byte": 486,
+      "written_name": "s"
+    },
+    {
+      "candidate_targets": [
+        "status"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 494,
+      "kind": "call",
+      "start_byte": 488,
+      "written_name": "status"
+    },
+    {
+      "candidate_targets": [
+        "Running"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 527,
+      "kind": "reference",
+      "start_byte": 520,
+      "written_name": "Running"
+    },
+    {
+      "candidate_targets": [
+        "s"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 540,
+      "kind": "reference",
+      "start_byte": 539,
+      "written_name": "s"
+    },
+    {
+      "candidate_targets": [
+        "stop"
+      ],
+      "enclosing_scope": "run_application",
+      "end_byte": 545,
+      "kind": "call",
+      "start_byte": 541,
+      "written_name": "stop"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 41,
+      "end_column": 14,
+      "end_line": 3,
+      "kind": "namespace",
+      "name": "App",
+      "qualified_name": "App",
+      "signature": "namespace App",
+      "start_byte": 38,
+      "start_column": 11,
+      "start_line": 3
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 61,
+      "end_column": 17,
+      "end_line": 5,
+      "kind": "method",
+      "name": "Service",
+      "qualified_name": "App::Service::Service",
+      "signature": "Service::Service(std::string name)",
+      "start_byte": 54,
+      "start_column": 10,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 159,
+      "end_column": 18,
+      "end_line": 7,
+      "kind": "method",
+      "name": "~Service",
+      "qualified_name": "App::Service::~Service",
+      "signature": "Service::~Service()",
+      "start_byte": 151,
+      "start_column": 10,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 193,
+      "end_column": 20,
+      "end_line": 9,
+      "kind": "method",
+      "name": "start",
+      "qualified_name": "App::Service::start",
+      "signature": "bool Service::start()",
+      "start_byte": 188,
+      "start_column": 15,
+      "start_line": 9
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 274,
+      "end_column": 19,
+      "end_line": 14,
+      "kind": "method",
+      "name": "stop",
+      "qualified_name": "App::Service::stop",
+      "signature": "void Service::stop()",
+      "start_byte": 270,
+      "start_column": 15,
+      "start_line": 14
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 349,
+      "end_column": 30,
+      "end_line": 18,
+      "kind": "method",
+      "name": "status",
+      "qualified_name": "App::Service::status",
+      "signature": "ServiceStatus Service::status() const",
+      "start_byte": 343,
+      "start_column": 24,
+      "start_line": 18
+    },
+    {
+      "end_byte": 423,
+      "end_column": 21,
+      "end_line": 24,
+      "kind": "function",
+      "name": "run_application",
+      "qualified_name": "run_application",
+      "signature": "void run_application()",
+      "start_byte": 408,
+      "start_column": 6,
+      "start_line": 24
+    },
+    {
+      "enclosing_scope": "run_application",
+      "end_byte": 446,
+      "end_column": 19,
+      "end_line": 25,
+      "kind": "variable",
+      "name": "s",
+      "qualified_name": "run_application::s",
+      "signature": "App::Service s(\"primary_svc\")",
+      "start_byte": 445,
+      "start_column": 18,
+      "start_line": 25
+    }
+  ]
+}

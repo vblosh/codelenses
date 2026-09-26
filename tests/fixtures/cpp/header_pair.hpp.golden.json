@@ -1,0 +1,471 @@
+{
+  "declarations": [
+    {
+      "end_byte": 46,
+      "is_definition": true,
+      "kind": "namespace",
+      "qualified_name": "App",
+      "start_byte": 43,
+      "symbol_name": "App"
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 74,
+      "is_definition": true,
+      "kind": "enum",
+      "qualified_name": "App::ServiceStatus",
+      "start_byte": 61,
+      "symbol_name": "ServiceStatus"
+    },
+    {
+      "enclosing_scope": "App::ServiceStatus",
+      "end_byte": 85,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "App::ServiceStatus::Starting",
+      "start_byte": 77,
+      "symbol_name": "Starting"
+    },
+    {
+      "enclosing_scope": "App::ServiceStatus",
+      "end_byte": 94,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "App::ServiceStatus::Running",
+      "start_byte": 87,
+      "symbol_name": "Running"
+    },
+    {
+      "enclosing_scope": "App::ServiceStatus",
+      "end_byte": 103,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "App::ServiceStatus::Stopped",
+      "start_byte": 96,
+      "symbol_name": "Stopped"
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 125,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "App::BaseService",
+      "start_byte": 114,
+      "symbol_name": "BaseService"
+    },
+    {
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 160,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "App::BaseService::~BaseService",
+      "start_byte": 148,
+      "symbol_name": "~BaseService"
+    },
+    {
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 196,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::BaseService::start",
+      "start_byte": 191,
+      "symbol_name": "start"
+    },
+    {
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 225,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::BaseService::stop",
+      "start_byte": 221,
+      "symbol_name": "stop"
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 250,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "App::Service",
+      "start_byte": 243,
+      "symbol_name": "Service"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 302,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::Service::Service",
+      "start_byte": 295,
+      "symbol_name": "Service"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 334,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::Service::~Service",
+      "start_byte": 326,
+      "symbol_name": "~Service"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 362,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::Service::start",
+      "start_byte": 357,
+      "symbol_name": "start"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 388,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::Service::stop",
+      "start_byte": 384,
+      "symbol_name": "stop"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 425,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "App::Service::status",
+      "start_byte": 419,
+      "symbol_name": "status"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 466,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "App::Service::name_",
+      "start_byte": 461,
+      "symbol_name": "name_"
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 493,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "App::Service::status_",
+      "start_byte": 486,
+      "symbol_name": "status_"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C++",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "#pragma"
+      ],
+      "end_byte": 7,
+      "kind": "call",
+      "start_byte": 0,
+      "written_name": "#pragma"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "end_byte": 31,
+      "kind": "include",
+      "start_byte": 23,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "BaseService"
+      ],
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 160,
+      "kind": "reference",
+      "start_byte": 149,
+      "written_name": "BaseService"
+    },
+    {
+      "candidate_targets": [
+        "BaseService"
+      ],
+      "enclosing_scope": "App::Service",
+      "end_byte": 271,
+      "kind": "inheritance",
+      "start_byte": 260,
+      "written_name": "BaseService"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "App::Service",
+      "end_byte": 314,
+      "kind": "reference",
+      "start_byte": 308,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "Service"
+      ],
+      "enclosing_scope": "App::Service",
+      "end_byte": 334,
+      "kind": "reference",
+      "start_byte": 327,
+      "written_name": "Service"
+    },
+    {
+      "candidate_targets": [
+        "ServiceStatus"
+      ],
+      "enclosing_scope": "App::Service",
+      "end_byte": 418,
+      "kind": "reference",
+      "start_byte": 405,
+      "written_name": "ServiceStatus"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "enclosing_scope": "App::Service",
+      "end_byte": 460,
+      "kind": "reference",
+      "start_byte": 454,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "ServiceStatus"
+      ],
+      "enclosing_scope": "App::Service",
+      "end_byte": 485,
+      "kind": "reference",
+      "start_byte": 472,
+      "written_name": "ServiceStatus"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 46,
+      "end_column": 14,
+      "end_line": 5,
+      "kind": "namespace",
+      "name": "App",
+      "qualified_name": "App",
+      "signature": "namespace App",
+      "start_byte": 43,
+      "start_column": 11,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 74,
+      "end_column": 25,
+      "end_line": 7,
+      "kind": "enum",
+      "name": "ServiceStatus",
+      "qualified_name": "App::ServiceStatus",
+      "signature": "enum class ServiceStatus",
+      "start_byte": 61,
+      "start_column": 12,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "App::ServiceStatus",
+      "end_byte": 85,
+      "end_column": 36,
+      "end_line": 7,
+      "kind": "enum_member",
+      "name": "Starting",
+      "qualified_name": "App::ServiceStatus::Starting",
+      "signature": "Starting",
+      "start_byte": 77,
+      "start_column": 28,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "App::ServiceStatus",
+      "end_byte": 94,
+      "end_column": 45,
+      "end_line": 7,
+      "kind": "enum_member",
+      "name": "Running",
+      "qualified_name": "App::ServiceStatus::Running",
+      "signature": "Running",
+      "start_byte": 87,
+      "start_column": 38,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "App::ServiceStatus",
+      "end_byte": 103,
+      "end_column": 54,
+      "end_line": 7,
+      "kind": "enum_member",
+      "name": "Stopped",
+      "qualified_name": "App::ServiceStatus::Stopped",
+      "signature": "Stopped",
+      "start_byte": 96,
+      "start_column": 47,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 125,
+      "end_column": 18,
+      "end_line": 9,
+      "kind": "class",
+      "name": "BaseService",
+      "qualified_name": "App::BaseService",
+      "signature": "class BaseService",
+      "start_byte": 114,
+      "start_column": 7,
+      "start_line": 9
+    },
+    {
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 160,
+      "end_column": 25,
+      "end_line": 11,
+      "kind": "method",
+      "name": "~BaseService",
+      "qualified_name": "App::BaseService::~BaseService",
+      "signature": "virtual ~BaseService()",
+      "start_byte": 148,
+      "start_column": 13,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 196,
+      "end_column": 23,
+      "end_line": 12,
+      "kind": "method",
+      "name": "start",
+      "qualified_name": "App::BaseService::start",
+      "signature": "virtual bool start()",
+      "start_byte": 191,
+      "start_column": 18,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "App::BaseService",
+      "end_byte": 225,
+      "end_column": 22,
+      "end_line": 13,
+      "kind": "method",
+      "name": "stop",
+      "qualified_name": "App::BaseService::stop",
+      "signature": "virtual void stop()",
+      "start_byte": 221,
+      "start_column": 18,
+      "start_line": 13
+    },
+    {
+      "enclosing_scope": "App",
+      "end_byte": 250,
+      "end_column": 14,
+      "end_line": 16,
+      "kind": "class",
+      "name": "Service",
+      "qualified_name": "App::Service",
+      "signature": "class Service",
+      "start_byte": 243,
+      "start_column": 7,
+      "start_line": 16
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 302,
+      "end_column": 21,
+      "end_line": 18,
+      "kind": "method",
+      "name": "Service",
+      "qualified_name": "App::Service::Service",
+      "signature": "explicit Service(std::string name)",
+      "start_byte": 295,
+      "start_column": 14,
+      "start_line": 18
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 334,
+      "end_column": 13,
+      "end_line": 19,
+      "kind": "method",
+      "name": "~Service",
+      "qualified_name": "App::Service::~Service",
+      "signature": "~Service() override",
+      "start_byte": 326,
+      "start_column": 5,
+      "start_line": 19
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 362,
+      "end_column": 15,
+      "end_line": 21,
+      "kind": "method",
+      "name": "start",
+      "qualified_name": "App::Service::start",
+      "signature": "bool start() override",
+      "start_byte": 357,
+      "start_column": 10,
+      "start_line": 21
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 388,
+      "end_column": 14,
+      "end_line": 22,
+      "kind": "method",
+      "name": "stop",
+      "qualified_name": "App::Service::stop",
+      "signature": "void stop() override",
+      "start_byte": 384,
+      "start_column": 10,
+      "start_line": 22
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 425,
+      "end_column": 25,
+      "end_line": 23,
+      "kind": "method",
+      "name": "status",
+      "qualified_name": "App::Service::status",
+      "signature": "ServiceStatus status() const",
+      "start_byte": 419,
+      "start_column": 19,
+      "start_line": 23
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 466,
+      "end_column": 22,
+      "end_line": 26,
+      "kind": "field",
+      "name": "name_",
+      "qualified_name": "App::Service::name_",
+      "signature": "std::string name_",
+      "start_byte": 461,
+      "start_column": 17,
+      "start_line": 26
+    },
+    {
+      "enclosing_scope": "App::Service",
+      "end_byte": 493,
+      "end_column": 26,
+      "end_line": 27,
+      "kind": "field",
+      "name": "status_",
+      "qualified_name": "App::Service::status_",
+      "signature": "ServiceStatus status_",
+      "start_byte": 486,
+      "start_column": 19,
+      "start_line": 27
+    }
+  ]
+}

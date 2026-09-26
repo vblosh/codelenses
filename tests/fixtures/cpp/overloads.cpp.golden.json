@@ -1,0 +1,559 @@
+{
+  "declarations": [
+    {
+      "end_byte": 7,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "add",
+      "start_byte": 4,
+      "symbol_name": "add"
+    },
+    {
+      "end_byte": 55,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "add",
+      "start_byte": 52,
+      "symbol_name": "add"
+    },
+    {
+      "end_byte": 106,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "add",
+      "start_byte": 103,
+      "symbol_name": "add"
+    },
+    {
+      "end_byte": 169,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Renderer",
+      "start_byte": 161,
+      "symbol_name": "Renderer"
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 195,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Renderer::render",
+      "start_byte": 189,
+      "symbol_name": "render"
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 236,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Renderer::render",
+      "start_byte": 230,
+      "symbol_name": "render"
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 289,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Renderer::render",
+      "start_byte": 283,
+      "symbol_name": "render"
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 480,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Renderer::draw_frame",
+      "start_byte": 470,
+      "symbol_name": "draw_frame"
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 524,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Renderer::draw_wireframe",
+      "start_byte": 510,
+      "symbol_name": "draw_wireframe"
+    },
+    {
+      "end_byte": 567,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "run_overloads",
+      "start_byte": 554,
+      "symbol_name": "run_overloads"
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 584,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "run_overloads::sum1",
+      "start_byte": 580,
+      "symbol_name": "sum1"
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 613,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "run_overloads::sum2",
+      "start_byte": 609,
+      "symbol_name": "sum2"
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 643,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "run_overloads::sum3",
+      "start_byte": 639,
+      "symbol_name": "sum3"
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 675,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "run_overloads::r",
+      "start_byte": 674,
+      "symbol_name": "r"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C++",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 36,
+      "kind": "reference",
+      "start_byte": 35,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 40,
+      "kind": "reference",
+      "start_byte": 39,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 90,
+      "kind": "reference",
+      "start_byte": 89,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 94,
+      "kind": "reference",
+      "start_byte": 93,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 142,
+      "kind": "reference",
+      "start_byte": 141,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 146,
+      "kind": "reference",
+      "start_byte": 145,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "c"
+      ],
+      "enclosing_scope": "add",
+      "end_byte": 150,
+      "kind": "reference",
+      "start_byte": 149,
+      "written_name": "c"
+    },
+    {
+      "candidate_targets": [
+        "draw_frame"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 210,
+      "kind": "call",
+      "start_byte": 200,
+      "written_name": "draw_frame"
+    },
+    {
+      "candidate_targets": [
+        "draw_frame"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 262,
+      "kind": "call",
+      "start_byte": 252,
+      "written_name": "draw_frame"
+    },
+    {
+      "candidate_targets": [
+        "scale"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 268,
+      "kind": "reference",
+      "start_byte": 263,
+      "written_name": "scale"
+    },
+    {
+      "candidate_targets": [
+        "wireframe"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 348,
+      "kind": "reference",
+      "start_byte": 339,
+      "written_name": "wireframe"
+    },
+    {
+      "candidate_targets": [
+        "draw_wireframe"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 378,
+      "kind": "call",
+      "start_byte": 364,
+      "written_name": "draw_wireframe"
+    },
+    {
+      "candidate_targets": [
+        "scale"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 384,
+      "kind": "reference",
+      "start_byte": 379,
+      "written_name": "scale"
+    },
+    {
+      "candidate_targets": [
+        "draw_frame"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 426,
+      "kind": "call",
+      "start_byte": 416,
+      "written_name": "draw_frame"
+    },
+    {
+      "candidate_targets": [
+        "scale"
+      ],
+      "enclosing_scope": "Renderer::render",
+      "end_byte": 432,
+      "kind": "reference",
+      "start_byte": 427,
+      "written_name": "scale"
+    },
+    {
+      "candidate_targets": [
+        "add"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 590,
+      "kind": "call",
+      "start_byte": 587,
+      "written_name": "add"
+    },
+    {
+      "candidate_targets": [
+        "add"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 619,
+      "kind": "call",
+      "start_byte": 616,
+      "written_name": "add"
+    },
+    {
+      "candidate_targets": [
+        "add"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 649,
+      "kind": "call",
+      "start_byte": 646,
+      "written_name": "add"
+    },
+    {
+      "candidate_targets": [
+        "Renderer"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 673,
+      "kind": "reference",
+      "start_byte": 665,
+      "written_name": "Renderer"
+    },
+    {
+      "candidate_targets": [
+        "r"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 682,
+      "kind": "reference",
+      "start_byte": 681,
+      "written_name": "r"
+    },
+    {
+      "candidate_targets": [
+        "render"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 689,
+      "kind": "call",
+      "start_byte": 683,
+      "written_name": "render"
+    },
+    {
+      "candidate_targets": [
+        "r"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 698,
+      "kind": "reference",
+      "start_byte": 697,
+      "written_name": "r"
+    },
+    {
+      "candidate_targets": [
+        "render"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 705,
+      "kind": "call",
+      "start_byte": 699,
+      "written_name": "render"
+    },
+    {
+      "candidate_targets": [
+        "r"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 718,
+      "kind": "reference",
+      "start_byte": 717,
+      "written_name": "r"
+    },
+    {
+      "candidate_targets": [
+        "render"
+      ],
+      "enclosing_scope": "run_overloads",
+      "end_byte": 725,
+      "kind": "call",
+      "start_byte": 719,
+      "written_name": "render"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 7,
+      "end_column": 8,
+      "end_line": 1,
+      "kind": "function",
+      "name": "add",
+      "qualified_name": "add",
+      "signature": "int add(int a, int b)",
+      "start_byte": 4,
+      "start_column": 5,
+      "start_line": 1
+    },
+    {
+      "end_byte": 55,
+      "end_column": 11,
+      "end_line": 5,
+      "kind": "function",
+      "name": "add",
+      "qualified_name": "add",
+      "signature": "double add(double a, double b)",
+      "start_byte": 52,
+      "start_column": 8,
+      "start_line": 5
+    },
+    {
+      "end_byte": 106,
+      "end_column": 8,
+      "end_line": 9,
+      "kind": "function",
+      "name": "add",
+      "qualified_name": "add",
+      "signature": "int add(int a, int b, int c)",
+      "start_byte": 103,
+      "start_column": 5,
+      "start_line": 9
+    },
+    {
+      "end_byte": 169,
+      "end_column": 15,
+      "end_line": 13,
+      "kind": "class",
+      "name": "Renderer",
+      "qualified_name": "Renderer",
+      "signature": "class Renderer",
+      "start_byte": 161,
+      "start_column": 7,
+      "start_line": 13
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 195,
+      "end_column": 16,
+      "end_line": 15,
+      "kind": "method",
+      "name": "render",
+      "qualified_name": "Renderer::render",
+      "signature": "void render()",
+      "start_byte": 189,
+      "start_column": 10,
+      "start_line": 15
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 236,
+      "end_column": 16,
+      "end_line": 17,
+      "kind": "method",
+      "name": "render",
+      "qualified_name": "Renderer::render",
+      "signature": "void render(float scale)",
+      "start_byte": 230,
+      "start_column": 10,
+      "start_line": 17
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 289,
+      "end_column": 16,
+      "end_line": 19,
+      "kind": "method",
+      "name": "render",
+      "qualified_name": "Renderer::render",
+      "signature": "void render(float scale, bool wireframe) const",
+      "start_byte": 283,
+      "start_column": 10,
+      "start_line": 19
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 480,
+      "end_column": 20,
+      "end_line": 28,
+      "kind": "method",
+      "name": "draw_frame",
+      "qualified_name": "Renderer::draw_frame",
+      "signature": "void draw_frame(float scale) const",
+      "start_byte": 470,
+      "start_column": 10,
+      "start_line": 28
+    },
+    {
+      "enclosing_scope": "Renderer",
+      "end_byte": 524,
+      "end_column": 24,
+      "end_line": 29,
+      "kind": "method",
+      "name": "draw_wireframe",
+      "qualified_name": "Renderer::draw_wireframe",
+      "signature": "void draw_wireframe(float scale) const",
+      "start_byte": 510,
+      "start_column": 10,
+      "start_line": 29
+    },
+    {
+      "end_byte": 567,
+      "end_column": 19,
+      "end_line": 32,
+      "kind": "function",
+      "name": "run_overloads",
+      "qualified_name": "run_overloads",
+      "signature": "void run_overloads()",
+      "start_byte": 554,
+      "start_column": 6,
+      "start_line": 32
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 584,
+      "end_column": 13,
+      "end_line": 33,
+      "kind": "variable",
+      "name": "sum1",
+      "qualified_name": "run_overloads::sum1",
+      "signature": "int sum1 = add(1, 2)",
+      "start_byte": 580,
+      "start_column": 9,
+      "start_line": 33
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 613,
+      "end_column": 16,
+      "end_line": 34,
+      "kind": "variable",
+      "name": "sum2",
+      "qualified_name": "run_overloads::sum2",
+      "signature": "double sum2 = add(1.5, 2.5)",
+      "start_byte": 609,
+      "start_column": 12,
+      "start_line": 34
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 643,
+      "end_column": 13,
+      "end_line": 35,
+      "kind": "variable",
+      "name": "sum3",
+      "qualified_name": "run_overloads::sum3",
+      "signature": "int sum3 = add(1, 2, 3)",
+      "start_byte": 639,
+      "start_column": 9,
+      "start_line": 35
+    },
+    {
+      "enclosing_scope": "run_overloads",
+      "end_byte": 675,
+      "end_column": 15,
+      "end_line": 37,
+      "kind": "variable",
+      "name": "r",
+      "qualified_name": "run_overloads::r",
+      "signature": "Renderer r",
+      "start_byte": 674,
+      "start_column": 14,
+      "start_line": 37
+    }
+  ]
+}

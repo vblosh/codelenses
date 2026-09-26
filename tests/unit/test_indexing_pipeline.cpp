@@ -618,7 +618,8 @@ int main() {
     REQUIRE(found_macro_ref);
 }
 
-TEST_CASE("Precedence: Individual file compile command overrides workspace default, unlisted file uses default",
+TEST_CASE("Precedence: Individual file compile command overrides workspace default, unlisted file "
+          "uses default",
           "[index][pipeline][compile_commands]") {
     PipelineTestWorkspace env;
 
@@ -630,7 +631,8 @@ int main() {
     return BUILD_VERSION;
 }
 )C");
-    // src/other.c has NO individual compile command, should inherit workspace default with DEFAULT_FLAG=99
+    // src/other.c has NO individual compile command, should inherit workspace default with
+    // DEFAULT_FLAG=99
     env.write_file("src/other.c", R"C(
 int other() {
     return DEFAULT_FLAG;
@@ -683,11 +685,15 @@ int other() {
 
     for (const auto& s : syms) {
         if (s.file_id == main_file->id) {
-            if (s.name == "BUILD_VERSION") main_has_build_version = true;
-            if (s.name == "DEFAULT_FLAG") main_has_default_flag = true;
+            if (s.name == "BUILD_VERSION")
+                main_has_build_version = true;
+            if (s.name == "DEFAULT_FLAG")
+                main_has_default_flag = true;
         } else if (s.file_id == other_file->id) {
-            if (s.name == "BUILD_VERSION") other_has_build_version = true;
-            if (s.name == "DEFAULT_FLAG") other_has_default_flag = true;
+            if (s.name == "BUILD_VERSION")
+                other_has_build_version = true;
+            if (s.name == "DEFAULT_FLAG")
+                other_has_default_flag = true;
         }
     }
 

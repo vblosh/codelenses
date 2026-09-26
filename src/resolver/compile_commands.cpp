@@ -108,8 +108,7 @@ CompilationDatabase::find_for_file(const std::filesystem::path& file_path) const
 
 namespace {
 
-void parse_flags_into_entry(CompileCommand& entry,
-                            const std::vector<std::string>& args,
+void parse_flags_into_entry(CompileCommand& entry, const std::vector<std::string>& args,
                             const std::filesystem::path& dir_path,
                             const std::filesystem::path& workspace_root) {
     for (std::size_t i = 0; i < args.size(); ++i) {
@@ -355,11 +354,9 @@ CompilationDatabase::load_file(const std::filesystem::path& file_path,
     return parse_json(content, workspace_root);
 }
 
-Result<CompileCommand>
-CompilationDatabase::parse_command_string(std::string_view command,
-                                          const std::filesystem::path& directory,
-                                          const std::filesystem::path& file,
-                                          const std::filesystem::path& workspace_root) {
+Result<CompileCommand> CompilationDatabase::parse_command_string(
+    std::string_view command, const std::filesystem::path& directory,
+    const std::filesystem::path& file, const std::filesystem::path& workspace_root) {
     if (command.empty()) {
         return unexpected_result<CompileCommand>(ErrorCode::invalid_argument,
                                                  "empty command string");
@@ -367,8 +364,7 @@ CompilationDatabase::parse_command_string(std::string_view command,
 
     auto tokenized = tokenize_command_safely(command);
     if (!tokenized) {
-        return unexpected_result<CompileCommand>(tokenized.error().code,
-                                                 tokenized.error().message);
+        return unexpected_result<CompileCommand>(tokenized.error().code, tokenized.error().message);
     }
 
     CompileCommand entry;

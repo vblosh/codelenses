@@ -666,15 +666,14 @@ TEST_CASE("Compile command endpoints and workspace compilation database status (
 
     // 2. Index workspace
     auto idx_res = env.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index", "{}",
-                                   "application/json");
+                                    "application/json");
     REQUIRE(idx_res != nullptr);
     REQUIRE(idx_res->status == 202);
 
     // Wait for indexing completion
     for (int i = 0; i < 20; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        auto st_res =
-            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+        auto st_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
         if (st_res && st_res->status == 200) {
             auto st_json = nlohmann::json::parse(st_res->body);
             if (st_json["status"] == "idle") {
@@ -707,8 +706,8 @@ TEST_CASE("Compile command endpoints and workspace compilation database status (
     REQUIRE(main_id > 0);
 
     // 3. Query compile-command for main.c
-    auto cmd_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                   "/files/" + std::to_string(main_id) + "/compile-command");
+    auto cmd_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                                   std::to_string(main_id) + "/compile-command");
     REQUIRE(cmd_res != nullptr);
     CHECK(cmd_res->status == 200);
     auto cmd_json = nlohmann::json::parse(cmd_res->body);
@@ -728,8 +727,9 @@ TEST_CASE("Compile command endpoints and workspace compilation database status (
 
     // 4. Query compile-command for file without command (README.md)
     if (readme_id > 0) {
-        auto no_cmd_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                          "/files/" + std::to_string(readme_id) + "/compile-command");
+        auto no_cmd_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                            std::to_string(readme_id) + "/compile-command");
         REQUIRE(no_cmd_res != nullptr);
         CHECK(no_cmd_res->status == 200);
         auto no_cmd_json = nlohmann::json::parse(no_cmd_res->body);
@@ -770,12 +770,14 @@ TEST_CASE("Compile command endpoints and workspace compilation database status (
     REQUIRE(ws_summary_res != nullptr);
     CHECK(ws_summary_res->status == 200);
     auto ws_summary_json = nlohmann::json::parse(ws_summary_res->body);
-    CHECK(ws_summary_json["defaultCompileCommand"] == "clang -std=c99 -Iinclude -DGLOBAL_FALLBACK=1");
+    CHECK(ws_summary_json["defaultCompileCommand"] ==
+          "clang -std=c99 -Iinclude -DGLOBAL_FALLBACK=1");
 
     // Unlisted file (README.md) now gets workspace default compile command
     if (readme_id > 0) {
-        auto fallback_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
-                                            "/files/" + std::to_string(readme_id) + "/compile-command");
+        auto fallback_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/files/" +
+                            std::to_string(readme_id) + "/compile-command");
         REQUIRE(fallback_res != nullptr);
         CHECK(fallback_res->status == 200);
         auto fallback_json = nlohmann::json::parse(fallback_res->body);

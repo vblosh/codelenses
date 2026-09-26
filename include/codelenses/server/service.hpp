@@ -122,7 +122,9 @@ private:
                     bool* out_is_auto_detected = nullptr);
 
     std::mutex cdb_cache_mutex_;
-    std::unordered_map<int64_t, std::pair<std::shared_ptr<const resolver::CompilationDatabase>, std::filesystem::path>> cdb_cache_;
+    std::unordered_map<int64_t, std::pair<std::shared_ptr<const resolver::CompilationDatabase>,
+                                          std::filesystem::path>>
+        cdb_cache_;
 };
 
 } // namespace codelenses::server

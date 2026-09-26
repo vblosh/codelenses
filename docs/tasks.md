@@ -146,10 +146,10 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H2 C++ adapter
 
-- [ ] H2-01 Extract namespaces, classes, structs, enums, aliases, templates, functions, methods.
-- [ ] H2-02 Extract inheritance, using declarations, includes, and calls.
-- [ ] H2-03 Add qualified-name and overload metadata where syntactically available.
-- [ ] H2-04 Add fixtures for templates, overloads, namespaces, and header/source pairs.
+- [x] H2-01 Extract namespaces, classes, structs, enums, aliases, templates, functions, methods.
+- [x] H2-02 Extract inheritance, using declarations, includes, and calls.
+- [x] H2-03 Add qualified-name and overload metadata where syntactically available.
+- [x] H2-04 Add fixtures for templates, overloads, namespaces, and header/source pairs.
 
 ### H3 C# adapter
 

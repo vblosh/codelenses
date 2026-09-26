@@ -509,12 +509,18 @@ inline void to_json(nlohmann::json& j, const CompileCommandDto& c) {
 }
 
 inline void from_json(const nlohmann::json& j, CompileCommandDto& c) {
-    if (j.contains("directory")) c.directory = j["directory"].get<std::string>();
-    if (j.contains("file")) c.file = j["file"].get<std::string>();
-    if (j.contains("output") && !j["output"].is_null()) c.output = j["output"].get<std::string>();
-    if (j.contains("arguments")) c.arguments = j["arguments"].get<std::vector<std::string>>();
-    if (j.contains("includeDirs")) c.include_dirs = j["includeDirs"].get<std::vector<std::string>>();
-    if (j.contains("defines")) c.defines = j["defines"].get<std::vector<std::string>>();
+    if (j.contains("directory"))
+        c.directory = j["directory"].get<std::string>();
+    if (j.contains("file"))
+        c.file = j["file"].get<std::string>();
+    if (j.contains("output") && !j["output"].is_null())
+        c.output = j["output"].get<std::string>();
+    if (j.contains("arguments"))
+        c.arguments = j["arguments"].get<std::vector<std::string>>();
+    if (j.contains("includeDirs"))
+        c.include_dirs = j["includeDirs"].get<std::vector<std::string>>();
+    if (j.contains("defines"))
+        c.defines = j["defines"].get<std::vector<std::string>>();
     if (j.contains("languageStandard") && !j["languageStandard"].is_null()) {
         c.language_standard = j["languageStandard"].get<std::string>();
     }
@@ -536,7 +542,8 @@ inline void to_json(nlohmann::json& j, const FileCompileCommandResponseDto& f) {
         {"isWorkspaceDefault", f.is_workspace_default},
         {"databasePath", f.database_path ? nlohmann::json(*f.database_path) : nullptr},
         {"isAutoDetected", f.is_auto_detected},
-        {"compileCommand", f.compile_command.has_value() ? nlohmann::json(*f.compile_command) : nullptr},
+        {"compileCommand",
+         f.compile_command.has_value() ? nlohmann::json(*f.compile_command) : nullptr},
     };
 }
 
@@ -556,7 +563,8 @@ inline void to_json(nlohmann::json& j, const WorkspaceCompileCommandsSummaryDto&
         {"exists", w.exists},
         {"isAutoDetected", w.is_auto_detected},
         {"totalCommands", w.total_commands},
-        {"defaultCompileCommand", w.default_compile_command ? nlohmann::json(*w.default_compile_command) : nullptr},
+        {"defaultCompileCommand",
+         w.default_compile_command ? nlohmann::json(*w.default_compile_command) : nullptr},
     };
 }
 

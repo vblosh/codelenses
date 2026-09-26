@@ -711,7 +711,8 @@ FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t works
         .file_id = file_id,
         .has_compile_command = false,
         .is_workspace_default = false,
-        .database_path = effective_path.empty() ? std::nullopt : std::make_optional(effective_path.string()),
+        .database_path =
+            effective_path.empty() ? std::nullopt : std::make_optional(effective_path.string()),
         .is_auto_detected = is_auto,
         .compile_command = std::nullopt,
     };
@@ -725,7 +726,8 @@ FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t works
     }
 
     std::optional<resolver::CompileCommand> fallback_cmd;
-    if (cmd == nullptr && ws.default_compile_command.has_value() && !ws.default_compile_command->empty()) {
+    if (cmd == nullptr && ws.default_compile_command.has_value() &&
+        !ws.default_compile_command->empty()) {
         auto parsed = resolver::CompilationDatabase::parse_command_string(
             *ws.default_compile_command, ws.root_path, f.relative_path, ws.root_path);
         if (parsed) {
@@ -746,8 +748,8 @@ FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t works
         res.compile_command = CompileCommandDto{
             .directory = cmd->directory.string(),
             .file = cmd->file.string(),
-            .output = cmd->output.has_value() ? std::make_optional(cmd->output->string())
-                                              : std::nullopt,
+            .output =
+                cmd->output.has_value() ? std::make_optional(cmd->output->string()) : std::nullopt,
             .arguments = cmd->arguments,
             .include_dirs = std::move(inc_dirs),
             .defines = cmd->defines,
@@ -758,7 +760,8 @@ FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t works
     return res;
 }
 
-WorkspaceCompileCommandsSummaryDto ApiService::get_workspace_compile_commands(int64_t workspace_id) {
+WorkspaceCompileCommandsSummaryDto
+ApiService::get_workspace_compile_commands(int64_t workspace_id) {
     auto ws = require_workspace(workspace_id);
     std::filesystem::path effective_path;
     bool is_auto = false;

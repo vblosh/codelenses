@@ -1,0 +1,606 @@
+{
+  "declarations": [
+    {
+      "end_byte": 85,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "Stack",
+      "start_byte": 80,
+      "symbol_name": "Stack"
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 109,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Stack::push",
+      "start_byte": 105,
+      "symbol_name": "push"
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 134,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "Stack::pop",
+      "start_byte": 131,
+      "symbol_name": "pop"
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 152,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Stack::empty",
+      "start_byte": 147,
+      "symbol_name": "empty"
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 210,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Stack::size",
+      "start_byte": 206,
+      "symbol_name": "size"
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 284,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "Stack::elements",
+      "start_byte": 276,
+      "symbol_name": "elements"
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 331,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "Stack::push",
+      "start_byte": 327,
+      "symbol_name": "push"
+    },
+    {
+      "end_byte": 427,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "pair_sum",
+      "start_byte": 419,
+      "symbol_name": "pair_sum"
+    },
+    {
+      "end_byte": 517,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "StringMap",
+      "start_byte": 508,
+      "symbol_name": "StringMap"
+    },
+    {
+      "end_byte": 586,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "TypeTraits",
+      "start_byte": 576,
+      "symbol_name": "TypeTraits"
+    },
+    {
+      "enclosing_scope": "TypeTraits",
+      "end_byte": 625,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "TypeTraits::is_pointer",
+      "start_byte": 615,
+      "symbol_name": "is_pointer"
+    },
+    {
+      "end_byte": 682,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "TypeTraits",
+      "start_byte": 668,
+      "symbol_name": "TypeTraits"
+    },
+    {
+      "enclosing_scope": "TypeTraits",
+      "end_byte": 721,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "TypeTraits::is_pointer",
+      "start_byte": 711,
+      "symbol_name": "is_pointer"
+    },
+    {
+      "end_byte": 753,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "test_templates",
+      "start_byte": 739,
+      "symbol_name": "test_templates"
+    },
+    {
+      "enclosing_scope": "test_templates",
+      "end_byte": 774,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "test_templates::s",
+      "start_byte": 773,
+      "symbol_name": "s"
+    },
+    {
+      "enclosing_scope": "test_templates",
+      "end_byte": 806,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "test_templates::total",
+      "start_byte": 801,
+      "symbol_name": "total"
+    },
+    {
+      "enclosing_scope": "test_templates",
+      "end_byte": 855,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "test_templates::mapping",
+      "start_byte": 848,
+      "symbol_name": "mapping"
+    }
+  ],
+  "diagnostics": [],
+  "language": "C++",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "map"
+      ],
+      "end_byte": 14,
+      "kind": "include",
+      "start_byte": 9,
+      "written_name": "map"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "end_byte": 32,
+      "kind": "include",
+      "start_byte": 24,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "vector"
+      ],
+      "end_byte": 50,
+      "kind": "include",
+      "start_byte": 42,
+      "written_name": "vector"
+    },
+    {
+      "candidate_targets": [
+        "elements"
+      ],
+      "enclosing_scope": "Stack::empty",
+      "end_byte": 178,
+      "kind": "reference",
+      "start_byte": 170,
+      "written_name": "elements"
+    },
+    {
+      "candidate_targets": [
+        "empty"
+      ],
+      "enclosing_scope": "Stack::empty",
+      "end_byte": 184,
+      "kind": "call",
+      "start_byte": 179,
+      "written_name": "empty"
+    },
+    {
+      "candidate_targets": [
+        "size_t"
+      ],
+      "enclosing_scope": "Stack",
+      "end_byte": 205,
+      "kind": "reference",
+      "start_byte": 199,
+      "written_name": "size_t"
+    },
+    {
+      "candidate_targets": [
+        "elements"
+      ],
+      "enclosing_scope": "Stack::size",
+      "end_byte": 236,
+      "kind": "reference",
+      "start_byte": 228,
+      "written_name": "elements"
+    },
+    {
+      "candidate_targets": [
+        "size"
+      ],
+      "enclosing_scope": "Stack::size",
+      "end_byte": 241,
+      "kind": "call",
+      "start_byte": 237,
+      "written_name": "size"
+    },
+    {
+      "candidate_targets": [
+        "vector"
+      ],
+      "enclosing_scope": "Stack",
+      "end_byte": 272,
+      "kind": "reference",
+      "start_byte": 266,
+      "written_name": "vector"
+    },
+    {
+      "candidate_targets": [
+        "Stack",
+        "Stack<T>"
+      ],
+      "end_byte": 325,
+      "kind": "reference",
+      "start_byte": 317,
+      "written_name": "Stack<T>"
+    },
+    {
+      "candidate_targets": [
+        "elements"
+      ],
+      "enclosing_scope": "Stack::push",
+      "end_byte": 360,
+      "kind": "reference",
+      "start_byte": 352,
+      "written_name": "elements"
+    },
+    {
+      "candidate_targets": [
+        "push_back"
+      ],
+      "enclosing_scope": "Stack::push",
+      "end_byte": 370,
+      "kind": "call",
+      "start_byte": 361,
+      "written_name": "push_back"
+    },
+    {
+      "candidate_targets": [
+        "val"
+      ],
+      "enclosing_scope": "Stack::push",
+      "end_byte": 374,
+      "kind": "reference",
+      "start_byte": 371,
+      "written_name": "val"
+    },
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "end_byte": 451,
+      "kind": "reference",
+      "start_byte": 450,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "end_byte": 455,
+      "kind": "reference",
+      "start_byte": 454,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "a"
+      ],
+      "enclosing_scope": "pair_sum",
+      "end_byte": 471,
+      "kind": "reference",
+      "start_byte": 470,
+      "written_name": "a"
+    },
+    {
+      "candidate_targets": [
+        "b"
+      ],
+      "enclosing_scope": "pair_sum",
+      "end_byte": 475,
+      "kind": "reference",
+      "start_byte": 474,
+      "written_name": "b"
+    },
+    {
+      "candidate_targets": [
+        "map"
+      ],
+      "end_byte": 528,
+      "kind": "reference",
+      "start_byte": 525,
+      "written_name": "map"
+    },
+    {
+      "candidate_targets": [
+        "string"
+      ],
+      "end_byte": 540,
+      "kind": "reference",
+      "start_byte": 534,
+      "written_name": "string"
+    },
+    {
+      "candidate_targets": [
+        "Stack"
+      ],
+      "enclosing_scope": "test_templates",
+      "end_byte": 767,
+      "kind": "reference",
+      "start_byte": 762,
+      "written_name": "Stack"
+    },
+    {
+      "candidate_targets": [
+        "s"
+      ],
+      "enclosing_scope": "test_templates",
+      "end_byte": 781,
+      "kind": "reference",
+      "start_byte": 780,
+      "written_name": "s"
+    },
+    {
+      "candidate_targets": [
+        "push"
+      ],
+      "enclosing_scope": "test_templates",
+      "end_byte": 786,
+      "kind": "call",
+      "start_byte": 782,
+      "written_name": "push"
+    },
+    {
+      "candidate_targets": [
+        "pair_sum"
+      ],
+      "enclosing_scope": "test_templates",
+      "end_byte": 817,
+      "kind": "call",
+      "start_byte": 809,
+      "written_name": "pair_sum"
+    },
+    {
+      "candidate_targets": [
+        "StringMap"
+      ],
+      "enclosing_scope": "test_templates",
+      "end_byte": 842,
+      "kind": "reference",
+      "start_byte": 833,
+      "written_name": "StringMap"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 85,
+      "end_column": 12,
+      "end_line": 6,
+      "kind": "class",
+      "name": "Stack",
+      "qualified_name": "Stack",
+      "signature": "template <typename T> class Stack",
+      "start_byte": 80,
+      "start_column": 7,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 109,
+      "end_column": 14,
+      "end_line": 8,
+      "kind": "method",
+      "name": "push",
+      "qualified_name": "Stack::push",
+      "signature": "void push(const T& val)",
+      "start_byte": 105,
+      "start_column": 10,
+      "start_line": 8
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 134,
+      "end_column": 10,
+      "end_line": 9,
+      "kind": "method",
+      "name": "pop",
+      "qualified_name": "Stack::pop",
+      "signature": "T pop()",
+      "start_byte": 131,
+      "start_column": 7,
+      "start_line": 9
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 152,
+      "end_column": 15,
+      "end_line": 10,
+      "kind": "method",
+      "name": "empty",
+      "qualified_name": "Stack::empty",
+      "signature": "bool empty() const",
+      "start_byte": 147,
+      "start_column": 10,
+      "start_line": 10
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 210,
+      "end_column": 21,
+      "end_line": 11,
+      "kind": "method",
+      "name": "size",
+      "qualified_name": "Stack::size",
+      "signature": "std::size_t size() const",
+      "start_byte": 206,
+      "start_column": 17,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 284,
+      "end_column": 28,
+      "end_line": 14,
+      "kind": "field",
+      "name": "elements",
+      "qualified_name": "Stack::elements",
+      "signature": "std::vector<T> elements",
+      "start_byte": 276,
+      "start_column": 20,
+      "start_line": 14
+    },
+    {
+      "enclosing_scope": "Stack",
+      "end_byte": 331,
+      "end_column": 20,
+      "end_line": 18,
+      "kind": "method",
+      "name": "push",
+      "qualified_name": "Stack::push",
+      "signature": "template <typename T> void Stack<T>::push(const T& val)",
+      "start_byte": 327,
+      "start_column": 16,
+      "start_line": 18
+    },
+    {
+      "end_byte": 427,
+      "end_column": 14,
+      "end_line": 23,
+      "kind": "function",
+      "name": "pair_sum",
+      "qualified_name": "pair_sum",
+      "signature": "template <typename T, typename U> auto pair_sum(T a, U b) -> decltype(a + b)",
+      "start_byte": 419,
+      "start_column": 6,
+      "start_line": 23
+    },
+    {
+      "end_byte": 517,
+      "end_column": 16,
+      "end_line": 28,
+      "kind": "type_alias",
+      "name": "StringMap",
+      "qualified_name": "StringMap",
+      "signature": "template <typename T> using StringMap = std::map<std::string, T>;",
+      "start_byte": 508,
+      "start_column": 7,
+      "start_line": 28
+    },
+    {
+      "end_byte": 586,
+      "end_column": 18,
+      "end_line": 31,
+      "kind": "struct",
+      "name": "TypeTraits",
+      "qualified_name": "TypeTraits",
+      "signature": "template <typename T> struct TypeTraits",
+      "start_byte": 576,
+      "start_column": 8,
+      "start_line": 31
+    },
+    {
+      "enclosing_scope": "TypeTraits",
+      "end_byte": 625,
+      "end_column": 37,
+      "end_line": 32,
+      "kind": "field",
+      "name": "is_pointer",
+      "qualified_name": "TypeTraits::is_pointer",
+      "signature": "static constexpr bool is_pointer",
+      "start_byte": 615,
+      "start_column": 27,
+      "start_line": 32
+    },
+    {
+      "end_byte": 682,
+      "end_column": 22,
+      "end_line": 36,
+      "kind": "struct",
+      "name": "TypeTraits",
+      "qualified_name": "TypeTraits",
+      "signature": "template <typename T> struct TypeTraits<T*>",
+      "start_byte": 668,
+      "start_column": 8,
+      "start_line": 36
+    },
+    {
+      "enclosing_scope": "TypeTraits",
+      "end_byte": 721,
+      "end_column": 37,
+      "end_line": 37,
+      "kind": "field",
+      "name": "is_pointer",
+      "qualified_name": "TypeTraits::is_pointer",
+      "signature": "static constexpr bool is_pointer",
+      "start_byte": 711,
+      "start_column": 27,
+      "start_line": 37
+    },
+    {
+      "end_byte": 753,
+      "end_column": 20,
+      "end_line": 40,
+      "kind": "function",
+      "name": "test_templates",
+      "qualified_name": "test_templates",
+      "signature": "void test_templates()",
+      "start_byte": 739,
+      "start_column": 6,
+      "start_line": 40
+    },
+    {
+      "enclosing_scope": "test_templates",
+      "end_byte": 774,
+      "end_column": 17,
+      "end_line": 41,
+      "kind": "variable",
+      "name": "s",
+      "qualified_name": "test_templates::s",
+      "signature": "Stack<int> s",
+      "start_byte": 773,
+      "start_column": 16,
+      "start_line": 41
+    },
+    {
+      "enclosing_scope": "test_templates",
+      "end_byte": 806,
+      "end_column": 15,
+      "end_line": 43,
+      "kind": "variable",
+      "name": "total",
+      "qualified_name": "test_templates::total",
+      "signature": "auto total = pair_sum(10, 3.14)",
+      "start_byte": 801,
+      "start_column": 10,
+      "start_line": 43
+    },
+    {
+      "enclosing_scope": "test_templates",
+      "end_byte": 855,
+      "end_column": 27,
+      "end_line": 44,
+      "kind": "variable",
+      "name": "mapping",
+      "qualified_name": "test_templates::mapping",
+      "signature": "StringMap<int> mapping",
+      "start_byte": 848,
+      "start_column": 20,
+      "start_line": 44
+    }
+  ]
+}

@@ -67,7 +67,9 @@ Language language_from_extension(std::string_view extension) {
     if (normalized == ".i")
         return Language::c;
     if (normalized == ".cc" || normalized == ".cpp" || normalized == ".cxx" ||
-        normalized == ".hpp" || normalized == ".hh" || normalized == ".hxx") {
+        normalized == ".hpp" || normalized == ".hh" || normalized == ".hxx" ||
+        normalized == ".tpp" || normalized == ".ipp" || normalized == ".c++" ||
+        normalized == ".h++") {
         return Language::cpp;
     }
     if (normalized == ".cs")

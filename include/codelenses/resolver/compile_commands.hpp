@@ -44,8 +44,7 @@ public:
 
     // Parses a single command string into a CompileCommand struct.
     [[nodiscard]] static Result<CompileCommand>
-    parse_command_string(std::string_view command,
-                         const std::filesystem::path& directory = {},
+    parse_command_string(std::string_view command, const std::filesystem::path& directory = {},
                          const std::filesystem::path& file = {},
                          const std::filesystem::path& workspace_root = {});
 

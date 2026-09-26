@@ -684,8 +684,10 @@ TEST_CASE("Compilation command configuration model and safe tokenization (E-09)"
     }
 
     SECTION("Parsing standalone command string into CompileCommand") {
-        std::string cmd = "clang -std=c17 -Iinclude -isystem /usr/include -DFEATURE_X=1 -UDEBUG -o bin/app src/main.c";
-        auto parsed = CompilationDatabase::parse_command_string(cmd, "/workspace", "src/main.c", "/workspace");
+        std::string cmd = "clang -std=c17 -Iinclude -isystem /usr/include -DFEATURE_X=1 -UDEBUG -o "
+                          "bin/app src/main.c";
+        auto parsed = CompilationDatabase::parse_command_string(cmd, "/workspace", "src/main.c",
+                                                                "/workspace");
         REQUIRE(parsed.has_value());
         REQUIRE(parsed->language_standard.has_value());
         REQUIRE(parsed->language_standard.value() == "c17");

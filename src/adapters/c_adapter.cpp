@@ -27,6 +27,8 @@ struct ASTContext {
     const CompileCommandContext* compile_context{nullptr};
     std::filesystem::path file_path{};
     std::unordered_set<std::string> command_line_macro_names{};
+    std::unordered_map<std::string, std::string> defined_macros;
+    std::unordered_set<std::string> undefined_macros;
 
     [[nodiscard]] std::optional<std::string> current_scope() const {
         if (scope_stack.empty())
@@ -107,6 +109,26 @@ bool is_extern_declaration(treesitter::Node node, std::string_view source) {
     return false;
 }
 
+std::string clean_signature(std::string_view raw) {
+    std::string result;
+    bool in_space = false;
+    for (char c : raw) {
+        if (c == '\r' || c == '\n' || c == '\t' || c == ' ') {
+            if (!in_space && !result.empty()) {
+                result += ' ';
+                in_space = true;
+            }
+        } else {
+            result += c;
+            in_space = false;
+        }
+    }
+    while (!result.empty() && result.back() == ' ') {
+        result.pop_back();
+    }
+    return result;
+}
+
 std::string clean_include_target(std::string_view raw) {
     std::string target(raw);
     if ((target.starts_with('<') && target.ends_with('>')) ||
@@ -175,6 +197,343 @@ void process_include(treesitter::Node node, ASTContext& ctx) {
     }
 }
 
+bool is_macro_defined(std::string_view name, const ASTContext& ctx) {
+    std::string s(name);
+    if (ctx.defined_macros.contains(s)) {
+        return true;
+    }
+    if (ctx.undefined_macros.contains(s)) {
+        return false;
+    }
+    return false;
+}
+
+int64_t evaluate_preproc_expression(treesitter::Node node, const ASTContext& ctx) {
+    if (node.is_null()) {
+        return 0;
+    }
+    const auto type = node.type();
+
+    if (type == "number_literal") {
+        std::string text = std::string(node.text(ctx.source));
+        while (!text.empty() && (text.back() == 'u' || text.back() == 'U' || text.back() == 'l' ||
+                                 text.back() == 'L')) {
+            text.pop_back();
+        }
+        try {
+            return std::stoll(text, nullptr, 0);
+        } catch (...) {
+            return 0;
+        }
+    }
+
+    if (type == "char_literal") {
+        std::string_view t = node.text(ctx.source);
+        if (t.size() >= 3 && t.front() == '\'' && t.back() == '\'') {
+            return static_cast<int64_t>(static_cast<unsigned char>(t[1]));
+        }
+        return 0;
+    }
+
+    if (type == "preproc_defined") {
+        for (uint32_t i = 0; i < node.child_count(); ++i) {
+            auto child = node.child(i);
+            if (child.type() == "identifier") {
+                return is_macro_defined(child.text(ctx.source), ctx) ? 1 : 0;
+            }
+        }
+        return 0;
+    }
+
+    if (type == "identifier") {
+        std::string name = std::string(node.text(ctx.source));
+        if (ctx.defined_macros.contains(name)) {
+            const std::string& val = ctx.defined_macros.at(name);
+            if (val.empty()) {
+                return 1;
+            }
+            std::string text = val;
+            while (!text.empty() && (text.back() == 'u' || text.back() == 'U' ||
+                                     text.back() == 'l' || text.back() == 'L')) {
+                text.pop_back();
+            }
+            try {
+                return std::stoll(text, nullptr, 0);
+            } catch (...) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (type == "parenthesized_expression") {
+        for (uint32_t i = 0; i < node.named_child_count(); ++i) {
+            return evaluate_preproc_expression(node.named_child(i), ctx);
+        }
+        return 0;
+    }
+
+    if (type == "unary_expression") {
+        treesitter::Node op_node = node.child_by_field_name("operator");
+        treesitter::Node arg_node = node.child_by_field_name("argument");
+        if (arg_node.is_null()) {
+            for (uint32_t i = 0; i < node.child_count(); ++i) {
+                const auto ctype = node.child(i).type();
+                if (ctype != "!" && ctype != "-" && ctype != "~" && ctype != "+") {
+                    arg_node = node.child(i);
+                    break;
+                }
+            }
+        }
+        std::string op = op_node.is_null() ? "" : std::string(op_node.text(ctx.source));
+        if (op.empty() && node.child_count() > 0) {
+            op = std::string(node.child(0).text(ctx.source));
+        }
+        int64_t val = evaluate_preproc_expression(arg_node, ctx);
+        if (op == "!") {
+            return (val == 0) ? 1 : 0;
+        }
+        if (op == "-") {
+            return -val;
+        }
+        if (op == "~") {
+            return ~val;
+        }
+        return val;
+    }
+
+    if (type == "binary_expression") {
+        treesitter::Node left_node = node.child_by_field_name("left");
+        treesitter::Node right_node = node.child_by_field_name("right");
+        treesitter::Node op_node = node.child_by_field_name("operator");
+
+        std::string op = op_node.is_null() ? "" : std::string(op_node.text(ctx.source));
+        if (op == "&&") {
+            int64_t l = evaluate_preproc_expression(left_node, ctx);
+            if (l == 0) {
+                return 0;
+            }
+            int64_t r = evaluate_preproc_expression(right_node, ctx);
+            return (r != 0) ? 1 : 0;
+        }
+        if (op == "||") {
+            int64_t l = evaluate_preproc_expression(left_node, ctx);
+            if (l != 0) {
+                return 1;
+            }
+            int64_t r = evaluate_preproc_expression(right_node, ctx);
+            return (r != 0) ? 1 : 0;
+        }
+
+        int64_t l = evaluate_preproc_expression(left_node, ctx);
+        int64_t r = evaluate_preproc_expression(right_node, ctx);
+        if (op == "==") {
+            return (l == r) ? 1 : 0;
+        }
+        if (op == "!=") {
+            return (l != r) ? 1 : 0;
+        }
+        if (op == "<") {
+            return (l < r) ? 1 : 0;
+        }
+        if (op == "<=") {
+            return (l <= r) ? 1 : 0;
+        }
+        if (op == ">") {
+            return (l > r) ? 1 : 0;
+        }
+        if (op == ">=") {
+            return (l >= r) ? 1 : 0;
+        }
+        if (op == "+") {
+            return l + r;
+        }
+        if (op == "-") {
+            return l - r;
+        }
+        if (op == "*") {
+            return l * r;
+        }
+        if (op == "/" && r != 0) {
+            return l / r;
+        }
+        if (op == "%" && r != 0) {
+            return l % r;
+        }
+        if (op == "&") {
+            return l & r;
+        }
+        if (op == "|") {
+            return l | r;
+        }
+        if (op == "^") {
+            return l ^ r;
+        }
+        if (op == "<<" && r >= 0 && r < 64) {
+            return l << r;
+        }
+        if (op == ">>" && r >= 0 && r < 64) {
+            return l >> r;
+        }
+        return 0;
+    }
+
+    return 0;
+}
+
+void walk_preproc_condition_references(treesitter::Node node, ASTContext& ctx) {
+    if (node.is_null()) {
+        return;
+    }
+    const auto type = node.type();
+    if (type == "identifier") {
+        if (!ctx.handled_identifier_byte_starts.contains(node.start_byte())) {
+            const std::string name = std::string(node.text(ctx.source));
+            ctx.result.occurrences.push_back(OccurrenceFact{
+                .kind = worker::FactKind::reference,
+                .written_name = name,
+                .range = node.byte_range(),
+                .display_range = node.display_range(),
+                .enclosing_scope = std::nullopt,
+                .candidate_targets = {name},
+            });
+            ctx.handled_identifier_byte_starts.insert(node.start_byte());
+        }
+        return;
+    }
+    for (uint32_t i = 0; i < node.child_count(); ++i) {
+        walk_preproc_condition_references(node.child(i), ctx);
+    }
+}
+
+void walk_preproc_alternative(treesitter::Node alt_node, ASTContext& ctx);
+void walk_preproc_skipped(treesitter::Node node, ASTContext& ctx);
+
+void walk_preproc_skipped(treesitter::Node node, ASTContext& ctx) {
+    if (node.is_null()) {
+        return;
+    }
+    const auto type = node.type();
+    if (type == "preproc_elif" || type == "preproc_elifdef" || type == "preproc_elifndef") {
+        treesitter::Node name_node = node.child_by_field_name("name");
+        treesitter::Node cond_node = node.child_by_field_name("condition");
+        if (!name_node.is_null()) {
+            const std::string name = std::string(name_node.text(ctx.source));
+            if (!ctx.handled_identifier_byte_starts.contains(name_node.start_byte())) {
+                ctx.result.occurrences.push_back(OccurrenceFact{
+                    .kind = worker::FactKind::reference,
+                    .written_name = name,
+                    .range = name_node.byte_range(),
+                    .display_range = name_node.display_range(),
+                    .enclosing_scope = std::nullopt,
+                    .candidate_targets = {name},
+                });
+                ctx.handled_identifier_byte_starts.insert(name_node.start_byte());
+            }
+        } else if (!cond_node.is_null()) {
+            walk_preproc_condition_references(cond_node, ctx);
+        }
+        treesitter::Node alt = node.child_by_field_name("alternative");
+        if (!alt.is_null()) {
+            walk_preproc_skipped(alt, ctx);
+        }
+    }
+}
+
+void process_preproc_conditional(treesitter::Node node, ASTContext& ctx) {
+    const auto type = node.type();
+    treesitter::Node name_node = node.child_by_field_name("name");
+    treesitter::Node cond_node = node.child_by_field_name("condition");
+    treesitter::Node alt_node = node.child_by_field_name("alternative");
+
+    if (!name_node.is_null()) {
+        const std::string name = std::string(name_node.text(ctx.source));
+        if (!ctx.handled_identifier_byte_starts.contains(name_node.start_byte())) {
+            ctx.result.occurrences.push_back(OccurrenceFact{
+                .kind = worker::FactKind::reference,
+                .written_name = name,
+                .range = name_node.byte_range(),
+                .display_range = name_node.display_range(),
+                .enclosing_scope = std::nullopt,
+                .candidate_targets = {name},
+            });
+            ctx.handled_identifier_byte_starts.insert(name_node.start_byte());
+        }
+    } else if (!cond_node.is_null()) {
+        walk_preproc_condition_references(cond_node, ctx);
+    }
+
+    bool is_active = false;
+    bool is_negated = (type == "preproc_ifndef" || type == "preproc_elifndef");
+    for (uint32_t i = 0; i < node.child_count(); ++i) {
+        const auto ct = node.child(i).type();
+        if (ct == "#ifndef" || ct == "#elifndef") {
+            is_negated = true;
+            break;
+        }
+        if (ct == "#ifdef" || ct == "#elifdef") {
+            is_negated = false;
+            break;
+        }
+    }
+
+    if (type == "preproc_ifdef" || type == "preproc_ifndef" || type == "preproc_elifdef" ||
+        type == "preproc_elifndef") {
+        if (!name_node.is_null()) {
+            const bool def = is_macro_defined(name_node.text(ctx.source), ctx);
+            is_active = is_negated ? !def : def;
+        }
+    } else if (type == "preproc_if" || type == "preproc_elif") {
+        if (!cond_node.is_null()) {
+            is_active = (evaluate_preproc_expression(cond_node, ctx) != 0);
+        }
+    }
+
+    if (is_active) {
+        const uint32_t count = node.child_count();
+        for (uint32_t i = 0; i < count; ++i) {
+            auto child = node.child(i);
+            if (child == name_node || child == cond_node || child == alt_node) {
+                continue;
+            }
+            const auto ctype = child.type();
+            if (ctype == "#ifdef" || ctype == "#ifndef" || ctype == "#if" || ctype == "#elif" ||
+                ctype == "#elifdef" || ctype == "#elifndef" || ctype == "#else" ||
+                ctype == "#endif" || ctype == "preproc_directive" || ctype == "\n") {
+                continue;
+            }
+            walk_node(child, ctx);
+        }
+        if (!alt_node.is_null()) {
+            walk_preproc_skipped(alt_node, ctx);
+        }
+    } else if (!alt_node.is_null()) {
+        walk_preproc_alternative(alt_node, ctx);
+    }
+}
+
+void walk_preproc_alternative(treesitter::Node alt_node, ASTContext& ctx) {
+    if (alt_node.is_null()) {
+        return;
+    }
+    const auto type = alt_node.type();
+    if (type == "preproc_elif" || type == "preproc_elifdef" || type == "preproc_elifndef") {
+        process_preproc_conditional(alt_node, ctx);
+        return;
+    }
+    if (type == "preproc_else") {
+        const uint32_t count = alt_node.child_count();
+        for (uint32_t i = 0; i < count; ++i) {
+            auto child = alt_node.child(i);
+            const auto ctype = child.type();
+            if (ctype == "#else" || ctype == "preproc_directive" || ctype == "\n") {
+                continue;
+            }
+            walk_node(child, ctx);
+        }
+    }
+}
+
 void process_macro(treesitter::Node node, ASTContext& ctx) {
     treesitter::Node name_node = node.child_by_field_name("name");
     if (name_node.is_null())
@@ -212,6 +571,14 @@ void process_macro(treesitter::Node node, ASTContext& ctx) {
         .is_definition = true,
     });
 
+    std::string macro_val = "1";
+    treesitter::Node val_node = node.child_by_field_name("value");
+    if (!val_node.is_null()) {
+        macro_val = clean_signature(val_node.text(ctx.source));
+    }
+    ctx.defined_macros[name] = macro_val;
+    ctx.undefined_macros.erase(name);
+
     // Collect macro parameter names if function-like macro
     std::unordered_set<std::string> saved_params = std::move(ctx.macro_param_names);
 
@@ -227,7 +594,6 @@ void process_macro(treesitter::Node node, ASTContext& ctx) {
     }
 
     // Walk macro body value
-    treesitter::Node val_node = node.child_by_field_name("value");
     if (!val_node.is_null()) {
         walk_node(val_node, ctx);
     }
@@ -900,6 +1266,14 @@ void walk_node(treesitter::Node node, ASTContext& ctx) {
         treesitter::Node dir = node.child_by_field_name("directive");
         if (!dir.is_null()) {
             std::string name = std::string(dir.text(ctx.source));
+            if (name == "#undef") {
+                treesitter::Node arg = node.child_by_field_name("argument");
+                if (!arg.is_null()) {
+                    std::string undef_name = clean_signature(arg.text(ctx.source));
+                    ctx.defined_macros.erase(undef_name);
+                    ctx.undefined_macros.insert(undef_name);
+                }
+            }
             ctx.result.occurrences.push_back(OccurrenceFact{
                 .kind = worker::FactKind::call,
                 .written_name = name,
@@ -917,29 +1291,9 @@ void walk_node(treesitter::Node node, ASTContext& ctx) {
         return;
     }
 
-    if (type == "preproc_ifdef" || type == "preproc_ifndef" || type == "preproc_elifdef") {
-        treesitter::Node name_node = node.child_by_field_name("name");
-        if (!name_node.is_null()) {
-            const std::string name = std::string(name_node.text(ctx.source));
-            if (!ctx.handled_identifier_byte_starts.contains(name_node.start_byte())) {
-                ctx.result.occurrences.push_back(OccurrenceFact{
-                    .kind = worker::FactKind::reference,
-                    .written_name = name,
-                    .range = name_node.byte_range(),
-                    .display_range = name_node.display_range(),
-                    .enclosing_scope = std::nullopt,
-                    .candidate_targets = {name},
-                });
-                ctx.handled_identifier_byte_starts.insert(name_node.start_byte());
-            }
-        }
-        const uint32_t count = node.child_count();
-        for (uint32_t i = 0; i < count; ++i) {
-            auto child = node.child(i);
-            if (child != name_node) {
-                walk_node(child, ctx);
-            }
-        }
+    if (type == "preproc_ifdef" || type == "preproc_ifndef" || type == "preproc_if" ||
+        type == "preproc_elifdef" || type == "preproc_elifndef" || type == "preproc_elif") {
+        process_preproc_conditional(node, ctx);
         return;
     }
 
@@ -1162,23 +1516,7 @@ Result<AdapterResult> CAdapter::parse(std::string_view source,
     }
 
     // Process active macro defines (-D and -U)
-    struct MacroDef {
-        std::string name;
-        std::string value;
-    };
-    std::vector<MacroDef> active_macros;
-    for (const auto& def_arg : context.defines) {
-        if (def_arg.starts_with("-U")) {
-            std::string undef_name = def_arg.substr(2);
-            std::erase_if(active_macros, [&](const MacroDef& m) { return m.name == undef_name; });
-        } else {
-            auto eq = def_arg.find('=');
-            std::string name = (eq != std::string::npos) ? def_arg.substr(0, eq) : def_arg;
-            std::string val = (eq != std::string::npos) ? def_arg.substr(eq + 1) : "1";
-            std::erase_if(active_macros, [&](const MacroDef& m) { return m.name == name; });
-            active_macros.push_back(MacroDef{.name = std::move(name), .value = std::move(val)});
-        }
-    }
+    const auto active_macros = context.active_defines();
 
     std::unordered_set<std::string> cmd_macro_names;
     for (const auto& m : active_macros) {
@@ -1206,6 +1544,20 @@ Result<AdapterResult> CAdapter::parse(std::string_view source,
         cmd_macro_names.insert(m.name);
     }
 
+    std::unordered_map<std::string, std::string> initial_defined_macros;
+    initial_defined_macros["__STDC__"] = "1";
+    std::unordered_set<std::string> initial_undefined_macros;
+    initial_undefined_macros.insert("__cplusplus");
+
+    for (const auto& m : active_macros) {
+        initial_defined_macros[m.name] = m.value;
+    }
+    for (const auto& def_arg : context.defines) {
+        if (def_arg.starts_with("-U")) {
+            initial_undefined_macros.insert(def_arg.substr(2));
+        }
+    }
+
     ASTContext ctx{
         .source = source,
         .stop_token = stop_token,
@@ -1216,6 +1568,8 @@ Result<AdapterResult> CAdapter::parse(std::string_view source,
         .compile_context = has_context ? &context : nullptr,
         .file_path = file_path,
         .command_line_macro_names = std::move(cmd_macro_names),
+        .defined_macros = std::move(initial_defined_macros),
+        .undefined_macros = std::move(initial_undefined_macros),
     };
 
     walk_node(root, ctx);

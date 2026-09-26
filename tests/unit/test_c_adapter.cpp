@@ -923,3 +923,87 @@ int run(void) {
     // Ordinary local identifier retains function enclosing scope
     CHECK(occ_local->enclosing_scope == "run");
 }
+
+TEST_CASE("CAdapter preprocessor conditional branch selection with -D and -U",
+          "[adapter][c][preprocessor]") {
+    CAdapter adapter;
+    CompileCommandContext ctx{
+        .defines = {"FEATURE_ENABLED=1", "-UFEATURE_DISABLED"},
+    };
+    std::string_view source = R"(
+#ifdef FEATURE_ENABLED
+void active_func_a(void);
+#else
+void inactive_func_a(void);
+#endif
+
+#ifdef FEATURE_DISABLED
+void inactive_func_b(void);
+#else
+void active_func_b(void);
+#endif
+
+#ifndef FEATURE_DISABLED
+void active_func_c(void);
+#else
+void inactive_func_c(void);
+#endif
+
+#if 0
+void inactive_func_d(void);
+#elif 1
+void active_func_d(void);
+#else
+void inactive_func_e(void);
+#endif
+
+#define INFILE_SET 1
+#ifdef INFILE_SET
+void active_func_e(void);
+#else
+void inactive_func_f(void);
+#endif
+
+#undef INFILE_SET
+#ifdef INFILE_SET
+void inactive_func_g(void);
+#else
+void active_func_f(void);
+#endif
+)";
+    auto res = adapter.parse(source, "test.c", ctx);
+    REQUIRE(res.has_value());
+    REQUIRE(res->status == worker::CompletionStatus::complete);
+
+    auto has_symbol = [&](std::string_view name) {
+        return std::ranges::any_of(res->symbols,
+                                   [&](const SymbolFact& sym) { return sym.name == name; });
+    };
+
+    // Active functions should be indexed
+    CHECK(has_symbol("active_func_a"));
+    CHECK(has_symbol("active_func_b"));
+    CHECK(has_symbol("active_func_c"));
+    CHECK(has_symbol("active_func_d"));
+    CHECK(has_symbol("active_func_e"));
+    CHECK(has_symbol("active_func_f"));
+
+    // Inactive functions should NOT be indexed
+    CHECK_FALSE(has_symbol("inactive_func_a"));
+    CHECK_FALSE(has_symbol("inactive_func_b"));
+    CHECK_FALSE(has_symbol("inactive_func_c"));
+    CHECK_FALSE(has_symbol("inactive_func_d"));
+    CHECK_FALSE(has_symbol("inactive_func_e"));
+    CHECK_FALSE(has_symbol("inactive_func_f"));
+    CHECK_FALSE(has_symbol("inactive_func_g"));
+
+    // Macro names in directives should still be recorded as reference occurrences
+    auto has_occurrence = [&](std::string_view name) {
+        return std::ranges::any_of(res->occurrences, [&](const OccurrenceFact& occ) {
+            return occ.kind == worker::FactKind::reference && occ.written_name == name;
+        });
+    };
+    CHECK(has_occurrence("FEATURE_ENABLED"));
+    CHECK(has_occurrence("FEATURE_DISABLED"));
+    CHECK(has_occurrence("INFILE_SET"));
+}

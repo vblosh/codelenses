@@ -605,12 +605,12 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
 
         for (std::size_t i = 0; i < current_batch; ++i) {
             const auto& planned = plan.files_to_process[idx + i];
-            futures.push_back(pool.submit(
-                [this, workspace_id, job_id, planned, job_stop, canonical_root, raw_cdb, raw_default_cmd] {
-                    return extract_file(workspace_id, job_id, planned, registry_,
-                                        options_.max_file_size_bytes, job_stop, canonical_root,
-                                        raw_cdb, raw_default_cmd);
-                }));
+            futures.push_back(pool.submit([this, workspace_id, job_id, planned, job_stop,
+                                           canonical_root, raw_cdb, raw_default_cmd] {
+                return extract_file(workspace_id, job_id, planned, registry_,
+                                    options_.max_file_size_bytes, job_stop, canonical_root, raw_cdb,
+                                    raw_default_cmd);
+            }));
         }
 
         for (auto& fut : futures) {

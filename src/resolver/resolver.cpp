@@ -163,7 +163,8 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         dep_resolver.register_file(f.id, f.relative_path, lang);
     }
 
-    configure_compilation_database(dep_resolver, root, ws->compile_commands_path, ws->default_compile_command);
+    configure_compilation_database(dep_resolver, root, ws->compile_commands_path,
+                                   ws->default_compile_command);
     configure_tsconfig_paths(dep_resolver, root);
     configure_go_module(dep_resolver, root);
 
