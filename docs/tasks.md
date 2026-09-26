@@ -203,7 +203,7 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 - [x] I-02 Add API contract tests against a temporary SQLite database.
 - [x] I-03 Add database migration tests from every supported schema version.
 - [x] I-04 Add malformed-source and hostile-path security tests.
-- [ ] I-05 Add cancellation and restart recovery tests.
+- [x] I-05 Add cancellation and restart recovery tests.
 - [ ] I-06 Benchmark cold indexing and incremental indexing separately.
 - [ ] I-07 Benchmark tree expansion, source range retrieval, symbol search, and reference queries.
 - [ ] I-08 Add memory and database-size measurements for representative repositories.

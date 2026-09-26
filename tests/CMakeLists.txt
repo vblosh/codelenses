@@ -19,6 +19,7 @@ set(UNIT_TEST_SOURCES
     integration/test_sample_workspace.cpp
     integration/test_api_contract.cpp
     integration/test_security_and_malformed.cpp
+    integration/test_cancellation_and_recovery.cpp
 )
 
 add_executable(codelenses_unit_tests
