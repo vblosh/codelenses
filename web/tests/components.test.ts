@@ -6,6 +6,12 @@ import { CodeWindowComponent } from "../src/components/code-window";
 import { OutlineComponent } from "../src/components/outline";
 import { ReferencesComponent } from "../src/components/references";
 import { DiagnosticsComponent } from "../src/components/diagnostics";
+import { CompileCommandComponent } from "../src/components/compile-command";
+import {
+  WorkspaceSettingsModal,
+  WorkspaceCompileCommandsModal,
+  parseCommandPreview,
+} from "../src/components/workspace-settings";
 import { AppComponent } from "../src/components/app";
 import { api } from "../src/api";
 
@@ -273,7 +279,7 @@ describe("Frontend components", () => {
       const methodItem = elem.querySelector('.outline-item[data-symbol-id="2"]') as HTMLElement;
       methodItem.click();
       expect(store.getState().selectedSymbolId).toBe(2);
-      expect(store.getState().selectedLine).toBe(6); // 5 (0-based) + 1 = 6 (1-based)
+      expect(store.getState().selectedLine).toBe(5); // 5 (1-based from outline range)
     });
   });
 
@@ -754,4 +760,325 @@ describe("Frontend components", () => {
       expect(line2.querySelector(".line-diag-marker")).not.toBeNull();
     });
   });
+
+  describe("parseCommandPreview", () => {
+    it("extracts compiler, standard, defines, and includes", () => {
+      const parsed = parseCommandPreview("clang++ -std=c++17 -DFOO=1 -DBAR -Iinclude -I /usr/local/include -O2");
+      expect(parsed.compiler).toBe("clang++");
+      expect(parsed.standard).toBe("c++17");
+      expect(parsed.defines).toEqual(["FOO=1", "BAR"]);
+      expect(parsed.includes).toEqual(["include", "/usr/local/include"]);
+    });
+
+    it("handles GNU style --std=", () => {
+      const parsed = parseCommandPreview("gcc --std=gnu11 -D_GNU_SOURCE");
+      expect(parsed.compiler).toBe("gcc");
+      expect(parsed.standard).toBe("gnu11");
+      expect(parsed.defines).toEqual(["_GNU_SOURCE"]);
+    });
+
+    it("handles command without compiler or standard", () => {
+      const parsed = parseCommandPreview("-Isrc -DVERSION=2");
+      expect(parsed.compiler).toBeUndefined();
+      expect(parsed.standard).toBeUndefined();
+      expect(parsed.includes).toEqual(["src"]);
+      expect(parsed.defines).toEqual(["VERSION=2"]);
+    });
+  });
+
+  describe("WorkspaceSettingsModal", () => {
+    let modal: WorkspaceSettingsModal;
+
+    beforeEach(() => {
+      modal = new WorkspaceSettingsModal(store);
+    });
+
+    it("loads workspace settings and populates defaultCompileCommand", async () => {
+      vi.spyOn(api, "getWorkspace").mockResolvedValueOnce({
+        id: 1,
+        name: "My Project",
+        rootPath: "/path/to/project",
+        compileCommandsPath: "build/compile_commands.json",
+        defaultCompileCommand: "clang -Iinclude -DDEBUG=1 -std=c11",
+        status: "idle",
+        revision: 1,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValueOnce({
+        configuredPath: "build/compile_commands.json",
+        effectivePath: "/path/to/project/build/compile_commands.json",
+        exists: true,
+        isAutoDetected: false,
+        totalCommands: 15,
+        defaultCompileCommand: "clang -Iinclude -DDEBUG=1 -std=c11",
+      });
+
+      await modal.open(1);
+
+      const elem = modal.getElement();
+      const defaultCmdInput = elem.querySelector(".ws-default-cmd-input") as HTMLInputElement;
+      expect(defaultCmdInput.value).toBe("clang -Iinclude -DDEBUG=1 -std=c11");
+
+      const previewBox = elem.querySelector(".ws-default-cmd-preview") as HTMLElement;
+      expect(previewBox.style.display).not.toBe("none");
+      expect(previewBox.textContent).toContain("C11");
+      expect(previewBox.textContent).toContain("1 define");
+      expect(previewBox.textContent).toContain("1 include dir");
+
+      modal.close();
+    });
+
+    it("updates live preview when typing into defaultCompileCommand input", async () => {
+      vi.spyOn(api, "getWorkspace").mockResolvedValueOnce({
+        id: 1,
+        name: "My Project",
+        rootPath: "/path/to/project",
+        status: "idle",
+        revision: 1,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValueOnce({
+        configuredPath: null,
+        effectivePath: null,
+        exists: false,
+        isAutoDetected: false,
+        totalCommands: 0,
+      });
+
+      await modal.open(1);
+
+      const elem = modal.getElement();
+      const defaultCmdInput = elem.querySelector(".ws-default-cmd-input") as HTMLInputElement;
+      const previewBox = elem.querySelector(".ws-default-cmd-preview") as HTMLElement;
+
+      expect(defaultCmdInput.value).toBe("");
+      expect(previewBox.style.display).toBe("none");
+
+      defaultCmdInput.value = "gcc -std=c99 -DFOO -DBAR -Iinc1 -Iinc2";
+      defaultCmdInput.dispatchEvent(new Event("input"));
+
+      expect(previewBox.style.display).toBe("block");
+      expect(previewBox.textContent).toContain("C99");
+      expect(previewBox.textContent).toContain("2 defines");
+      expect(previewBox.textContent).toContain("2 include dirs");
+
+      modal.close();
+    });
+
+    it("saves workspace with defaultCompileCommand via Save button", async () => {
+      vi.spyOn(api, "getWorkspace").mockResolvedValueOnce({
+        id: 1,
+        name: "My Project",
+        rootPath: "/path/to/project",
+        status: "idle",
+        revision: 1,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValueOnce({
+        configuredPath: null,
+        effectivePath: null,
+        exists: false,
+        isAutoDetected: false,
+        totalCommands: 0,
+      });
+      const updateSpy = vi.spyOn(api, "updateWorkspace").mockResolvedValueOnce({
+        id: 1,
+        name: "My Project",
+        rootPath: "/path/to/project",
+        status: "idle",
+        revision: 2,
+        createdAt: "",
+        updatedAt: "",
+      });
+
+      await modal.open(1);
+
+      const elem = modal.getElement();
+      const defaultCmdInput = elem.querySelector(".ws-default-cmd-input") as HTMLInputElement;
+      defaultCmdInput.value = "clang -Isrc -DTEST=1";
+
+      const saveBtn = elem.querySelector(".save-settings-btn") as HTMLButtonElement;
+      saveBtn.click();
+
+      expect(updateSpy).toHaveBeenCalledWith(1, {
+        name: "My Project",
+        compileCommandsPath: null,
+        defaultCompileCommand: "clang -Isrc -DTEST=1",
+      });
+    });
+
+    it("focuses defaultCompileCommand input when focusDefaultCmd is true", async () => {
+      vi.spyOn(api, "getWorkspace").mockResolvedValueOnce({
+        id: 1,
+        name: "My Project",
+        rootPath: "/path/to/project",
+        status: "idle",
+        revision: 1,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValueOnce({
+        configuredPath: null,
+        effectivePath: null,
+        exists: false,
+        isAutoDetected: false,
+        totalCommands: 0,
+      });
+
+      const elem = modal.getElement();
+      const defaultCmdInput = elem.querySelector(".ws-default-cmd-input") as HTMLInputElement;
+      const focusSpy = vi.spyOn(defaultCmdInput, "focus");
+
+      await modal.open(1, true);
+
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      expect(focusSpy).toHaveBeenCalled();
+      modal.close();
+    });
+  });
+
+  describe("WorkspaceCompileCommandsModal", () => {
+    it("calls open with focusDefaultCmd=true", async () => {
+      const modal = new WorkspaceCompileCommandsModal(store);
+      vi.spyOn(api, "getWorkspace").mockResolvedValueOnce({
+        id: 1,
+        name: "My Project",
+        rootPath: "/path/to/project",
+        status: "idle",
+        revision: 1,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValueOnce({
+        configuredPath: null,
+        effectivePath: null,
+        exists: false,
+        isAutoDetected: false,
+        totalCommands: 0,
+      });
+
+      const defaultCmdInput = modal.getElement().querySelector(".ws-default-cmd-input") as HTMLInputElement;
+      const focusSpy = vi.spyOn(defaultCmdInput, "focus");
+
+      await modal.open(1);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      expect(focusSpy).toHaveBeenCalled();
+      modal.close();
+    });
+  });
+
+  describe("CompileCommandComponent", () => {
+    it("renders per-file compile command with precedence banner and badge", () => {
+      const onConfigureWorkspaceDefault = vi.fn();
+      const comp = new CompileCommandComponent(store, {
+        onConfigureWorkspaceDefault,
+      });
+
+      comp.setCompileCommand({
+        fileId: 10,
+        hasCompileCommand: true,
+        isAutoDetected: false,
+        isWorkspaceDefault: false,
+        databasePath: "compile_commands.json",
+        compileCommand: {
+          directory: "/project",
+          file: "src/main.c",
+          arguments: ["clang", "-Iinclude", "-DDEBUG=1", "-std=c11", "-c", "src/main.c"],
+          output: "main.o",
+          languageStandard: "c11",
+          defines: ["DEBUG=1"],
+          includeDirs: ["/project/include"],
+        },
+      });
+
+      const elem = comp.getElement();
+      // Badge should have file-entry class and 'configured' text
+      const badge = elem.querySelector(".cc-source-badge");
+      expect(badge?.classList.contains("file-entry")).toBe(true);
+      expect(badge?.textContent).toBe("configured");
+
+      // Precedence banner should explain individual override
+      const banner = elem.querySelector(".cc-precedence-banner");
+      expect(banner?.textContent).toContain("individual file command");
+      expect(banner?.textContent).toContain("overrides workspace default");
+
+      // Clicking Change Default button invokes callback
+      const editBtn = banner?.querySelector(".edit-ws-default-btn") as HTMLButtonElement;
+      expect(editBtn).not.toBeNull();
+      editBtn.click();
+      expect(onConfigureWorkspaceDefault).toHaveBeenCalledTimes(1);
+
+      // Defines and includes rendered
+      expect(elem.textContent).toContain("DEBUG=1");
+      expect(elem.textContent).toContain("/project/include");
+    });
+
+    it("renders workspace default compile command with precedence banner and badge", () => {
+      const onConfigureWorkspaceDefault = vi.fn();
+      const comp = new CompileCommandComponent(store, {
+        onConfigureWorkspaceDefault,
+      });
+
+      comp.setCompileCommand({
+        fileId: 20,
+        hasCompileCommand: true,
+        isAutoDetected: false,
+        isWorkspaceDefault: true,
+        databasePath: null,
+        compileCommand: {
+          directory: "/project",
+          file: "src/other.c",
+          arguments: ["clang", "-Icommon", "-DAPP_VERSION=2", "-std=c17"],
+          output: null,
+          languageStandard: "c17",
+          defines: ["APP_VERSION=2"],
+          includeDirs: ["/project/common"],
+        },
+      });
+
+      const elem = comp.getElement();
+      // Badge should have ws-default class and 'workspace default' text
+      const badge = elem.querySelector(".cc-source-badge");
+      expect(badge?.classList.contains("ws-default")).toBe(true);
+      expect(badge?.textContent).toBe("workspace default");
+
+      // Precedence banner should explain fallback
+      const banner = elem.querySelector(".cc-precedence-banner");
+      expect(banner?.textContent).toContain("workspace default");
+      expect(banner?.textContent).toContain("no entry in compile_commands.json");
+
+      // Clicking Change Default button invokes callback
+      const editBtn = banner?.querySelector(".edit-ws-default-btn") as HTMLButtonElement;
+      expect(editBtn).not.toBeNull();
+      editBtn.click();
+      expect(onConfigureWorkspaceDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders empty state with Change Workspace Default Command button and triggers callback", () => {
+      const onConfigureWorkspaceDefault = vi.fn();
+      const comp = new CompileCommandComponent(store, {
+        onConfigureWorkspaceDefault,
+      });
+
+      comp.setCompileCommand({
+        fileId: 30,
+        hasCompileCommand: false,
+        isAutoDetected: false,
+      });
+
+      const elem = comp.getElement();
+      expect(elem.querySelector(".empty-state-title")?.textContent).toBe("No compile command");
+
+      const defaultBtn = elem.querySelector(".configure-default-cmd-btn") as HTMLButtonElement;
+      expect(defaultBtn).not.toBeNull();
+      expect(defaultBtn.textContent).toContain("Change Workspace Default Command");
+
+      defaultBtn.click();
+      expect(onConfigureWorkspaceDefault).toHaveBeenCalledTimes(1);
+    });
+  });
 });
+

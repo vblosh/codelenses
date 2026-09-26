@@ -13,6 +13,7 @@
 #include "codelenses/filesystem/file_capture.hpp"
 #include "codelenses/filesystem/path.hpp"
 #include "codelenses/parser/reference_adapter.hpp"
+#include "codelenses/resolver/compile_commands.hpp"
 #include "codelenses/treesitter/grammars.hpp"
 #include "codelenses/treesitter/parser.hpp"
 
@@ -219,6 +220,7 @@ WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
         .exclude_patterns = req.exclude_patterns,
         .default_ignores = std::move(default_ignores),
         .compile_commands_path = req.compile_commands_path,
+        .default_compile_command = req.default_compile_command,
         .status = WorkspaceStatus::idle,
     };
 
@@ -259,6 +261,10 @@ WorkspaceDto ApiService::update_workspace(int64_t id, const UpdateWorkspaceReque
     }
     if (req.compile_commands_path.has_value()) {
         ws.compile_commands_path = *req.compile_commands_path;
+        invalidate_cdb_cache(id);
+    }
+    if (req.default_compile_command.has_value()) {
+        ws.default_compile_command = *req.default_compile_command;
     }
 
     db_.workspaces().update(ws);
@@ -268,6 +274,7 @@ WorkspaceDto ApiService::update_workspace(int64_t id, const UpdateWorkspaceReque
 
 void ApiService::delete_workspace(int64_t id) {
     require_workspace(id);
+    invalidate_cdb_cache(id);
     {
         std::lock_guard<std::mutex> lock(threads_mutex_);
         reserved_workspaces_.erase(id);
@@ -618,6 +625,156 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
         .end_byte = actual_end_byte,
         .is_binary = false,
         .content_hash = captured->content_hash,
+    };
+}
+
+void ApiService::invalidate_cdb_cache(int64_t workspace_id) {
+    std::lock_guard<std::mutex> lock(cdb_cache_mutex_);
+    cdb_cache_.erase(workspace_id);
+}
+
+std::shared_ptr<const resolver::CompilationDatabase>
+ApiService::get_or_load_cdb(const Workspace& ws, std::filesystem::path* out_effective_path,
+                            bool* out_is_auto_detected) {
+    std::lock_guard<std::mutex> lock(cdb_cache_mutex_);
+    auto it = cdb_cache_.find(ws.id);
+    if (it != cdb_cache_.end()) {
+        if (out_effective_path != nullptr) {
+            *out_effective_path = it->second.second;
+        }
+        if (out_is_auto_detected != nullptr) {
+            *out_is_auto_detected =
+                (!ws.compile_commands_path.has_value() || ws.compile_commands_path->empty());
+        }
+        return it->second.first;
+    }
+
+    std::error_code ec;
+    std::filesystem::path canonical_root = std::filesystem::canonical(ws.root_path, ec);
+    if (ec) {
+        canonical_root = ws.root_path;
+    }
+
+    std::filesystem::path cdb_path;
+    bool is_auto = false;
+
+    if (ws.compile_commands_path.has_value() && !ws.compile_commands_path->empty()) {
+        cdb_path = *ws.compile_commands_path;
+        if (cdb_path.is_relative()) {
+            cdb_path = canonical_root / cdb_path;
+        }
+        is_auto = false;
+    } else {
+        std::vector<std::filesystem::path> candidates = {
+            canonical_root / "compile_commands.json",
+            canonical_root / "build" / "compile_commands.json",
+        };
+        for (const auto& c : candidates) {
+            if (std::filesystem::exists(c)) {
+                cdb_path = c;
+                is_auto = true;
+                break;
+            }
+        }
+    }
+
+    if (out_effective_path != nullptr) {
+        *out_effective_path = cdb_path;
+    }
+    if (out_is_auto_detected != nullptr) {
+        *out_is_auto_detected = is_auto;
+    }
+
+    if (!cdb_path.empty() && std::filesystem::exists(cdb_path)) {
+        auto loaded = resolver::CompilationDatabase::load_file(cdb_path, canonical_root);
+        if (loaded) {
+            auto comp_db =
+                std::make_shared<const resolver::CompilationDatabase>(std::move(*loaded));
+            cdb_cache_[ws.id] = {comp_db, cdb_path};
+            return comp_db;
+        }
+    }
+
+    return nullptr;
+}
+
+FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t workspace_id,
+                                                                   int64_t file_id) {
+    auto ws = require_workspace(workspace_id);
+    auto f = require_file(workspace_id, file_id);
+
+    std::filesystem::path effective_path;
+    bool is_auto = false;
+    auto cdb = get_or_load_cdb(ws, &effective_path, &is_auto);
+
+    FileCompileCommandResponseDto res{
+        .file_id = file_id,
+        .has_compile_command = false,
+        .is_workspace_default = false,
+        .database_path = effective_path.empty() ? std::nullopt : std::make_optional(effective_path.string()),
+        .is_auto_detected = is_auto,
+        .compile_command = std::nullopt,
+    };
+
+    const resolver::CompileCommand* cmd = nullptr;
+    if (cdb != nullptr) {
+        cmd = cdb->find_for_file(f.relative_path);
+        if (cmd == nullptr) {
+            cmd = cdb->find_for_file(f.path);
+        }
+    }
+
+    std::optional<resolver::CompileCommand> fallback_cmd;
+    if (cmd == nullptr && ws.default_compile_command.has_value() && !ws.default_compile_command->empty()) {
+        auto parsed = resolver::CompilationDatabase::parse_command_string(
+            *ws.default_compile_command, ws.root_path, f.relative_path, ws.root_path);
+        if (parsed) {
+            fallback_cmd = std::move(*parsed);
+            cmd = &*fallback_cmd;
+            res.is_workspace_default = true;
+        }
+    }
+
+    if (cmd != nullptr) {
+        res.has_compile_command = true;
+        std::vector<std::string> inc_dirs;
+        inc_dirs.reserve(cmd->include_dirs.size());
+        for (const auto& d : cmd->include_dirs) {
+            inc_dirs.push_back(d.string());
+        }
+
+        res.compile_command = CompileCommandDto{
+            .directory = cmd->directory.string(),
+            .file = cmd->file.string(),
+            .output = cmd->output.has_value() ? std::make_optional(cmd->output->string())
+                                              : std::nullopt,
+            .arguments = cmd->arguments,
+            .include_dirs = std::move(inc_dirs),
+            .defines = cmd->defines,
+            .language_standard = cmd->language_standard,
+        };
+    }
+
+    return res;
+}
+
+WorkspaceCompileCommandsSummaryDto ApiService::get_workspace_compile_commands(int64_t workspace_id) {
+    auto ws = require_workspace(workspace_id);
+    std::filesystem::path effective_path;
+    bool is_auto = false;
+    auto cdb = get_or_load_cdb(ws, &effective_path, &is_auto);
+
+    bool exists = !effective_path.empty() && std::filesystem::exists(effective_path);
+    size_t total = cdb != nullptr ? cdb->size() : 0;
+
+    return WorkspaceCompileCommandsSummaryDto{
+        .configured_path = ws.compile_commands_path,
+        .effective_path =
+            effective_path.empty() ? std::nullopt : std::make_optional(effective_path.string()),
+        .exists = exists,
+        .is_auto_detected = is_auto,
+        .total_commands = total,
+        .default_compile_command = ws.default_compile_command,
     };
 }
 

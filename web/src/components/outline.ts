@@ -2,15 +2,21 @@ import type { SymbolOutlineNodeDto } from "../types";
 import type { StateStore } from "../state";
 import { api } from "../api";
 
+export interface OutlineCallbacks {
+  onCliMacroClick?: (macroName: string) => void;
+}
+
 export class OutlineComponent {
   private element: HTMLElement;
   private store: StateStore;
+  private callbacks: OutlineCallbacks;
   private filterInput!: HTMLInputElement;
   private listContainer!: HTMLElement;
   private outlineData: SymbolOutlineNodeDto[] = [];
 
-  constructor(store: StateStore) {
+  constructor(store: StateStore, callbacks: OutlineCallbacks = {}) {
     this.store = store;
+    this.callbacks = callbacks;
     this.element = document.createElement("div");
     this.element.className = "inspector-pane-view active";
     this.element.id = "inspector-outline";
@@ -158,11 +164,29 @@ export class OutlineComponent {
           nameSpan.title = `${node.name}${node.signature}`;
         }
 
+        const isCliMacro =
+          node.kind.toLowerCase() === "macro" &&
+          node.range.start.line === 0 &&
+          node.range.end.line === 0 &&
+          node.range.start.byte === 0 &&
+          node.range.end.byte === 0;
+
         item.appendChild(kindBadge);
         item.appendChild(nameSpan);
 
+        if (isCliMacro) {
+          const cliBadge = document.createElement("span");
+          cliBadge.className = "badge cli-macro-badge";
+          cliBadge.textContent = "CLI";
+          cliBadge.title = "Defined via compile-command argument (-D)";
+          item.appendChild(cliBadge);
+        }
+
         item.addEventListener("click", () => {
-          this.store.selectSymbol(node.id, node.range.start.line + 1);
+          this.store.selectSymbol(node.id, isCliMacro ? null : node.range.start.line);
+          if (isCliMacro && this.callbacks.onCliMacroClick) {
+            this.callbacks.onCliMacroClick(node.name);
+          }
         });
 
         container.appendChild(item);

@@ -676,11 +676,26 @@ TEST_CASE("Compilation command configuration model and safe tokenization (E-09)"
         const auto* entry = cdb.find_for_file("src/main.cpp");
         REQUIRE(entry != nullptr);
         REQUIRE(entry->language_standard.has_value());
-        REQUIRE(*entry->language_standard == "c++20");
+        REQUIRE(entry->language_standard.value() == "c++20");
         REQUIRE(entry->defines.size() == 2);
         REQUIRE(entry->defines[0] == "FOO=1");
         REQUIRE(entry->defines[1] == "-UOLD");
         REQUIRE(entry->include_dirs.size() >= 2);
+    }
+
+    SECTION("Parsing standalone command string into CompileCommand") {
+        std::string cmd = "clang -std=c17 -Iinclude -isystem /usr/include -DFEATURE_X=1 -UDEBUG -o bin/app src/main.c";
+        auto parsed = CompilationDatabase::parse_command_string(cmd, "/workspace", "src/main.c", "/workspace");
+        REQUIRE(parsed.has_value());
+        REQUIRE(parsed->language_standard.has_value());
+        REQUIRE(parsed->language_standard.value() == "c17");
+        REQUIRE(parsed->defines.size() == 2);
+        REQUIRE(parsed->defines[0] == "FEATURE_X=1");
+        REQUIRE(parsed->defines[1] == "-UDEBUG");
+        REQUIRE(parsed->include_dirs.size() == 2);
+        REQUIRE(parsed->include_dirs[0] == "include");
+        REQUIRE(parsed->output.has_value());
+        REQUIRE(parsed->output.value() == "bin/app");
     }
 }
 

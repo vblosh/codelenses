@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS workspace (
     exclude_json        TEXT NOT NULL DEFAULT '[]',
     default_ignores_json TEXT NOT NULL DEFAULT '[]',
     compile_commands_path TEXT,
+    default_compile_command TEXT,
     created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     revision            INTEGER NOT NULL DEFAULT 0,

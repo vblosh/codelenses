@@ -238,6 +238,15 @@ void HttpServer::register_routes() {
         });
     });
 
+    svr_.Get(R"(/api/v1/workspaces/(\d+)/compile-commands)",
+             [this](const httplib::Request& req, httplib::Response& res) {
+                 handle_json(req, res,
+                             [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
+                                 int64_t id = parse_id(r.matches[1].str(), "workspaceId");
+                                 return service_.get_workspace_compile_commands(id);
+                             });
+             });
+
     svr_.Get(R"(/api/v1/jobs/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
         handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
             int64_t id = parse_id(r.matches[1].str(), "jobId");
@@ -286,6 +295,16 @@ void HttpServer::register_routes() {
             return service_.get_file_content(ws_id, file_id, sl, el, sb, eb);
         });
     });
+
+    svr_.Get(R"(/api/v1/workspaces/(\d+)/files/(\d+)/compile-command)",
+             [this](const httplib::Request& req, httplib::Response& res) {
+                 handle_json(req, res,
+                             [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
+                                 int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
+                                 int64_t file_id = parse_id(r.matches[2].str(), "fileId");
+                                 return service_.get_file_compile_command(ws_id, file_id);
+                             });
+             });
 
     // ==========================================
     // Highlights, Symbols & Outline (F-07)

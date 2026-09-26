@@ -35,11 +35,12 @@ Workspace read_workspace_row(Statement& stmt) {
     ws.exclude_patterns = parse_json_string_array(stmt.column_text(4));
     ws.default_ignores = parse_json_string_array(stmt.column_text(5));
     ws.compile_commands_path = stmt.column_optional_text(6);
-    ws.created_at = stmt.column_text(7);
-    ws.updated_at = stmt.column_text(8);
-    ws.revision = stmt.column_int64(9);
-    ws.status = workspace_status_from_string(stmt.column_text(10));
-    ws.last_error = stmt.column_optional_text(11);
+    ws.default_compile_command = stmt.column_optional_text(7);
+    ws.created_at = stmt.column_text(8);
+    ws.updated_at = stmt.column_text(9);
+    ws.revision = stmt.column_int64(10);
+    ws.status = workspace_status_from_string(stmt.column_text(11));
+    ws.last_error = stmt.column_optional_text(12);
     return ws;
 }
 
@@ -51,8 +52,8 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
     Statement stmt(conn_.handle(), R"SQL(
         INSERT INTO workspace (
             root_path, name, include_json, exclude_json, default_ignores_json,
-            compile_commands_path, revision, status, last_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            compile_commands_path, default_compile_command, revision, status, last_error
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )SQL");
 
     stmt.bind_text(1, ws.root_path);
@@ -61,9 +62,10 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
     stmt.bind_text(4, serialize_json_string_array(ws.exclude_patterns));
     stmt.bind_text(5, serialize_json_string_array(ws.default_ignores));
     stmt.bind_optional_text(6, ws.compile_commands_path);
-    stmt.bind_int64(7, ws.revision);
-    stmt.bind_text(8, to_string(ws.status));
-    stmt.bind_optional_text(9, ws.last_error);
+    stmt.bind_optional_text(7, ws.default_compile_command);
+    stmt.bind_int64(8, ws.revision);
+    stmt.bind_text(9, to_string(ws.status));
+    stmt.bind_optional_text(10, ws.last_error);
 
     stmt.execute();
     return conn_.last_insert_rowid();
@@ -72,7 +74,7 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
 std::optional<Workspace> WorkspaceRepository::get_by_id(int64_t id) {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, created_at, updated_at, revision, status, last_error
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error
         FROM workspace
         WHERE id = ?;
     )SQL");
@@ -87,7 +89,7 @@ std::optional<Workspace> WorkspaceRepository::get_by_id(int64_t id) {
 std::optional<Workspace> WorkspaceRepository::get_by_root_path(const std::string& root_path) {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, created_at, updated_at, revision, status, last_error
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error
         FROM workspace
         WHERE root_path = ?;
     )SQL");
@@ -102,7 +104,7 @@ std::optional<Workspace> WorkspaceRepository::get_by_root_path(const std::string
 std::vector<Workspace> WorkspaceRepository::list_all() {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, created_at, updated_at, revision, status, last_error
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error
         FROM workspace
         ORDER BY id ASC;
     )SQL");
@@ -122,6 +124,7 @@ bool WorkspaceRepository::update(const Workspace& ws) {
             exclude_json = ?,
             default_ignores_json = ?,
             compile_commands_path = ?,
+            default_compile_command = ?,
             status = ?,
             last_error = ?,
             updated_at = CURRENT_TIMESTAMP
@@ -133,9 +136,10 @@ bool WorkspaceRepository::update(const Workspace& ws) {
     stmt.bind_text(3, serialize_json_string_array(ws.exclude_patterns));
     stmt.bind_text(4, serialize_json_string_array(ws.default_ignores));
     stmt.bind_optional_text(5, ws.compile_commands_path);
-    stmt.bind_text(6, to_string(ws.status));
-    stmt.bind_optional_text(7, ws.last_error);
-    stmt.bind_int64(8, ws.id);
+    stmt.bind_optional_text(6, ws.default_compile_command);
+    stmt.bind_text(7, to_string(ws.status));
+    stmt.bind_optional_text(8, ws.last_error);
+    stmt.bind_int64(9, ws.id);
 
     stmt.execute();
     return conn_.changes() > 0;

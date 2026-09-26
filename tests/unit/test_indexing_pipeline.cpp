@@ -617,3 +617,82 @@ int main() {
     }
     REQUIRE(found_macro_ref);
 }
+
+TEST_CASE("Precedence: Individual file compile command overrides workspace default, unlisted file uses default",
+          "[index][pipeline][compile_commands]") {
+    PipelineTestWorkspace env;
+
+    env.write_file("include/mylib.h", "int helper(void);\n");
+    // src/main.c has individual compile command with BUILD_VERSION=42
+    env.write_file("src/main.c", R"C(
+#include "mylib.h"
+int main() {
+    return BUILD_VERSION;
+}
+)C");
+    // src/other.c has NO individual compile command, should inherit workspace default with DEFAULT_FLAG=99
+    env.write_file("src/other.c", R"C(
+int other() {
+    return DEFAULT_FLAG;
+}
+)C");
+
+    // compile_commands.json has ONLY src/main.c, with BUILD_VERSION=42 and NOT DEFAULT_FLAG
+    std::string cdb_json = R"json([
+  {
+    "directory": ".",
+    "file": "src/main.c",
+    "arguments": [
+      "gcc",
+      "-Iinclude",
+      "-DBUILD_VERSION=42",
+      "-std=c11",
+      "-c",
+      "src/main.c"
+    ]
+  }
+])json";
+    env.write_file("compile_commands.json", cdb_json);
+
+    // Workspace has default_compile_command defining DEFAULT_FLAG=99
+    Workspace ws{
+        .root_path = env.root.string(),
+        .name = "Precedence Workspace",
+        .default_compile_command = "gcc -Iinclude -DDEFAULT_FLAG=99 -std=c17",
+    };
+    int64_t ws_id = env.db->workspaces().create(ws);
+    REQUIRE(ws_id > 0);
+
+    IndexingPipeline pipeline(*env.db);
+    auto res = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res.has_value());
+    REQUIRE(res->status == "completed");
+
+    auto syms = env.db->symbols().list_by_workspace(ws_id);
+    auto main_file = env.db->files().get_by_path(ws_id, "src/main.c");
+    REQUIRE(main_file.has_value());
+    auto other_file = env.db->files().get_by_path(ws_id, "src/other.c");
+    REQUIRE(other_file.has_value());
+
+    // main.c used individual command: should define BUILD_VERSION, and NOT DEFAULT_FLAG
+    bool main_has_build_version = false;
+    bool main_has_default_flag = false;
+    // other.c used workspace default: should define DEFAULT_FLAG, and NOT BUILD_VERSION
+    bool other_has_build_version = false;
+    bool other_has_default_flag = false;
+
+    for (const auto& s : syms) {
+        if (s.file_id == main_file->id) {
+            if (s.name == "BUILD_VERSION") main_has_build_version = true;
+            if (s.name == "DEFAULT_FLAG") main_has_default_flag = true;
+        } else if (s.file_id == other_file->id) {
+            if (s.name == "BUILD_VERSION") other_has_build_version = true;
+            if (s.name == "DEFAULT_FLAG") other_has_default_flag = true;
+        }
+    }
+
+    CHECK(main_has_build_version == true);
+    CHECK(main_has_default_flag == false); // individual command took precedence!
+    CHECK(other_has_default_flag == true); // inherited workspace default command!
+    CHECK(other_has_build_version == false);
+}

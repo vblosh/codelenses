@@ -4,6 +4,7 @@ import type {
   HighlightResponseDto,
   DiagnosticItem,
   OccurrenceDto,
+  FileCompileCommandDto,
 } from "../types";
 import type { StateStore } from "../state";
 import { api } from "../api";
@@ -13,6 +14,7 @@ import { formatByteSize } from "../rendering/ranges";
 
 export interface CodeWindowCallbacks {
   onSymbolClick?: (symbolId: number, line: number) => void;
+  onCompileClick?: () => void;
 }
 
 export class CodeWindowComponent {
@@ -22,6 +24,7 @@ export class CodeWindowComponent {
 
   private pathElem!: HTMLElement;
   private langBadge!: HTMLElement;
+  private compileBadge!: HTMLElement;
   private navControls!: HTMLElement;
   private viewerContainer!: HTMLElement;
   private bannerContainer!: HTMLElement;
@@ -32,6 +35,7 @@ export class CodeWindowComponent {
   private currentHighlights: HighlightResponseDto | null = null;
   private currentOccurrences: OccurrenceDto[] = [];
   private currentDiagnostics: DiagnosticItem[] = [];
+  private currentCompileCommand: FileCompileCommandDto | null = null;
 
   // In-memory cache of loaded files for quick tab switching
   private fileCache = new Map<number, {
@@ -39,6 +43,7 @@ export class CodeWindowComponent {
     content: FileContentDto;
     highlights: HighlightResponseDto | null;
     occurrences: OccurrenceDto[];
+    compileCommand: FileCompileCommandDto | null;
   }>();
 
   // Range pagination for large files (> 5MB or > 5000 lines)
@@ -61,6 +66,10 @@ export class CodeWindowComponent {
     return this.element;
   }
 
+  getCompileCommand(): FileCompileCommandDto | null {
+    return this.currentCompileCommand;
+  }
+
   private render(): void {
     this.element.innerHTML = `
       <div class="code-tabs-bar" role="tablist" style="display: none;"></div>
@@ -68,6 +77,7 @@ export class CodeWindowComponent {
         <div class="code-path">
           <span class="file-path-text">No file open</span>
           <span class="badge lang-badge" style="display: none;"></span>
+          <button class="badge compile-badge" style="display: none;" title="Active compile command context (click to inspect)"></button>
         </div>
         <div class="code-nav">
           <span class="file-size-text"></span>
@@ -86,12 +96,19 @@ export class CodeWindowComponent {
     this.tabsBar = this.element.querySelector(".code-tabs-bar")!;
     this.pathElem = this.element.querySelector(".file-path-text")!;
     this.langBadge = this.element.querySelector(".lang-badge")!;
+    this.compileBadge = this.element.querySelector(".compile-badge")!;
     this.navControls = this.element.querySelector(".code-nav")!;
     this.bannerContainer = this.element.querySelector(".range-banner-area")!;
     this.viewerContainer = this.element.querySelector(".code-viewer-container")!;
   }
 
   private initEvents(): void {
+    this.compileBadge.addEventListener("click", () => {
+      if (this.callbacks.onCompileClick) {
+        this.callbacks.onCompileClick();
+      }
+    });
+
     this.store.subscribe((state, changedKeys) => {
       if (changedKeys.includes("openTabs") || changedKeys.includes("selectedFileId")) {
         this.renderTabs();
@@ -136,12 +153,21 @@ export class CodeWindowComponent {
       this.currentContent = cached.content;
       this.currentHighlights = cached.highlights;
       this.currentOccurrences = cached.occurrences;
+      this.currentCompileCommand = cached.compileCommand;
       this.isRangePaged = false;
       this.currentStartLine = 0;
 
       this.pathElem.textContent = cached.file.relativePath || cached.file.path;
       this.langBadge.textContent = cached.file.language || "text";
       this.langBadge.style.display = "inline-block";
+
+      if (cached.compileCommand?.hasCompileCommand && cached.compileCommand.compileCommand) {
+        const std = cached.compileCommand.compileCommand.languageStandard?.toUpperCase() || "BUILD";
+        this.compileBadge.textContent = "⚡ " + std;
+        this.compileBadge.style.display = "inline-flex";
+      } else {
+        this.compileBadge.style.display = "none";
+      }
 
       this.store.ensureTabOpen({
         fileId: cached.file.id,
@@ -197,6 +223,8 @@ export class CodeWindowComponent {
       // 2. Binary file state check
       if (meta.isBinary) {
         this.currentContent = null;
+        this.currentCompileCommand = null;
+        this.compileBadge.style.display = "none";
         this.bannerContainer.innerHTML = "";
         this.viewerContainer.innerHTML = `
           <div class="empty-state">
@@ -220,7 +248,7 @@ export class CodeWindowComponent {
       this.isRangePaged = isLargeFile;
       this.currentStartLine = pageStartLine;
 
-      // 4. Concurrently fetch Content, Tree-sitter Highlights, and Occurrences
+      // 4. Concurrently fetch Content, Tree-sitter Highlights, Occurrences, and Compile Command
       const contentPromise = isLargeFile
         ? api.getFileContent(
             wsId,
@@ -232,11 +260,13 @@ export class CodeWindowComponent {
 
       const highlightsPromise = api.getFileHighlights(wsId, fileId).catch(() => null);
       const occurrencesPromise = api.getFileOccurrences(wsId, fileId).catch(() => null);
+      const compileCommandPromise = api.getFileCompileCommand(wsId, fileId).catch(() => null);
 
-      const [contentRes, highlightsRes, occurrencesRes] = await Promise.all([
+      const [contentRes, highlightsRes, occurrencesRes, compileRes] = await Promise.all([
         contentPromise,
         highlightsPromise,
         occurrencesPromise,
+        compileCommandPromise,
       ]);
 
       // Discard stale response if another file was selected while requests were in flight
@@ -252,6 +282,15 @@ export class CodeWindowComponent {
       this.currentContent = contentRes;
       this.currentHighlights = highlightsRes;
       this.currentOccurrences = occurrencesRes?.occurrences || [];
+      this.currentCompileCommand = compileRes;
+
+      if (compileRes?.hasCompileCommand && compileRes.compileCommand) {
+        const std = compileRes.compileCommand.languageStandard?.toUpperCase() || "BUILD";
+        this.compileBadge.textContent = "⚡ " + std;
+        this.compileBadge.style.display = "inline-flex";
+      } else {
+        this.compileBadge.style.display = "none";
+      }
 
       // Save to cache for quick tab switching
       if (!isLargeFile && !meta.isBinary) {
@@ -260,6 +299,7 @@ export class CodeWindowComponent {
           content: contentRes,
           highlights: highlightsRes,
           occurrences: occurrencesRes?.occurrences || [],
+          compileCommand: compileRes,
         });
       }
 
@@ -375,7 +415,7 @@ export class CodeWindowComponent {
     // Build map from line number (1-based) to occurrences on that line
     const occByLine = new Map<number, OccurrenceDto[]>();
     for (const occ of this.currentOccurrences) {
-      const line = occ.range.start.line + 1; // 1-based for matching DOM data-line
+      const line = occ.range.start.line; // 1-based for matching DOM data-line
       const list = occByLine.get(line) || [];
       list.push(occ);
       occByLine.set(line, list);
@@ -444,8 +484,10 @@ export class CodeWindowComponent {
     this.currentContent = null;
     this.currentHighlights = null;
     this.currentOccurrences = [];
+    this.currentCompileCommand = null;
     this.pathElem.textContent = "No file open";
     this.langBadge.style.display = "none";
+    this.compileBadge.style.display = "none";
     this.navControls.innerHTML = "";
     this.bannerContainer.innerHTML = "";
     this.renderTabs();

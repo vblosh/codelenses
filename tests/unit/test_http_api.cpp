@@ -617,3 +617,178 @@ TEST_CASE("Indexing lifecycle, status, jobs, and file content (F-05, F-06)", "[s
         CHECK((st == "completed" || st == "canceled"));
     }
 }
+
+TEST_CASE("Compile command endpoints and workspace compilation database status (H1-06, UI)",
+          "[server][api][compile_commands]") {
+    TestHttpServerEnv env;
+
+    // Create compile_commands.json in workspace root
+    std::string cdb_content = R"json([
+        {
+            "directory": ".",
+            "file": "src/main.c",
+            "output": "build/main.o",
+            "arguments": [
+                "gcc",
+                "-Iinclude",
+                "-DBUILD_VERSION=42",
+                "-std=c17",
+                "-c",
+                "src/main.c"
+            ]
+        }
+    ])json";
+    std::ofstream cdb_file(env.root / "compile_commands.json");
+    cdb_file << cdb_content;
+    cdb_file.close();
+
+    // Create workspace
+    nlohmann::json ws_req{
+        {"rootPath", env.root.string()},
+        {"name", "CDB Test Workspace"},
+    };
+    auto ws_res = env.client->Post("/api/v1/workspaces", ws_req.dump(), "application/json");
+    REQUIRE(ws_res != nullptr);
+    REQUIRE(ws_res->status == 201);
+    auto ws_json = nlohmann::json::parse(ws_res->body);
+    int64_t ws_id = ws_json["id"];
+
+    // 1. Verify workspace compile-commands summary (auto-detected)
+    auto cdb_status_res =
+        env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/compile-commands");
+    REQUIRE(cdb_status_res != nullptr);
+    CHECK(cdb_status_res->status == 200);
+    auto cdb_status_json = nlohmann::json::parse(cdb_status_res->body);
+    CHECK(cdb_status_json["exists"] == true);
+    CHECK(cdb_status_json["isAutoDetected"] == true);
+    CHECK(cdb_status_json["totalCommands"] == 1);
+    CHECK(cdb_status_json["effectivePath"].is_string());
+
+    // 2. Index workspace
+    auto idx_res = env.client->Post("/api/v1/workspaces/" + std::to_string(ws_id) + "/index", "{}",
+                                   "application/json");
+    REQUIRE(idx_res != nullptr);
+    REQUIRE(idx_res->status == 202);
+
+    // Wait for indexing completion
+    for (int i = 0; i < 20; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto st_res =
+            env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/status");
+        if (st_res && st_res->status == 200) {
+            auto st_json = nlohmann::json::parse(st_res->body);
+            if (st_json["status"] == "idle") {
+                break;
+            }
+        }
+    }
+
+    // Find main.c and README.md file IDs from tree
+    auto tree_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree");
+    REQUIRE(tree_res != nullptr);
+    auto tree_json = nlohmann::json::parse(tree_res->body);
+    int64_t readme_id = 0;
+    for (const auto& entry : tree_json["entries"]) {
+        if (entry["name"] == "README.md") {
+            readme_id = entry["fileId"];
+        }
+    }
+
+    auto src_tree_res =
+        env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/tree?path=src");
+    REQUIRE(src_tree_res != nullptr);
+    auto src_tree_json = nlohmann::json::parse(src_tree_res->body);
+    int64_t main_id = 0;
+    for (const auto& entry : src_tree_json["entries"]) {
+        if (entry["name"] == "main.c") {
+            main_id = entry["fileId"];
+        }
+    }
+    REQUIRE(main_id > 0);
+
+    // 3. Query compile-command for main.c
+    auto cmd_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                   "/files/" + std::to_string(main_id) + "/compile-command");
+    REQUIRE(cmd_res != nullptr);
+    CHECK(cmd_res->status == 200);
+    auto cmd_json = nlohmann::json::parse(cmd_res->body);
+    CHECK(cmd_json["hasCompileCommand"] == true);
+    CHECK(cmd_json["isAutoDetected"] == true);
+    REQUIRE(cmd_json["compileCommand"].is_object());
+    CHECK(cmd_json["compileCommand"]["languageStandard"] == "c17");
+    CHECK(cmd_json["compileCommand"]["output"] == "build/main.o");
+
+    bool has_build_version = false;
+    for (const auto& def : cmd_json["compileCommand"]["defines"]) {
+        if (def == "BUILD_VERSION=42") {
+            has_build_version = true;
+        }
+    }
+    CHECK(has_build_version);
+
+    // 4. Query compile-command for file without command (README.md)
+    if (readme_id > 0) {
+        auto no_cmd_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                          "/files/" + std::to_string(readme_id) + "/compile-command");
+        REQUIRE(no_cmd_res != nullptr);
+        CHECK(no_cmd_res->status == 200);
+        auto no_cmd_json = nlohmann::json::parse(no_cmd_res->body);
+        CHECK(no_cmd_json["hasCompileCommand"] == false);
+        CHECK(no_cmd_json["compileCommand"].is_null());
+    }
+
+    // 5. Update workspace with explicit compileCommandsPath
+    nlohmann::json patch_req{
+        {"compileCommandsPath", "custom/compile_commands.json"},
+    };
+    auto patch_res = env.client->Patch("/api/v1/workspaces/" + std::to_string(ws_id),
+                                       patch_req.dump(), "application/json");
+    REQUIRE(patch_res != nullptr);
+    CHECK(patch_res->status == 200);
+
+    auto custom_status_res =
+        env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/compile-commands");
+    REQUIRE(custom_status_res != nullptr);
+    CHECK(custom_status_res->status == 200);
+    auto custom_status_json = nlohmann::json::parse(custom_status_res->body);
+    CHECK(custom_status_json["isAutoDetected"] == false);
+    CHECK(custom_status_json["configuredPath"] == "custom/compile_commands.json");
+    CHECK(custom_status_json["exists"] == false);
+
+    // 6. Set workspace default compile command and test precedence
+    nlohmann::json def_cmd_patch{
+        {"defaultCompileCommand", "clang -std=c99 -Iinclude -DGLOBAL_FALLBACK=1"},
+    };
+    auto def_patch_res = env.client->Patch("/api/v1/workspaces/" + std::to_string(ws_id),
+                                           def_cmd_patch.dump(), "application/json");
+    REQUIRE(def_patch_res != nullptr);
+    CHECK(def_patch_res->status == 200);
+
+    // Summary endpoint reflects default compile command
+    auto ws_summary_res =
+        env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) + "/compile-commands");
+    REQUIRE(ws_summary_res != nullptr);
+    CHECK(ws_summary_res->status == 200);
+    auto ws_summary_json = nlohmann::json::parse(ws_summary_res->body);
+    CHECK(ws_summary_json["defaultCompileCommand"] == "clang -std=c99 -Iinclude -DGLOBAL_FALLBACK=1");
+
+    // Unlisted file (README.md) now gets workspace default compile command
+    if (readme_id > 0) {
+        auto fallback_res = env.client->Get("/api/v1/workspaces/" + std::to_string(ws_id) +
+                                            "/files/" + std::to_string(readme_id) + "/compile-command");
+        REQUIRE(fallback_res != nullptr);
+        CHECK(fallback_res->status == 200);
+        auto fallback_json = nlohmann::json::parse(fallback_res->body);
+        CHECK(fallback_json["hasCompileCommand"] == true);
+        CHECK(fallback_json["isWorkspaceDefault"] == true);
+        REQUIRE(fallback_json["compileCommand"].is_object());
+        CHECK(fallback_json["compileCommand"]["languageStandard"] == "c99");
+        bool has_fallback_flag = false;
+        for (const auto& def : fallback_json["compileCommand"]["defines"]) {
+            if (def == "GLOBAL_FALLBACK=1") {
+                has_fallback_flag = true;
+            }
+        }
+        CHECK(has_fallback_flag);
+    }
+}

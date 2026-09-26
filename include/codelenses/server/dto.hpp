@@ -49,6 +49,7 @@ struct CreateWorkspaceRequest {
     std::vector<std::string> exclude_patterns;
     std::vector<std::string> default_ignores;
     std::optional<std::string> compile_commands_path{std::nullopt};
+    std::optional<std::string> default_compile_command{std::nullopt};
 };
 
 inline void from_json(const nlohmann::json& j, CreateWorkspaceRequest& req) {
@@ -79,6 +80,11 @@ inline void from_json(const nlohmann::json& j, CreateWorkspaceRequest& req) {
         req.compile_commands_path = j["compileCommandsPath"].get<std::string>();
     else if (j.contains("compile_commands_path") && !j["compile_commands_path"].is_null())
         req.compile_commands_path = j["compile_commands_path"].get<std::string>();
+
+    if (j.contains("defaultCompileCommand") && !j["defaultCompileCommand"].is_null())
+        req.default_compile_command = j["defaultCompileCommand"].get<std::string>();
+    else if (j.contains("default_compile_command") && !j["default_compile_command"].is_null())
+        req.default_compile_command = j["default_compile_command"].get<std::string>();
 }
 
 struct UpdateWorkspaceRequest {
@@ -86,6 +92,7 @@ struct UpdateWorkspaceRequest {
     std::optional<std::vector<std::string>> include_patterns{std::nullopt};
     std::optional<std::vector<std::string>> exclude_patterns{std::nullopt};
     std::optional<std::string> compile_commands_path{std::nullopt};
+    std::optional<std::string> default_compile_command{std::nullopt};
 };
 
 inline void from_json(const nlohmann::json& j, UpdateWorkspaceRequest& req) {
@@ -106,6 +113,11 @@ inline void from_json(const nlohmann::json& j, UpdateWorkspaceRequest& req) {
         req.compile_commands_path = j["compileCommandsPath"].get<std::string>();
     else if (j.contains("compile_commands_path") && !j["compile_commands_path"].is_null())
         req.compile_commands_path = j["compile_commands_path"].get<std::string>();
+
+    if (j.contains("defaultCompileCommand") && !j["defaultCompileCommand"].is_null())
+        req.default_compile_command = j["defaultCompileCommand"].get<std::string>();
+    else if (j.contains("default_compile_command") && !j["default_compile_command"].is_null())
+        req.default_compile_command = j["default_compile_command"].get<std::string>();
 }
 
 struct WorkspaceDto {
@@ -116,6 +128,7 @@ struct WorkspaceDto {
     std::vector<std::string> exclude_patterns;
     std::vector<std::string> default_ignores;
     std::optional<std::string> compile_commands_path;
+    std::optional<std::string> default_compile_command;
     int64_t revision{0};
     std::string status{"idle"};
     std::optional<std::string> last_error;
@@ -141,6 +154,11 @@ inline void to_json(nlohmann::json& j, const WorkspaceDto& w) {
     else
         j["compileCommandsPath"] = nullptr;
 
+    if (w.default_compile_command.has_value())
+        j["defaultCompileCommand"] = *w.default_compile_command;
+    else
+        j["defaultCompileCommand"] = nullptr;
+
     if (w.last_error.has_value())
         j["lastError"] = *w.last_error;
     else
@@ -156,6 +174,7 @@ inline WorkspaceDto workspace_to_dto(const Workspace& ws) {
         .exclude_patterns = ws.exclude_patterns,
         .default_ignores = ws.default_ignores,
         .compile_commands_path = ws.compile_commands_path,
+        .default_compile_command = ws.default_compile_command,
         .revision = ws.revision,
         .status = to_string(ws.status),
         .last_error = ws.last_error,
@@ -461,6 +480,83 @@ inline void to_json(nlohmann::json& j, const FileContentDto& c) {
         {"endLine", c.end_line},         {"startByte", c.start_byte},
         {"endByte", c.end_byte},         {"isBinary", c.is_binary},
         {"contentHash", c.content_hash},
+    };
+}
+
+// ==========================================
+// Compile Command DTOs (H1-06 / UI)
+// ==========================================
+struct CompileCommandDto {
+    std::string directory;
+    std::string file;
+    std::optional<std::string> output{std::nullopt};
+    std::vector<std::string> arguments;
+    std::vector<std::string> include_dirs;
+    std::vector<std::string> defines;
+    std::optional<std::string> language_standard{std::nullopt};
+};
+
+inline void to_json(nlohmann::json& j, const CompileCommandDto& c) {
+    j = nlohmann::json{
+        {"directory", c.directory},
+        {"file", c.file},
+        {"output", c.output ? nlohmann::json(*c.output) : nullptr},
+        {"arguments", c.arguments},
+        {"includeDirs", c.include_dirs},
+        {"defines", c.defines},
+        {"languageStandard", c.language_standard ? nlohmann::json(*c.language_standard) : nullptr},
+    };
+}
+
+inline void from_json(const nlohmann::json& j, CompileCommandDto& c) {
+    if (j.contains("directory")) c.directory = j["directory"].get<std::string>();
+    if (j.contains("file")) c.file = j["file"].get<std::string>();
+    if (j.contains("output") && !j["output"].is_null()) c.output = j["output"].get<std::string>();
+    if (j.contains("arguments")) c.arguments = j["arguments"].get<std::vector<std::string>>();
+    if (j.contains("includeDirs")) c.include_dirs = j["includeDirs"].get<std::vector<std::string>>();
+    if (j.contains("defines")) c.defines = j["defines"].get<std::vector<std::string>>();
+    if (j.contains("languageStandard") && !j["languageStandard"].is_null()) {
+        c.language_standard = j["languageStandard"].get<std::string>();
+    }
+}
+
+struct FileCompileCommandResponseDto {
+    int64_t file_id{0};
+    bool has_compile_command{false};
+    bool is_workspace_default{false};
+    std::optional<std::string> database_path{std::nullopt};
+    bool is_auto_detected{false};
+    std::optional<CompileCommandDto> compile_command{std::nullopt};
+};
+
+inline void to_json(nlohmann::json& j, const FileCompileCommandResponseDto& f) {
+    j = nlohmann::json{
+        {"fileId", f.file_id},
+        {"hasCompileCommand", f.has_compile_command},
+        {"isWorkspaceDefault", f.is_workspace_default},
+        {"databasePath", f.database_path ? nlohmann::json(*f.database_path) : nullptr},
+        {"isAutoDetected", f.is_auto_detected},
+        {"compileCommand", f.compile_command.has_value() ? nlohmann::json(*f.compile_command) : nullptr},
+    };
+}
+
+struct WorkspaceCompileCommandsSummaryDto {
+    std::optional<std::string> configured_path{std::nullopt};
+    std::optional<std::string> effective_path{std::nullopt};
+    bool exists{false};
+    bool is_auto_detected{false};
+    size_t total_commands{0};
+    std::optional<std::string> default_compile_command{std::nullopt};
+};
+
+inline void to_json(nlohmann::json& j, const WorkspaceCompileCommandsSummaryDto& w) {
+    j = nlohmann::json{
+        {"configuredPath", w.configured_path ? nlohmann::json(*w.configured_path) : nullptr},
+        {"effectivePath", w.effective_path ? nlohmann::json(*w.effective_path) : nullptr},
+        {"exists", w.exists},
+        {"isAutoDetected", w.is_auto_detected},
+        {"totalCommands", w.total_commands},
+        {"defaultCompileCommand", w.default_compile_command ? nlohmann::json(*w.default_compile_command) : nullptr},
     };
 }
 

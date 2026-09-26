@@ -50,6 +50,7 @@ struct Workspace {
     std::vector<std::string> exclude_patterns = {};
     std::vector<std::string> default_ignores = {};
     std::optional<std::string> compile_commands_path = std::nullopt;
+    std::optional<std::string> default_compile_command = std::nullopt;
     std::string created_at = "";
     std::string updated_at = "";
     int64_t revision = 0;

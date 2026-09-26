@@ -94,7 +94,8 @@ void configure_go_module(DependencyResolver& resolver, const std::filesystem::pa
 }
 
 void configure_compilation_database(DependencyResolver& resolver, const std::filesystem::path& root,
-                                    const std::optional<std::string>& configured_path) {
+                                    const std::optional<std::string>& configured_path,
+                                    const std::optional<std::string>& default_cmd_str) {
     std::filesystem::path cdb_path;
     if (configured_path.has_value() && !configured_path->empty()) {
         cdb_path = *configured_path;
@@ -118,6 +119,13 @@ void configure_compilation_database(DependencyResolver& resolver, const std::fil
         auto loaded = CompilationDatabase::load_file(cdb_path, root);
         if (loaded) {
             resolver.set_compilation_database(*loaded);
+        }
+    }
+
+    if (default_cmd_str.has_value() && !default_cmd_str->empty()) {
+        auto parsed = CompilationDatabase::parse_command_string(*default_cmd_str, root, "", root);
+        if (parsed && !parsed->include_dirs.empty()) {
+            resolver.set_include_directories("", parsed->include_dirs, parsed->include_dirs);
         }
     }
 }
@@ -155,7 +163,7 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         dep_resolver.register_file(f.id, f.relative_path, lang);
     }
 
-    configure_compilation_database(dep_resolver, root, ws->compile_commands_path);
+    configure_compilation_database(dep_resolver, root, ws->compile_commands_path, ws->default_compile_command);
     configure_tsconfig_paths(dep_resolver, root);
     configure_go_module(dep_resolver, root);
 

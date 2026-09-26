@@ -104,6 +104,7 @@ TEST_CASE("Workspace repository and cascade deletion", "[db][workspace][cascade]
         .exclude_patterns = {"build/**"},
         .default_ignores = {".git", "node_modules"},
         .compile_commands_path = "/home/user/project/build/compile_commands.json",
+        .default_compile_command = "gcc -Iinclude -DDEBUG=1 -std=c17",
         .revision = 1,
         .status = WorkspaceStatus::idle,
     };
@@ -118,16 +119,19 @@ TEST_CASE("Workspace repository and cascade deletion", "[db][workspace][cascade]
     REQUIRE(fetched->exclude_patterns.size() == 1);
     REQUIRE(fetched->default_ignores.size() == 2);
     REQUIRE(fetched->compile_commands_path == "/home/user/project/build/compile_commands.json");
+    REQUIRE(fetched->default_compile_command == "gcc -Iinclude -DDEBUG=1 -std=c17");
     REQUIRE(fetched->revision == 1);
     REQUIRE(fetched->status == WorkspaceStatus::idle);
 
     // Update workspace
     fetched->name = "Updated Project";
+    fetched->default_compile_command = "clang -Isrc -DRELEASE=1 -std=c2x";
     fetched->status = WorkspaceStatus::indexing;
     REQUIRE(db->workspaces().update(*fetched));
 
     auto updated = db->workspaces().get_by_id(ws_id);
     REQUIRE(updated->name == "Updated Project");
+    REQUIRE(updated->default_compile_command == "clang -Isrc -DRELEASE=1 -std=c2x");
     REQUIRE(updated->status == WorkspaceStatus::indexing);
 
     // Revision increment

@@ -106,6 +106,144 @@ CompilationDatabase::find_for_file(const std::filesystem::path& file_path) const
     return nullptr;
 }
 
+namespace {
+
+void parse_flags_into_entry(CompileCommand& entry,
+                            const std::vector<std::string>& args,
+                            const std::filesystem::path& dir_path,
+                            const std::filesystem::path& workspace_root) {
+    for (std::size_t i = 0; i < args.size(); ++i) {
+        const auto& arg = args[i];
+
+        // Include directories
+        if (arg == "-I" || arg == "-isystem" || arg == "-iquote" || arg == "-idirafter") {
+            if (i + 1 < args.size()) {
+                std::filesystem::path inc_path = args[++i];
+                if (inc_path.is_relative() && !dir_path.empty()) {
+                    inc_path = (dir_path / inc_path).lexically_normal();
+                }
+                if (!workspace_root.empty()) {
+                    std::error_code ec;
+                    auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
+                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                        entry.include_dirs.push_back(rel);
+                    } else {
+                        entry.include_dirs.push_back(inc_path);
+                    }
+                } else {
+                    entry.include_dirs.push_back(inc_path);
+                }
+            }
+        } else if (arg.starts_with("-I") && arg.size() > 2) {
+            std::filesystem::path inc_path = arg.substr(2);
+            if (inc_path.is_relative() && !dir_path.empty()) {
+                inc_path = (dir_path / inc_path).lexically_normal();
+            }
+            if (!workspace_root.empty()) {
+                std::error_code ec;
+                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
+                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                    entry.include_dirs.push_back(rel);
+                } else {
+                    entry.include_dirs.push_back(inc_path);
+                }
+            } else {
+                entry.include_dirs.push_back(inc_path);
+            }
+        } else if (arg.starts_with("-isystem") && arg.size() > 8) {
+            std::filesystem::path inc_path = arg.substr(8);
+            if (inc_path.is_relative() && !dir_path.empty()) {
+                inc_path = (dir_path / inc_path).lexically_normal();
+            }
+            if (!workspace_root.empty()) {
+                std::error_code ec;
+                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
+                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                    entry.include_dirs.push_back(rel);
+                } else {
+                    entry.include_dirs.push_back(inc_path);
+                }
+            } else {
+                entry.include_dirs.push_back(inc_path);
+            }
+        } else if (arg.starts_with("-iquote") && arg.size() > 7) {
+            std::filesystem::path inc_path = arg.substr(7);
+            if (inc_path.is_relative() && !dir_path.empty()) {
+                inc_path = (dir_path / inc_path).lexically_normal();
+            }
+            if (!workspace_root.empty()) {
+                std::error_code ec;
+                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
+                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                    entry.include_dirs.push_back(rel);
+                } else {
+                    entry.include_dirs.push_back(inc_path);
+                }
+            } else {
+                entry.include_dirs.push_back(inc_path);
+            }
+        } else if (arg.starts_with("-idirafter") && arg.size() > 10) {
+            std::filesystem::path inc_path = arg.substr(10);
+            if (inc_path.is_relative() && !dir_path.empty()) {
+                inc_path = (dir_path / inc_path).lexically_normal();
+            }
+            if (!workspace_root.empty()) {
+                std::error_code ec;
+                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
+                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                    entry.include_dirs.push_back(rel);
+                } else {
+                    entry.include_dirs.push_back(inc_path);
+                }
+            } else {
+                entry.include_dirs.push_back(inc_path);
+            }
+        }
+        // Defines (-D, -U)
+        else if (arg == "-D") {
+            if (i + 1 < args.size()) {
+                entry.defines.push_back(args[++i]);
+            }
+        } else if (arg.starts_with("-D") && arg.size() > 2) {
+            entry.defines.push_back(arg.substr(2));
+        } else if (arg == "-U") {
+            if (i + 1 < args.size()) {
+                entry.defines.push_back("-U" + args[++i]);
+            }
+        } else if (arg.starts_with("-U") && arg.size() > 2) {
+            entry.defines.push_back("-U" + arg.substr(2));
+        }
+        // Language standard
+        else if (arg.starts_with("-std=")) {
+            entry.language_standard = arg.substr(5);
+        } else if (arg.starts_with("--std=")) {
+            entry.language_standard = arg.substr(6);
+        }
+        // Output (-o)
+        else if (arg == "-o") {
+            if (i + 1 < args.size() && !entry.output.has_value()) {
+                std::filesystem::path out_file = args[++i];
+                if (out_file.is_relative() && !dir_path.empty()) {
+                    out_file = (dir_path / out_file).lexically_normal();
+                }
+                if (!workspace_root.empty()) {
+                    std::error_code ec;
+                    auto rel = std::filesystem::relative(out_file, workspace_root, ec);
+                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                        entry.output = rel;
+                    } else {
+                        entry.output = out_file;
+                    }
+                } else {
+                    entry.output = out_file;
+                }
+            }
+        }
+    }
+}
+
+} // namespace
+
 Result<CompilationDatabase>
 CompilationDatabase::parse_json(std::string_view json_content,
                                 const std::filesystem::path& workspace_root) {
@@ -195,135 +333,7 @@ CompilationDatabase::parse_json(std::string_view json_content,
         }
         entry.arguments = args;
 
-        // Parse GCC/Clang flags from arguments
-        for (std::size_t i = 0; i < args.size(); ++i) {
-            const auto& arg = args[i];
-
-            // Include directories
-            if (arg == "-I" || arg == "-isystem" || arg == "-iquote" || arg == "-idirafter") {
-                if (i + 1 < args.size()) {
-                    std::filesystem::path inc_path = args[++i];
-                    if (inc_path.is_relative() && !dir_path.empty()) {
-                        inc_path = (dir_path / inc_path).lexically_normal();
-                    }
-                    if (!workspace_root.empty()) {
-                        std::error_code ec;
-                        auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                        if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                            entry.include_dirs.push_back(rel);
-                        } else {
-                            entry.include_dirs.push_back(inc_path);
-                        }
-                    } else {
-                        entry.include_dirs.push_back(inc_path);
-                    }
-                }
-            } else if (arg.starts_with("-I") && arg.size() > 2) {
-                std::filesystem::path inc_path = arg.substr(2);
-                if (inc_path.is_relative() && !dir_path.empty()) {
-                    inc_path = (dir_path / inc_path).lexically_normal();
-                }
-                if (!workspace_root.empty()) {
-                    std::error_code ec;
-                    auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                        entry.include_dirs.push_back(rel);
-                    } else {
-                        entry.include_dirs.push_back(inc_path);
-                    }
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else if (arg.starts_with("-isystem") && arg.size() > 8) {
-                std::filesystem::path inc_path = arg.substr(8);
-                if (inc_path.is_relative() && !dir_path.empty()) {
-                    inc_path = (dir_path / inc_path).lexically_normal();
-                }
-                if (!workspace_root.empty()) {
-                    std::error_code ec;
-                    auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                        entry.include_dirs.push_back(rel);
-                    } else {
-                        entry.include_dirs.push_back(inc_path);
-                    }
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else if (arg.starts_with("-iquote") && arg.size() > 7) {
-                std::filesystem::path inc_path = arg.substr(7);
-                if (inc_path.is_relative() && !dir_path.empty()) {
-                    inc_path = (dir_path / inc_path).lexically_normal();
-                }
-                if (!workspace_root.empty()) {
-                    std::error_code ec;
-                    auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                        entry.include_dirs.push_back(rel);
-                    } else {
-                        entry.include_dirs.push_back(inc_path);
-                    }
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else if (arg.starts_with("-idirafter") && arg.size() > 10) {
-                std::filesystem::path inc_path = arg.substr(10);
-                if (inc_path.is_relative() && !dir_path.empty()) {
-                    inc_path = (dir_path / inc_path).lexically_normal();
-                }
-                if (!workspace_root.empty()) {
-                    std::error_code ec;
-                    auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                        entry.include_dirs.push_back(rel);
-                    } else {
-                        entry.include_dirs.push_back(inc_path);
-                    }
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            }
-            // Defines (-D, -U)
-            else if (arg == "-D") {
-                if (i + 1 < args.size()) {
-                    entry.defines.push_back(args[++i]);
-                }
-            } else if (arg.starts_with("-D") && arg.size() > 2) {
-                entry.defines.push_back(arg.substr(2));
-            } else if (arg == "-U") {
-                if (i + 1 < args.size()) {
-                    entry.defines.push_back("-U" + args[++i]);
-                }
-            } else if (arg.starts_with("-U") && arg.size() > 2) {
-                entry.defines.push_back("-U" + arg.substr(2));
-            }
-            // Language standard
-            else if (arg.starts_with("-std=")) {
-                entry.language_standard = arg.substr(5);
-            } else if (arg.starts_with("--std=")) {
-                entry.language_standard = arg.substr(6);
-            }
-            // Output (-o)
-            else if (arg == "-o") {
-                if (i + 1 < args.size() && !entry.output.has_value()) {
-                    std::filesystem::path out_file = args[++i];
-                    if (out_file.is_relative() && !dir_path.empty()) {
-                        out_file = (dir_path / out_file).lexically_normal();
-                    }
-                    if (!workspace_root.empty()) {
-                        std::error_code ec;
-                        auto rel = std::filesystem::relative(out_file, workspace_root, ec);
-                        if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                            entry.output = rel;
-                        } else {
-                            entry.output = out_file;
-                        }
-                    } else {
-                        entry.output = out_file;
-                    }
-                }
-            }
-        }
+        parse_flags_into_entry(entry, args, dir_path, workspace_root);
 
         db.add_entry(std::move(entry));
     }
@@ -343,6 +353,33 @@ CompilationDatabase::load_file(const std::filesystem::path& file_path,
 
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     return parse_json(content, workspace_root);
+}
+
+Result<CompileCommand>
+CompilationDatabase::parse_command_string(std::string_view command,
+                                          const std::filesystem::path& directory,
+                                          const std::filesystem::path& file,
+                                          const std::filesystem::path& workspace_root) {
+    if (command.empty()) {
+        return unexpected_result<CompileCommand>(ErrorCode::invalid_argument,
+                                                 "empty command string");
+    }
+
+    auto tokenized = tokenize_command_safely(command);
+    if (!tokenized) {
+        return unexpected_result<CompileCommand>(tokenized.error().code,
+                                                 tokenized.error().message);
+    }
+
+    CompileCommand entry;
+    std::filesystem::path dir = directory.empty() ? workspace_root : directory;
+    entry.directory = dir;
+    entry.file = file;
+    entry.arguments = *tokenized;
+    entry.parsed_from_arguments = false;
+
+    parse_flags_into_entry(entry, *tokenized, dir, workspace_root);
+    return entry;
 }
 
 } // namespace codelenses::resolver

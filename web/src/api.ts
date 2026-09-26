@@ -15,6 +15,9 @@ import type {
   SymbolSearchHitDto,
   JobDto,
   DiagnosticsResponseDto,
+  FileCompileCommandDto,
+  WorkspaceCompileCommandsDto,
+  UpdateWorkspaceRequest,
 } from "./types";
 
 export class ApiClient {
@@ -179,6 +182,37 @@ export class ApiClient {
   ): Promise<DiagnosticsResponseDto> {
     return this.request<DiagnosticsResponseDto>(
       `/api/v1/workspaces/${workspaceId}/files/${fileId}/diagnostics`
+    );
+  }
+
+  async getFileCompileCommand(
+    workspaceId: number,
+    fileId: number
+  ): Promise<FileCompileCommandDto> {
+    return this.request<FileCompileCommandDto>(
+      `/api/v1/workspaces/${workspaceId}/files/${fileId}/compile-command`
+    );
+  }
+
+  async getWorkspaceCompileCommands(
+    workspaceId: number
+  ): Promise<WorkspaceCompileCommandsDto> {
+    return this.request<WorkspaceCompileCommandsDto>(
+      `/api/v1/workspaces/${workspaceId}/compile-commands`
+    );
+  }
+
+  async updateWorkspace(
+    workspaceId: number,
+    req: UpdateWorkspaceRequest
+  ): Promise<WorkspaceDto> {
+    return this.request<WorkspaceDto>(
+      `/api/v1/workspaces/${workspaceId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      }
     );
   }
 }

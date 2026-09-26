@@ -142,6 +142,7 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 - [x] H1-04 Add highlighting queries.
 - [x] H1-05 Add fixtures for headers, pointers, macros, and declarations.
 - [x] H1-06 Support optional compile-command context.
+- [x] H1-07 Support optional compile-command context in UI.
 
 ### H2 C++ adapter
 

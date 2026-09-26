@@ -17,6 +17,10 @@
 #include "codelenses/server/error.hpp"
 #include "codelenses/server/server_config.hpp"
 
+namespace codelenses::resolver {
+class CompilationDatabase;
+}
+
 namespace codelenses::server {
 
 class ApiService {
@@ -49,6 +53,8 @@ public:
                                     std::optional<int64_t> end_line = std::nullopt,
                                     std::optional<int64_t> start_byte = std::nullopt,
                                     std::optional<int64_t> end_byte = std::nullopt);
+    FileCompileCommandResponseDto get_file_compile_command(int64_t workspace_id, int64_t file_id);
+    WorkspaceCompileCommandsSummaryDto get_workspace_compile_commands(int64_t workspace_id);
 
     // Highlights, Symbols & Outline (F-07)
     HighlightResponseDto get_file_highlights(int64_t workspace_id, int64_t file_id);
@@ -109,6 +115,14 @@ private:
     std::unordered_set<int64_t> reserved_workspaces_;
     std::unordered_map<int64_t, std::shared_ptr<std::stop_source>> active_job_stops_;
     std::atomic<bool> shutting_down_{false};
+
+    void invalidate_cdb_cache(int64_t workspace_id);
+    std::shared_ptr<const resolver::CompilationDatabase>
+    get_or_load_cdb(const Workspace& ws, std::filesystem::path* out_effective_path = nullptr,
+                    bool* out_is_auto_detected = nullptr);
+
+    std::mutex cdb_cache_mutex_;
+    std::unordered_map<int64_t, std::pair<std::shared_ptr<const resolver::CompilationDatabase>, std::filesystem::path>> cdb_cache_;
 };
 
 } // namespace codelenses::server

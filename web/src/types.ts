@@ -6,6 +6,7 @@ export interface WorkspaceDto {
   excludePatterns?: string[];
   defaultIgnores?: string[];
   compileCommandsPath?: string | null;
+  defaultCompileCommand?: string | null;
   revision: number;
   status: string;
   lastError?: string | null;
@@ -269,6 +270,42 @@ export interface OpenTabDto {
 
 export type IndexStatus = "idle" | "running" | "failed";
 
+export interface CompileCommandDto {
+  directory: string;
+  file: string;
+  output?: string | null;
+  arguments: string[];
+  includeDirs: string[];
+  defines: string[];
+  languageStandard?: string | null;
+}
+
+export interface FileCompileCommandDto {
+  fileId: number;
+  hasCompileCommand: boolean;
+  isWorkspaceDefault?: boolean;
+  databasePath?: string | null;
+  isAutoDetected: boolean;
+  compileCommand?: CompileCommandDto | null;
+}
+
+export interface WorkspaceCompileCommandsDto {
+  configuredPath?: string | null;
+  effectivePath?: string | null;
+  exists: boolean;
+  isAutoDetected: boolean;
+  totalCommands: number;
+  defaultCompileCommand?: string | null;
+}
+
+export interface UpdateWorkspaceRequest {
+  name?: string;
+  includePatterns?: string[];
+  excludePatterns?: string[];
+  compileCommandsPath?: string | null;
+  defaultCompileCommand?: string | null;
+}
+
 export interface AppState {
   workspaceId: number | null;
   selectedFileId: number | null;
@@ -278,7 +315,7 @@ export interface AppState {
   expandedFolders: Set<string>;
   indexStatus: IndexStatus;
   activeMobileTab: "explorer" | "code" | "inspector";
-  activeInspectorTab: "outline" | "references" | "diagnostics";
+  activeInspectorTab: "outline" | "references" | "diagnostics" | "compile-command";
   searchQuery: string;
   searchType: "source" | "symbol";
   isSearching: boolean;

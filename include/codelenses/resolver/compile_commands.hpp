@@ -42,6 +42,13 @@ public:
     load_file(const std::filesystem::path& file_path,
               const std::filesystem::path& workspace_root = {});
 
+    // Parses a single command string into a CompileCommand struct.
+    [[nodiscard]] static Result<CompileCommand>
+    parse_command_string(std::string_view command,
+                         const std::filesystem::path& directory = {},
+                         const std::filesystem::path& file = {},
+                         const std::filesystem::path& workspace_root = {});
+
 private:
     std::vector<CompileCommand> entries_;
 };

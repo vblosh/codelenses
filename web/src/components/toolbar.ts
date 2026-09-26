@@ -4,6 +4,7 @@ import { api } from "../api";
 
 export interface ToolbarCallbacks {
   onSearch: (query: string, type: "source" | "symbol") => void;
+  onOpenSettings?: () => void;
 }
 
 export class ToolbarComponent {
@@ -11,6 +12,7 @@ export class ToolbarComponent {
   private store: StateStore;
   private callbacks: ToolbarCallbacks;
   private workspaceSelect!: HTMLSelectElement;
+  private settingsBtn!: HTMLButtonElement;
   private statusBadge!: HTMLElement;
   private statusText!: HTMLElement;
   private indexBtn!: HTMLButtonElement;
@@ -43,9 +45,17 @@ export class ToolbarComponent {
           <span>CodeLenses</span>
         </a>
 
-        <select class="workspace-select" aria-label="Select Workspace" title="Select Workspace">
-          <option value="">Loading workspaces...</option>
-        </select>
+        <div class="workspace-select-wrapper" style="display: flex; align-items: center; gap: 6px;">
+          <select class="workspace-select" aria-label="Select Workspace" title="Select Workspace">
+            <option value="">Loading workspaces...</option>
+          </select>
+          <button class="btn-icon ws-settings-btn" title="Workspace settings & compilation database">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="toolbar-section">
@@ -79,6 +89,7 @@ export class ToolbarComponent {
     `;
 
     this.workspaceSelect = this.element.querySelector(".workspace-select")!;
+    this.settingsBtn = this.element.querySelector(".ws-settings-btn")!;
     this.statusBadge = this.element.querySelector(".index-status-badge")!;
     this.statusText = this.element.querySelector(".status-text")!;
     this.indexBtn = this.element.querySelector(".index-btn")!;
@@ -87,6 +98,12 @@ export class ToolbarComponent {
   }
 
   private initEvents(): void {
+    this.settingsBtn.addEventListener("click", () => {
+      if (this.callbacks.onOpenSettings) {
+        this.callbacks.onOpenSettings();
+      }
+    });
+
     this.workspaceSelect.addEventListener("change", () => {
       const val = this.workspaceSelect.value;
       const wsId = val ? parseInt(val, 10) : null;

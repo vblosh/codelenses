@@ -7,6 +7,8 @@ import { CodeWindowComponent } from "./code-window";
 import { OutlineComponent } from "./outline";
 import { ReferencesComponent } from "./references";
 import { DiagnosticsComponent } from "./diagnostics";
+import { CompileCommandComponent } from "./compile-command";
+import { WorkspaceSettingsModal } from "./workspace-settings";
 
 export class AppComponent {
   private container: HTMLElement;
@@ -18,6 +20,8 @@ export class AppComponent {
   private outline!: OutlineComponent;
   private references!: ReferencesComponent;
   private diagnostics!: DiagnosticsComponent;
+  private compileCommand!: CompileCommandComponent;
+  private settingsModal!: WorkspaceSettingsModal;
 
   private mainGrid!: HTMLElement;
   private mobileTabsBar!: HTMLElement;
@@ -40,13 +44,22 @@ export class AppComponent {
   private initLayout(): void {
     this.container.innerHTML = "";
 
-    // 1. Toolbar
+    // 1. Settings modal
+    this.settingsModal = new WorkspaceSettingsModal(this.store, {
+      onSaved: () => {
+        this.toolbar.loadWorkspaces();
+        this.reconcile();
+      },
+    });
+
+    // 2. Toolbar
     this.toolbar = new ToolbarComponent(this.store, {
       onSearch: (q, type) => this.openSearch(q, type),
+      onOpenSettings: () => this.settingsModal.open(),
     });
     this.container.appendChild(this.toolbar.getElement());
 
-    // 2. Mobile Tabs Bar (for narrow screens)
+    // 3. Mobile Tabs Bar (for narrow screens)
     this.mobileTabsBar = document.createElement("div");
     this.mobileTabsBar.className = "mobile-tabs";
     this.mobileTabsBar.innerHTML = `
@@ -56,7 +69,7 @@ export class AppComponent {
     `;
     this.container.appendChild(this.mobileTabsBar);
 
-    // 3. Main Three-Pane Grid
+    // 4. Main Three-Pane Grid
     this.mainGrid = document.createElement("main");
     this.mainGrid.className = "main-grid";
     this.mainGrid.dataset.mobileActive = "explorer";
@@ -70,6 +83,9 @@ export class AppComponent {
       onSymbolClick: (symId) => {
         this.switchInspectorTab("references");
         this.references.loadReferences(symId);
+      },
+      onCompileClick: () => {
+        this.switchInspectorTab("compile-command");
       },
     });
     this.mainGrid.appendChild(this.codeWindow.getElement());
@@ -89,17 +105,30 @@ export class AppComponent {
         <span>Diagnostics</span>
         <span class="count-pill diag-count-pill" style="display: none;">0</span>
       </button>
+      <button class="inspector-tab-btn" data-target="compile-command">
+        <span>Build</span>
+        <span class="count-pill build-badge" style="display: none; background: rgba(59, 130, 246, 0.2); color: #60a5fa;">active</span>
+      </button>
     `;
     inspectorPane.appendChild(inspectorTabBar);
 
     // Inspector content views
-    this.outline = new OutlineComponent(this.store);
+    this.outline = new OutlineComponent(this.store, {
+      onCliMacroClick: () => {
+        this.switchInspectorTab("compile-command");
+      },
+    });
     this.references = new ReferencesComponent(this.store);
     this.diagnostics = new DiagnosticsComponent(this.store);
+    this.compileCommand = new CompileCommandComponent(this.store, {
+      onConfigureWorkspace: () => this.settingsModal.open(),
+      onConfigureWorkspaceDefault: () => this.settingsModal.open(undefined, true),
+    });
 
     inspectorPane.appendChild(this.outline.getElement());
     inspectorPane.appendChild(this.references.getElement());
     inspectorPane.appendChild(this.diagnostics.getElement());
+    inspectorPane.appendChild(this.compileCommand.getElement());
 
     this.mainGrid.appendChild(inspectorPane);
     this.container.appendChild(this.mainGrid);
@@ -174,7 +203,7 @@ export class AppComponent {
     const inspectorTabs = this.container.querySelectorAll<HTMLButtonElement>(".inspector-tab-btn");
     inspectorTabs.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const target = btn.dataset.target as "outline" | "references" | "diagnostics";
+        const target = btn.dataset.target as "outline" | "references" | "diagnostics" | "compile-command";
         this.switchInspectorTab(target);
       });
     });
@@ -202,6 +231,9 @@ export class AppComponent {
       if (changedKeys.includes("activeInspectorTab")) {
         this.switchInspectorTab(state.activeInspectorTab);
       }
+      if (changedKeys.includes("selectedFileId")) {
+        this.updateBuildBadge(state.selectedFileId);
+      }
       if (changedKeys.includes("workspaceId") || changedKeys.includes("selectedFileId")) {
         if (state.workspaceId !== null) {
           this.loadDiagnostics(state.workspaceId, state.selectedFileId);
@@ -209,6 +241,7 @@ export class AppComponent {
           this.diagnostics.setDiagnostics([]);
           this.codeWindow.setDiagnostics([]);
           this.updateDiagnosticsCount(0);
+          this.updateBuildBadge(null);
         }
       }
       if (changedKeys.includes("selectedSymbolId") && state.selectedSymbolId !== null) {
@@ -272,6 +305,10 @@ export class AppComponent {
       if (state.selectedFileId !== null) {
         promises.push(this.codeWindow.loadFile(state.selectedFileId));
         promises.push(this.outline.loadOutline(state.selectedFileId));
+        promises.push(this.compileCommand.loadCompileCommand(state.selectedFileId));
+        promises.push(this.updateBuildBadge(state.selectedFileId));
+      } else {
+        promises.push(this.updateBuildBadge(null));
       }
 
       if (state.selectedSymbolId !== null) {
@@ -287,7 +324,9 @@ export class AppComponent {
     }
   }
 
-  private switchInspectorTab(tab: "outline" | "references" | "diagnostics"): void {
+  private switchInspectorTab(
+    tab: "outline" | "references" | "diagnostics" | "compile-command"
+  ): void {
     const tabs = this.container.querySelectorAll<HTMLButtonElement>(".inspector-tab-btn");
     tabs.forEach((b) => {
       b.classList.toggle("active", b.dataset.target === tab);
@@ -296,8 +335,30 @@ export class AppComponent {
     this.outline.getElement().classList.toggle("active", tab === "outline");
     this.references.getElement().classList.toggle("active", tab === "references");
     this.diagnostics.getElement().classList.toggle("active", tab === "diagnostics");
+    this.compileCommand.getElement().classList.toggle("active", tab === "compile-command");
 
     this.store.setActiveInspectorTab(tab);
+  }
+
+  private async updateBuildBadge(fileId: number | null): Promise<void> {
+    const badge = this.container.querySelector(".build-badge") as HTMLElement | null;
+    if (!badge) return;
+    const wsId = this.store.getState().workspaceId;
+    if (!wsId || !fileId) {
+      badge.style.display = "none";
+      return;
+    }
+    try {
+      const cmd = await api.getFileCompileCommand(wsId, fileId);
+      if (cmd.hasCompileCommand && cmd.compileCommand) {
+        badge.style.display = "inline-block";
+        badge.textContent = cmd.compileCommand.languageStandard?.toUpperCase() || "active";
+      } else {
+        badge.style.display = "none";
+      }
+    } catch {
+      badge.style.display = "none";
+    }
   }
 
   openSearch(initialQuery: string = "", type: "source" | "symbol" = "source"): void {

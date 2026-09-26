@@ -63,7 +63,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                               adapters::AdapterRegistry& registry, std::size_t max_file_size,
                               const std::stop_token& stop_token,
                               const std::filesystem::path& workspace_root,
-                              const resolver::CompilationDatabase* cdb = nullptr) {
+                              const resolver::CompilationDatabase* cdb = nullptr,
+                              const resolver::CompileCommand* default_cmd = nullptr) {
     ExtractionResult result;
     result.planned = planned;
 
@@ -121,6 +122,9 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
         if (!cmd) {
             cmd = cdb->find_for_file(planned.absolute_path);
         }
+    }
+    if (cmd == nullptr && default_cmd != nullptr) {
+        cmd = default_cmd;
     }
 
     if (cmd != nullptr) {
@@ -560,6 +564,16 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
 
     const auto* raw_cdb = comp_db.get();
 
+    std::shared_ptr<const resolver::CompileCommand> default_cmd;
+    if (ws->default_compile_command.has_value() && !ws->default_compile_command->empty()) {
+        auto parsed = resolver::CompilationDatabase::parse_command_string(
+            *ws->default_compile_command, canonical_root, "", canonical_root);
+        if (parsed) {
+            default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(*parsed));
+        }
+    }
+    const auto* raw_default_cmd = default_cmd.get();
+
     // Parallel parsing via ThreadPool and bounded batches
     ThreadPool pool(options_.worker_threads);
 
@@ -592,10 +606,10 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         for (std::size_t i = 0; i < current_batch; ++i) {
             const auto& planned = plan.files_to_process[idx + i];
             futures.push_back(pool.submit(
-                [this, workspace_id, job_id, planned, job_stop, canonical_root, raw_cdb] {
+                [this, workspace_id, job_id, planned, job_stop, canonical_root, raw_cdb, raw_default_cmd] {
                     return extract_file(workspace_id, job_id, planned, registry_,
                                         options_.max_file_size_bytes, job_stop, canonical_root,
-                                        raw_cdb);
+                                        raw_cdb, raw_default_cmd);
                 }));
         }
 
