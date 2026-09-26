@@ -18,6 +18,7 @@ set(UNIT_TEST_SOURCES
     unit/test_python_adapter.cpp
     unit/test_typescript_adapter.cpp
     unit/test_javascript_adapter.cpp
+    unit/test_shell_adapter.cpp
     integration/test_sample_workspace.cpp
     integration/test_api_contract.cpp
     integration/test_security_and_malformed.cpp
@@ -41,6 +42,7 @@ target_link_libraries(codelenses_unit_tests PRIVATE
     codelenses_grammar_javascript
     codelenses_grammar_typescript
     codelenses_grammar_tsx
+    codelenses_grammar_bash
 )
 
 target_compile_definitions(codelenses_unit_tests PRIVATE

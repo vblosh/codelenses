@@ -1,0 +1,223 @@
+{
+  "declarations": [
+    {
+      "end_byte": 51,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "sub_var",
+      "start_byte": 44,
+      "symbol_name": "sub_var"
+    },
+    {
+      "end_byte": 142,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "current_dir",
+      "start_byte": 131,
+      "symbol_name": "current_dir"
+    },
+    {
+      "end_byte": 159,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "old_style",
+      "start_byte": 150,
+      "symbol_name": "old_style"
+    },
+    {
+      "end_byte": 212,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "run_isolated",
+      "start_byte": 200,
+      "symbol_name": "run_isolated"
+    },
+    {
+      "enclosing_scope": "run_isolated",
+      "end_byte": 233,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "run_isolated.isolated_var",
+      "start_byte": 221,
+      "symbol_name": "isolated_var"
+    }
+  ],
+  "diagnostics": [],
+  "language": "POSIX shell",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "echo"
+      ],
+      "end_byte": 74,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 70,
+      "written_name": "echo"
+    },
+    {
+      "candidate_targets": [
+        "sub_var"
+      ],
+      "end_byte": 84,
+      "kind": "reference",
+      "start_byte": 77,
+      "written_name": "sub_var"
+    },
+    {
+      "candidate_targets": [
+        "cd"
+      ],
+      "end_byte": 92,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 90,
+      "written_name": "cd"
+    },
+    {
+      "candidate_targets": [
+        "pwd"
+      ],
+      "end_byte": 104,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 101,
+      "written_name": "pwd"
+    },
+    {
+      "candidate_targets": [
+        "pwd"
+      ],
+      "end_byte": 148,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 145,
+      "written_name": "pwd"
+    },
+    {
+      "candidate_targets": [
+        "whoami"
+      ],
+      "end_byte": 167,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 161,
+      "written_name": "whoami"
+    },
+    {
+      "candidate_targets": [
+        "echo"
+      ],
+      "enclosing_scope": "run_isolated",
+      "end_byte": 245,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 241,
+      "written_name": "echo"
+    },
+    {
+      "candidate_targets": [
+        "isolated_var"
+      ],
+      "enclosing_scope": "run_isolated",
+      "end_byte": 260,
+      "kind": "reference",
+      "start_byte": 248,
+      "written_name": "isolated_var"
+    },
+    {
+      "candidate_targets": [
+        "diff"
+      ],
+      "end_byte": 313,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 309,
+      "written_name": "diff"
+    },
+    {
+      "candidate_targets": [
+        "cat"
+      ],
+      "end_byte": 319,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 316,
+      "written_name": "cat"
+    },
+    {
+      "candidate_targets": [
+        "cat"
+      ],
+      "end_byte": 336,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 333,
+      "written_name": "cat"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 51,
+      "end_column": 12,
+      "end_line": 5,
+      "kind": "variable",
+      "name": "sub_var",
+      "qualified_name": "sub_var",
+      "signature": "sub_var",
+      "start_byte": 44,
+      "start_column": 5,
+      "start_line": 5
+    },
+    {
+      "end_byte": 142,
+      "end_column": 12,
+      "end_line": 11,
+      "kind": "variable",
+      "name": "current_dir",
+      "qualified_name": "current_dir",
+      "signature": "current_dir",
+      "start_byte": 131,
+      "start_column": 1,
+      "start_line": 11
+    },
+    {
+      "end_byte": 159,
+      "end_column": 10,
+      "end_line": 12,
+      "kind": "variable",
+      "name": "old_style",
+      "qualified_name": "old_style",
+      "signature": "old_style",
+      "start_byte": 150,
+      "start_column": 1,
+      "start_line": 12
+    },
+    {
+      "end_byte": 212,
+      "end_column": 13,
+      "end_line": 15,
+      "kind": "function",
+      "name": "run_isolated",
+      "qualified_name": "run_isolated",
+      "signature": "run_isolated()",
+      "start_byte": 200,
+      "start_column": 1,
+      "start_line": 15
+    },
+    {
+      "enclosing_scope": "run_isolated",
+      "end_byte": 233,
+      "end_column": 17,
+      "end_line": 16,
+      "kind": "variable",
+      "name": "isolated_var",
+      "qualified_name": "run_isolated.isolated_var",
+      "signature": "isolated_var",
+      "start_byte": 221,
+      "start_column": 5,
+      "start_line": 16
+    }
+  ]
+}

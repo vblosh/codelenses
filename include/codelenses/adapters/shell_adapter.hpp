@@ -21,6 +21,13 @@ public:
                                               const std::filesystem::path& file_path = {},
                                               const std::stop_token& stop_token = {}) override;
 
+    [[nodiscard]] Result<std::vector<HighlightToken>>
+    highlight(std::string_view source, const treesitter::Tree& tree) override;
+
+    [[nodiscard]] Result<std::vector<HighlightToken>> highlight(std::string_view source);
+
+    [[nodiscard]] static std::string_view highlighting_query() noexcept;
+
 private:
     Language lang_{Language::shell};
     LanguageCapabilities capabilities_{};

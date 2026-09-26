@@ -8,6 +8,7 @@ const TSLanguage* tree_sitter_python(void);
 const TSLanguage* tree_sitter_javascript(void);
 const TSLanguage* tree_sitter_typescript(void);
 const TSLanguage* tree_sitter_tsx(void);
+const TSLanguage* tree_sitter_bash(void);
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((weak)) const TSLanguage* tree_sitter_go(void) {
     return nullptr;
@@ -15,13 +16,9 @@ __attribute__((weak)) const TSLanguage* tree_sitter_go(void) {
 __attribute__((weak)) const TSLanguage* tree_sitter_java(void) {
     return nullptr;
 }
-__attribute__((weak)) const TSLanguage* tree_sitter_bash(void) {
-    return nullptr;
-}
 #else
 const TSLanguage* tree_sitter_go(void);
 const TSLanguage* tree_sitter_java(void);
-const TSLanguage* tree_sitter_bash(void);
 #endif
 }
 

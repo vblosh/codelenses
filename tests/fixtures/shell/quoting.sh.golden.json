@@ -1,0 +1,196 @@
+{
+  "declarations": [
+    {
+      "end_byte": 40,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "VAR",
+      "start_byte": 37,
+      "symbol_name": "VAR"
+    },
+    {
+      "end_byte": 60,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "ANOTHER_VAR",
+      "start_byte": 49,
+      "symbol_name": "ANOTHER_VAR"
+    },
+    {
+      "end_byte": 131,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "single_str",
+      "start_byte": 121,
+      "symbol_name": "single_str"
+    },
+    {
+      "end_byte": 224,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "double_str",
+      "start_byte": 214,
+      "symbol_name": "double_str"
+    },
+    {
+      "end_byte": 284,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "ansi_str",
+      "start_byte": 276,
+      "symbol_name": "ansi_str"
+    }
+  ],
+  "diagnostics": [],
+  "language": "POSIX shell",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "VAR"
+      ],
+      "end_byte": 236,
+      "kind": "reference",
+      "start_byte": 233,
+      "written_name": "VAR"
+    },
+    {
+      "candidate_targets": [
+        "ANOTHER_VAR"
+      ],
+      "end_byte": 255,
+      "kind": "reference",
+      "start_byte": 244,
+      "written_name": "ANOTHER_VAR"
+    },
+    {
+      "candidate_targets": [
+        "cat"
+      ],
+      "end_byte": 347,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 344,
+      "written_name": "cat"
+    },
+    {
+      "candidate_targets": [
+        "VAR"
+      ],
+      "end_byte": 368,
+      "kind": "reference",
+      "start_byte": 365,
+      "written_name": "VAR"
+    },
+    {
+      "candidate_targets": [
+        "ANOTHER_VAR"
+      ],
+      "end_byte": 391,
+      "kind": "reference",
+      "start_byte": 380,
+      "written_name": "ANOTHER_VAR"
+    },
+    {
+      "candidate_targets": [
+        "cat"
+      ],
+      "end_byte": 436,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 433,
+      "written_name": "cat"
+    },
+    {
+      "candidate_targets": [
+        "echo"
+      ],
+      "end_byte": 519,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 515,
+      "written_name": "echo"
+    },
+    {
+      "candidate_targets": [
+        "VAR"
+      ],
+      "end_byte": 531,
+      "kind": "reference",
+      "start_byte": 528,
+      "written_name": "VAR"
+    },
+    {
+      "candidate_targets": [
+        "printf"
+      ],
+      "end_byte": 539,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 533,
+      "written_name": "printf"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 40,
+      "end_column": 4,
+      "end_line": 4,
+      "kind": "variable",
+      "name": "VAR",
+      "qualified_name": "VAR",
+      "signature": "VAR",
+      "start_byte": 37,
+      "start_column": 1,
+      "start_line": 4
+    },
+    {
+      "end_byte": 60,
+      "end_column": 12,
+      "end_line": 5,
+      "kind": "variable",
+      "name": "ANOTHER_VAR",
+      "qualified_name": "ANOTHER_VAR",
+      "signature": "ANOTHER_VAR",
+      "start_byte": 49,
+      "start_column": 1,
+      "start_line": 5
+    },
+    {
+      "end_byte": 131,
+      "end_column": 11,
+      "end_line": 8,
+      "kind": "variable",
+      "name": "single_str",
+      "qualified_name": "single_str",
+      "signature": "single_str",
+      "start_byte": 121,
+      "start_column": 1,
+      "start_line": 8
+    },
+    {
+      "end_byte": 224,
+      "end_column": 11,
+      "end_line": 11,
+      "kind": "variable",
+      "name": "double_str",
+      "qualified_name": "double_str",
+      "signature": "double_str",
+      "start_byte": 214,
+      "start_column": 1,
+      "start_line": 11
+    },
+    {
+      "end_byte": 284,
+      "end_column": 9,
+      "end_line": 14,
+      "kind": "variable",
+      "name": "ansi_str",
+      "qualified_name": "ansi_str",
+      "signature": "ansi_str",
+      "start_byte": 276,
+      "start_column": 1,
+      "start_line": 14
+    }
+  ]
+}

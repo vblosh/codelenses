@@ -189,9 +189,9 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H9 POSIX shell/Bash adapter
 
-- [ ] H9-01 Extract functions, variables, source directives, and command occurrences.
-- [ ] H9-02 Distinguish shell built-ins and external commands when possible.
-- [ ] H9-03 Add fixtures for quoting, subshells, aliases, and sourced files.
+- [x] H9-01 Extract functions, variables, source directives, and command occurrences.
+- [x] H9-02 Distinguish shell built-ins and external commands when possible.
+- [x] H9-03 Add fixtures for quoting, subshells, aliases, and sourced files.
 
 **Done for each adapter when:** grammar registration, extraction, highlighting, and representative fixtures pass; unsupported semantics are labeled rather than guessed.
 

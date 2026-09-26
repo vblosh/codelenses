@@ -1,0 +1,189 @@
+{
+  "declarations": [
+    {
+      "end_byte": 149,
+      "is_definition": true,
+      "kind": "variable",
+      "qualified_name": "SCRIPT_DIR",
+      "start_byte": 139,
+      "symbol_name": "SCRIPT_DIR"
+    },
+    {
+      "end_byte": 272,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "init_app",
+      "start_byte": 264,
+      "symbol_name": "init_app"
+    }
+  ],
+  "diagnostics": [],
+  "language": "POSIX shell",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "./lib/helpers.sh"
+      ],
+      "end_byte": 63,
+      "kind": "import",
+      "start_byte": 47,
+      "written_name": "./lib/helpers.sh"
+    },
+    {
+      "candidate_targets": [
+        "./config/settings.sh"
+      ],
+      "end_byte": 86,
+      "kind": "import",
+      "start_byte": 66,
+      "written_name": "./config/settings.sh"
+    },
+    {
+      "candidate_targets": [
+        "lib/common.sh"
+      ],
+      "end_byte": 108,
+      "kind": "import",
+      "start_byte": 95,
+      "written_name": "lib/common.sh"
+    },
+    {
+      "candidate_targets": [
+        "cd"
+      ],
+      "end_byte": 155,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 153,
+      "written_name": "cd"
+    },
+    {
+      "candidate_targets": [
+        "dirname"
+      ],
+      "end_byte": 166,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 159,
+      "written_name": "dirname"
+    },
+    {
+      "candidate_targets": [
+        "BASH_SOURCE"
+      ],
+      "end_byte": 181,
+      "kind": "reference",
+      "start_byte": 170,
+      "written_name": "BASH_SOURCE"
+    },
+    {
+      "candidate_targets": [
+        "pwd"
+      ],
+      "end_byte": 195,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"builtin\",\"is_builtin\":true}",
+      "start_byte": 192,
+      "written_name": "pwd"
+    },
+    {
+      "candidate_targets": [
+        "${SCRIPT_DIR}/modules/extra.sh"
+      ],
+      "confidence": 0.0,
+      "end_byte": 236,
+      "kind": "import",
+      "metadata_json": "{\"dynamic\":true}",
+      "start_byte": 206,
+      "written_name": "${SCRIPT_DIR}/modules/extra.sh"
+    },
+    {
+      "candidate_targets": [
+        "SCRIPT_DIR"
+      ],
+      "end_byte": 218,
+      "kind": "reference",
+      "start_byte": 208,
+      "written_name": "SCRIPT_DIR"
+    },
+    {
+      "candidate_targets": [
+        "$DYNAMIC_CONFIG"
+      ],
+      "confidence": 0.0,
+      "end_byte": 261,
+      "kind": "import",
+      "metadata_json": "{\"dynamic\":true}",
+      "start_byte": 246,
+      "written_name": "$DYNAMIC_CONFIG"
+    },
+    {
+      "candidate_targets": [
+        "DYNAMIC_CONFIG"
+      ],
+      "end_byte": 261,
+      "kind": "reference",
+      "start_byte": 247,
+      "written_name": "DYNAMIC_CONFIG"
+    },
+    {
+      "candidate_targets": [
+        "setup_helpers"
+      ],
+      "enclosing_scope": "init_app",
+      "end_byte": 294,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 281,
+      "written_name": "setup_helpers"
+    },
+    {
+      "candidate_targets": [
+        "load_settings"
+      ],
+      "enclosing_scope": "init_app",
+      "end_byte": 312,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"external\",\"is_builtin\":false}",
+      "start_byte": 299,
+      "written_name": "load_settings"
+    },
+    {
+      "candidate_targets": [
+        "init_app"
+      ],
+      "end_byte": 324,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"function\",\"is_builtin\":false}",
+      "start_byte": 316,
+      "written_name": "init_app"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 149,
+      "end_column": 11,
+      "end_line": 9,
+      "kind": "variable",
+      "name": "SCRIPT_DIR",
+      "qualified_name": "SCRIPT_DIR",
+      "signature": "SCRIPT_DIR",
+      "start_byte": 139,
+      "start_column": 1,
+      "start_line": 9
+    },
+    {
+      "end_byte": 272,
+      "end_column": 9,
+      "end_line": 13,
+      "kind": "function",
+      "name": "init_app",
+      "qualified_name": "init_app",
+      "signature": "init_app()",
+      "start_byte": 264,
+      "start_column": 1,
+      "start_line": 13
+    }
+  ]
+}

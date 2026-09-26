@@ -177,7 +177,7 @@ The CodeLenses database schema and HTTP REST API return the following resolution
 #### Known Limitations
 1. **Dynamic Path Expansion:** Dynamic variable expansions in source paths (e.g. `source "$BASE_DIR/lib.sh"` or `source "$(dirname "$0")/util.sh"`) cannot be resolved statically and are marked `unresolved`.
 2. **Subshell & Dynamic Scopes:** Shell variables are dynamically scoped; variable references inside functions or pipelines do not enforce lexical boundaries.
-3. **Built-ins vs Executables:** Built-in shell commands (e.g., `cd`, `echo`, `test`) are identified heuristically but cannot account for user-specific shell aliases.
+3. **Built-ins vs Executables & Intra-file Alias/Function Scope:** Built-in shell commands (e.g., `cd`, `echo`, `test`) are identified heuristically but cannot account for user-specific shell aliases in external startup files (`~/.bashrc`). Within a single script, alias and function classification uses an AST pre-pass: commands used prior to their `alias name=...` or `func() { ... }` definitions, or aliases defined inside function bodies, are classified file-globally across the script.
 
 ---
 

@@ -1,0 +1,175 @@
+{
+  "declarations": [
+    {
+      "end_byte": 42,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "ll",
+      "start_byte": 40,
+      "symbol_name": "ll"
+    },
+    {
+      "end_byte": 61,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "gst",
+      "start_byte": 58,
+      "symbol_name": "gst"
+    },
+    {
+      "end_byte": 85,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "grep",
+      "start_byte": 81,
+      "symbol_name": "grep"
+    },
+    {
+      "end_byte": 117,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "list_files",
+      "start_byte": 107,
+      "symbol_name": "list_files"
+    },
+    {
+      "end_byte": 154,
+      "is_definition": true,
+      "kind": "macro",
+      "qualified_name": "cls",
+      "start_byte": 151,
+      "symbol_name": "cls"
+    },
+    {
+      "end_byte": 166,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "main",
+      "start_byte": 162,
+      "symbol_name": "main"
+    }
+  ],
+  "diagnostics": [],
+  "language": "POSIX shell",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "ll"
+      ],
+      "enclosing_scope": "list_files",
+      "end_byte": 128,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"alias\",\"is_builtin\":false}",
+      "start_byte": 126,
+      "written_name": "ll"
+    },
+    {
+      "candidate_targets": [
+        "gst"
+      ],
+      "enclosing_scope": "list_files",
+      "end_byte": 141,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"alias\",\"is_builtin\":false}",
+      "start_byte": 138,
+      "written_name": "gst"
+    },
+    {
+      "candidate_targets": [
+        "list_files"
+      ],
+      "enclosing_scope": "main",
+      "end_byte": 185,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"function\",\"is_builtin\":false}",
+      "start_byte": 175,
+      "written_name": "list_files"
+    },
+    {
+      "candidate_targets": [
+        "cls"
+      ],
+      "enclosing_scope": "main",
+      "end_byte": 193,
+      "kind": "call",
+      "metadata_json": "{\"command_type\":\"alias\",\"is_builtin\":false}",
+      "start_byte": 190,
+      "written_name": "cls"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 42,
+      "end_column": 9,
+      "end_line": 4,
+      "kind": "macro",
+      "name": "ll",
+      "qualified_name": "ll",
+      "signature": "alias ll='ls -la'",
+      "start_byte": 40,
+      "start_column": 7,
+      "start_line": 4
+    },
+    {
+      "end_byte": 61,
+      "end_column": 10,
+      "end_line": 5,
+      "kind": "macro",
+      "name": "gst",
+      "qualified_name": "gst",
+      "signature": "alias gst=\"git status\"",
+      "start_byte": 58,
+      "start_column": 7,
+      "start_line": 5
+    },
+    {
+      "end_byte": 85,
+      "end_column": 11,
+      "end_line": 6,
+      "kind": "macro",
+      "name": "grep",
+      "qualified_name": "grep",
+      "signature": "alias grep='grep --color=auto'",
+      "start_byte": 81,
+      "start_column": 7,
+      "start_line": 6
+    },
+    {
+      "end_byte": 117,
+      "end_column": 11,
+      "end_line": 8,
+      "kind": "function",
+      "name": "list_files",
+      "qualified_name": "list_files",
+      "signature": "list_files()",
+      "start_byte": 107,
+      "start_column": 1,
+      "start_line": 8
+    },
+    {
+      "end_byte": 154,
+      "end_column": 10,
+      "end_line": 13,
+      "kind": "macro",
+      "name": "cls",
+      "qualified_name": "cls",
+      "signature": "alias cls=clear",
+      "start_byte": 151,
+      "start_column": 7,
+      "start_line": 13
+    },
+    {
+      "end_byte": 166,
+      "end_column": 5,
+      "end_line": 15,
+      "kind": "function",
+      "name": "main",
+      "qualified_name": "main",
+      "signature": "main()",
+      "start_byte": 162,
+      "start_column": 1,
+      "start_line": 15
+    }
+  ]
+}
