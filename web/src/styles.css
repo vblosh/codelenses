@@ -227,17 +227,19 @@ html, body {
 }
 
 /* =========================================================
-   Main Three-Pane Layout (CSS Grid)
+   Main Workspace Layout (CSS Grid)
    ========================================================= */
 .main-grid {
   display: grid;
-  grid-template-columns: 240px 1fr 320px;
+  grid-template-columns: minmax(180px, 240px) minmax(200px, 1fr) minmax(180px, var(--outline-width, 260px)) 6px minmax(240px, 320px);
   height: calc(100vh - var(--top-height));
   width: 100vw;
   overflow: hidden;
 }
 
 .pane {
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -246,6 +248,26 @@ html, body {
 }
 .pane:last-child {
   border-right: none;
+}
+
+.panel-resizer {
+  position: relative;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.panel-resizer::after {
+  content: "";
+  position: absolute;
+  inset: 0 2px;
+  background: var(--border-color);
+}
+
+.panel-resizer:hover::after,
+.panel-resizer:focus-visible::after {
+  background: var(--info);
 }
 
 .pane-header {
@@ -604,16 +626,34 @@ html, body {
 .inspector-pane-view {
   display: none;
   flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 .inspector-pane-view.active {
   display: flex;
 }
 
+.outline-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* Outline tree */
 .outline-list {
+  min-height: 0;
   padding: 6px 0;
+}
+
+.references-list,
+.diagnostics-list,
+.compile-command-container {
+  min-height: 0;
 }
 
 .outline-item {
@@ -904,11 +944,19 @@ html, body {
     border-right: none;
   }
 
+  .main-grid .panel-resizer {
+    display: none;
+  }
+
   .main-grid[data-mobile-active="explorer"] #pane-explorer {
     display: flex;
   }
 
   .main-grid[data-mobile-active="code"] #pane-code {
+    display: flex;
+  }
+
+  .main-grid[data-mobile-active="outline"] #pane-outline {
     display: flex;
   }
 

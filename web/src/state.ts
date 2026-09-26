@@ -19,7 +19,7 @@ export class StateStore {
       expandedFolders: new Set<string>(),
       indexStatus: "idle",
       activeMobileTab: "explorer",
-      activeInspectorTab: "outline",
+      activeInspectorTab: "references",
       searchQuery: "",
       searchType: "source",
       isSearching: false,

@@ -63,13 +63,14 @@ export class AppComponent {
     this.mobileTabsBar = document.createElement("div");
     this.mobileTabsBar.className = "mobile-tabs";
     this.mobileTabsBar.innerHTML = `
-      <button class="mobile-tab-btn active" data-tab="explorer">Explorer</button>
+      <button class="mobile-tab-btn active" data-tab="explorer">Files</button>
       <button class="mobile-tab-btn" data-tab="code">Code</button>
+      <button class="mobile-tab-btn" data-tab="outline">Outline</button>
       <button class="mobile-tab-btn" data-tab="inspector">Inspector</button>
     `;
     this.container.appendChild(this.mobileTabsBar);
 
-    // 4. Main Three-Pane Grid
+    // 4. Main workspace panels
     this.mainGrid = document.createElement("main");
     this.mainGrid.className = "main-grid";
     this.mainGrid.dataset.mobileActive = "explorer";
@@ -90,6 +91,28 @@ export class AppComponent {
     });
     this.mainGrid.appendChild(this.codeWindow.getElement());
 
+    // Outline pane
+    const outlinePane = document.createElement("div");
+    outlinePane.className = "pane outline-pane";
+    outlinePane.id = "pane-outline";
+    outlinePane.innerHTML = `<div class="pane-header"><span>Outline</span></div>`;
+    this.outline = new OutlineComponent(this.store, {
+      onCliMacroClick: () => this.switchInspectorTab("compile-command"),
+    });
+    outlinePane.appendChild(this.outline.getElement());
+    this.mainGrid.appendChild(outlinePane);
+
+    const outlineResizer = document.createElement("div");
+    outlineResizer.className = "panel-resizer outline-resizer";
+    outlineResizer.setAttribute("role", "separator");
+    outlineResizer.setAttribute("aria-orientation", "vertical");
+    outlineResizer.setAttribute("aria-label", "Resize Outline panel");
+    outlineResizer.setAttribute("aria-valuemin", "180");
+    outlineResizer.setAttribute("aria-valuemax", "480");
+    outlineResizer.tabIndex = 0;
+    this.mainGrid.appendChild(outlineResizer);
+    this.initOutlineResizer(outlineResizer);
+
     // Inspector pane
     const inspectorPane = document.createElement("div");
     inspectorPane.className = "pane";
@@ -99,8 +122,7 @@ export class AppComponent {
     const inspectorTabBar = document.createElement("div");
     inspectorTabBar.className = "inspector-tabs";
     inspectorTabBar.innerHTML = `
-      <button class="inspector-tab-btn active" data-target="outline">Outline</button>
-      <button class="inspector-tab-btn" data-target="references">References</button>
+      <button class="inspector-tab-btn active" data-target="references">References</button>
       <button class="inspector-tab-btn" data-target="diagnostics">
         <span>Diagnostics</span>
         <span class="count-pill diag-count-pill" style="display: none;">0</span>
@@ -113,11 +135,6 @@ export class AppComponent {
     inspectorPane.appendChild(inspectorTabBar);
 
     // Inspector content views
-    this.outline = new OutlineComponent(this.store, {
-      onCliMacroClick: () => {
-        this.switchInspectorTab("compile-command");
-      },
-    });
     this.references = new ReferencesComponent(this.store);
     this.diagnostics = new DiagnosticsComponent(this.store);
     this.compileCommand = new CompileCommandComponent(this.store, {
@@ -125,20 +142,74 @@ export class AppComponent {
       onConfigureWorkspaceDefault: () => this.settingsModal.open(undefined, true),
     });
 
-    inspectorPane.appendChild(this.outline.getElement());
     inspectorPane.appendChild(this.references.getElement());
     inspectorPane.appendChild(this.diagnostics.getElement());
     inspectorPane.appendChild(this.compileCommand.getElement());
 
     this.mainGrid.appendChild(inspectorPane);
     this.container.appendChild(this.mainGrid);
+    this.switchInspectorTab(this.store.getState().activeInspectorTab);
+  }
+
+  private initOutlineResizer(resizer: HTMLElement): void {
+    let storedWidth = 0;
+    try {
+      storedWidth = Number(localStorage.getItem("codelenses-outline-width"));
+    } catch {
+      // Keep the default width when browser storage is unavailable.
+    }
+    let width = Number.isFinite(storedWidth) && storedWidth >= 180 && storedWidth <= 480
+      ? storedWidth
+      : 260;
+
+    const saveWidth = (): void => {
+      try {
+        localStorage.setItem("codelenses-outline-width", String(width));
+      } catch {
+        // Resizing still works for this session when browser storage is unavailable.
+      }
+    };
+
+    const applyWidth = (nextWidth: number): void => {
+      width = Math.max(180, Math.min(480, Math.round(nextWidth)));
+      this.mainGrid.style.setProperty("--outline-width", `${width}px`);
+      resizer.setAttribute("aria-valuenow", String(width));
+    };
+
+    applyWidth(width);
+
+    resizer.addEventListener("pointerdown", (event) => {
+      if (window.innerWidth <= 860) return;
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = width;
+
+      const onPointerMove = (moveEvent: PointerEvent): void => {
+        applyWidth(startWidth + moveEvent.clientX - startX);
+      };
+      const onPointerUp = (): void => {
+        document.removeEventListener("pointermove", onPointerMove);
+        saveWidth();
+      };
+
+      document.addEventListener("pointermove", onPointerMove);
+      document.addEventListener("pointerup", onPointerUp, { once: true });
+    });
+
+    resizer.addEventListener("keydown", (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        applyWidth(width + (event.key === "ArrowRight" ? 10 : -10));
+        saveWidth();
+      }
+    });
   }
 
   private initMobileTabs(): void {
     const tabButtons = this.mobileTabsBar.querySelectorAll<HTMLButtonElement>(".mobile-tab-btn");
     tabButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const tab = btn.dataset.tab as "explorer" | "code" | "inspector";
+        const tab = btn.dataset.tab as "explorer" | "code" | "outline" | "inspector";
         tabButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         this.mainGrid.dataset.mobileActive = tab;
@@ -203,7 +274,7 @@ export class AppComponent {
     const inspectorTabs = this.container.querySelectorAll<HTMLButtonElement>(".inspector-tab-btn");
     inspectorTabs.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const target = btn.dataset.target as "outline" | "references" | "diagnostics" | "compile-command";
+        const target = btn.dataset.target as "references" | "diagnostics" | "compile-command";
         this.switchInspectorTab(target);
       });
     });
@@ -325,14 +396,13 @@ export class AppComponent {
   }
 
   private switchInspectorTab(
-    tab: "outline" | "references" | "diagnostics" | "compile-command"
+    tab: "references" | "diagnostics" | "compile-command"
   ): void {
     const tabs = this.container.querySelectorAll<HTMLButtonElement>(".inspector-tab-btn");
     tabs.forEach((b) => {
       b.classList.toggle("active", b.dataset.target === tab);
     });
 
-    this.outline.getElement().classList.toggle("active", tab === "outline");
     this.references.getElement().classList.toggle("active", tab === "references");
     this.diagnostics.getElement().classList.toggle("active", tab === "diagnostics");
     this.compileCommand.getElement().classList.toggle("active", tab === "compile-command");
