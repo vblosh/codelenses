@@ -208,7 +208,7 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 - [x] I-07 Benchmark tree expansion, source range retrieval, symbol search, and reference queries.
 - [x] I-08 Add memory and database-size measurements for representative repositories.
 - [x] I-09 Add release packaging and sample configuration.
-- [ ] I-10 Document limitations and language-specific resolution behavior.
+- [x] I-10 Document limitations and language-specific resolution behavior.
 - [ ] I-11 Define regression suite required before each release.
 
 **Done when:** the acceptance criteria in `requirements.md` pass on a repeatable sample and performance regressions have thresholds.
