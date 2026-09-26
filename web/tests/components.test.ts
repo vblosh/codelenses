@@ -700,13 +700,12 @@ describe("Frontend components", () => {
       const elem = refs.getElement();
       expect(elem.textContent).toContain("calculateTotal");
       expect(elem.textContent).toContain("3 references");
-      expect(elem.textContent).toContain("main.cpp:43"); // 42 (0-based) + 1 = 43 (1-based)
-
+      expect(elem.textContent).toContain("main.cpp:42"); // 42 is 1-based line from range
       // Click on reference navigates to target file and line
       const refItem = elem.querySelector(".reference-item") as HTMLElement;
       refItem.click();
       expect(store.getState().selectedFileId).toBe(2);
-      expect(store.getState().selectedLine).toBe(43); // 42 + 1 = 43
+      expect(store.getState().selectedLine).toBe(42);
     });
 
     it("loads additional reference pages when hasMore is true", async () => {

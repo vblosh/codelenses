@@ -205,7 +205,7 @@ export class ReferencesComponent {
       const item = document.createElement("div");
       item.className = "reference-item";
 
-      const lineNum = ref.range.start.line + 1; // 1-based display line
+      const lineNum = ref.range.start.line;
       const fileText = `${ref.relativePath || "Unknown file"}:${lineNum}`;
       const kind = ref.referenceKind || "ref";
 
