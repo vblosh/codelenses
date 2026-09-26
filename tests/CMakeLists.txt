@@ -22,6 +22,7 @@ set(UNIT_TEST_SOURCES
     integration/test_cancellation_and_recovery.cpp
     benchmarks/benchmark_indexing.cpp
     benchmarks/benchmark_queries.cpp
+    benchmarks/benchmark_footprint.cpp
 )
 
 add_executable(codelenses_unit_tests
