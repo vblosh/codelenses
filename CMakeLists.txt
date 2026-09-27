@@ -95,6 +95,13 @@ codelenses_add_tree_sitter_grammar(
     GIT_TAG v0.23.3
 )
 
+# Go grammar baseline
+codelenses_add_tree_sitter_grammar(
+    NAME go
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-go.git
+    GIT_TAG v0.23.4
+)
+
 # Core library
 set(CODELENSES_CORE_SOURCES
     src/app/config.cpp
@@ -162,6 +169,7 @@ target_link_libraries(codelenses_core PUBLIC
     codelenses_grammar_typescript
     codelenses_grammar_tsx
     codelenses_grammar_bash
+    codelenses_grammar_go
 )
 
 codelenses_set_compiler_warnings(codelenses_core)

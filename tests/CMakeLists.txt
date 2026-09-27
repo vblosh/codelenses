@@ -19,6 +19,7 @@ set(UNIT_TEST_SOURCES
     unit/test_typescript_adapter.cpp
     unit/test_javascript_adapter.cpp
     unit/test_shell_adapter.cpp
+    unit/test_go_adapter.cpp
     integration/test_sample_workspace.cpp
     integration/test_api_contract.cpp
     integration/test_security_and_malformed.cpp

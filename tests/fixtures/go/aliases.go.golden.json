@@ -1,0 +1,157 @@
+{
+  "declarations": [
+    {
+      "end_byte": 20,
+      "is_definition": true,
+      "kind": "package",
+      "qualified_name": "aliasfixture",
+      "start_byte": 8,
+      "symbol_name": "aliasfixture"
+    },
+    {
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 73,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "aliasfixture.Task",
+      "start_byte": 69,
+      "symbol_name": "Task"
+    },
+    {
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 98,
+      "is_definition": true,
+      "kind": "type_alias",
+      "qualified_name": "aliasfixture.TaskID",
+      "start_byte": 92,
+      "symbol_name": "TaskID"
+    },
+    {
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 116,
+      "is_definition": true,
+      "kind": "function",
+      "qualified_name": "aliasfixture.UseTask",
+      "start_byte": 109,
+      "symbol_name": "UseTask"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Go",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "example.org/project/model"
+      ],
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 62,
+      "kind": "import",
+      "start_byte": 35,
+      "written_name": "example.org/project/model"
+    },
+    {
+      "candidate_targets": [
+        "model.Task"
+      ],
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 86,
+      "kind": "reference",
+      "start_byte": 76,
+      "written_name": "model.Task"
+    },
+    {
+      "candidate_targets": [
+        "Task"
+      ],
+      "enclosing_scope": "aliasfixture.UseTask",
+      "end_byte": 126,
+      "kind": "reference",
+      "start_byte": 122,
+      "written_name": "Task"
+    },
+    {
+      "candidate_targets": [
+        "Name"
+      ],
+      "enclosing_scope": "aliasfixture.UseTask",
+      "end_byte": 155,
+      "kind": "call",
+      "start_byte": 151,
+      "written_name": "Name"
+    },
+    {
+      "candidate_targets": [
+        "model"
+      ],
+      "enclosing_scope": "aliasfixture.UseTask",
+      "end_byte": 150,
+      "kind": "reference",
+      "start_byte": 145,
+      "written_name": "model"
+    },
+    {
+      "candidate_targets": [
+        "task"
+      ],
+      "enclosing_scope": "aliasfixture.UseTask",
+      "end_byte": 160,
+      "kind": "reference",
+      "start_byte": 156,
+      "written_name": "task"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 20,
+      "end_column": 21,
+      "end_line": 1,
+      "kind": "package",
+      "name": "aliasfixture",
+      "qualified_name": "aliasfixture",
+      "signature": "package aliasfixture",
+      "start_byte": 8,
+      "start_column": 9,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 73,
+      "end_column": 10,
+      "end_line": 5,
+      "kind": "type_alias",
+      "name": "Task",
+      "qualified_name": "aliasfixture.Task",
+      "signature": "type Task = model.Task",
+      "start_byte": 69,
+      "start_column": 6,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 98,
+      "end_column": 12,
+      "end_line": 6,
+      "kind": "type_alias",
+      "name": "TaskID",
+      "qualified_name": "aliasfixture.TaskID",
+      "signature": "type TaskID int",
+      "start_byte": 92,
+      "start_column": 6,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "aliasfixture",
+      "end_byte": 116,
+      "end_column": 13,
+      "end_line": 8,
+      "kind": "function",
+      "name": "UseTask",
+      "qualified_name": "aliasfixture.UseTask",
+      "signature": "func UseTask(task Task) string",
+      "start_byte": 109,
+      "start_column": 6,
+      "start_line": 8
+    }
+  ]
+}
