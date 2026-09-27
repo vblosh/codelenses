@@ -196,13 +196,14 @@
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "App::Service",
       "end_byte": 314,
       "kind": "reference",
-      "start_byte": 308,
-      "written_name": "string"
+      "start_byte": 303,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [
@@ -226,13 +227,14 @@
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "App::Service",
       "end_byte": 460,
       "kind": "reference",
-      "start_byte": 454,
-      "written_name": "string"
+      "start_byte": 449,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [

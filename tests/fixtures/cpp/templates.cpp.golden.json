@@ -200,13 +200,14 @@
     },
     {
       "candidate_targets": [
+        "std::size_t",
         "size_t"
       ],
       "enclosing_scope": "Stack",
       "end_byte": 205,
       "kind": "reference",
-      "start_byte": 199,
-      "written_name": "size_t"
+      "start_byte": 194,
+      "written_name": "std::size_t"
     },
     {
       "candidate_targets": [
@@ -230,13 +231,14 @@
     },
     {
       "candidate_targets": [
+        "std::vector",
         "vector"
       ],
       "enclosing_scope": "Stack",
       "end_byte": 272,
       "kind": "reference",
-      "start_byte": 266,
-      "written_name": "vector"
+      "start_byte": 261,
+      "written_name": "std::vector"
     },
     {
       "candidate_targets": [
@@ -318,21 +320,23 @@
     },
     {
       "candidate_targets": [
+        "std::map",
         "map"
       ],
       "end_byte": 528,
       "kind": "reference",
-      "start_byte": 525,
-      "written_name": "map"
+      "start_byte": 520,
+      "written_name": "std::map"
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "end_byte": 540,
       "kind": "reference",
-      "start_byte": 534,
-      "written_name": "string"
+      "start_byte": 529,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [

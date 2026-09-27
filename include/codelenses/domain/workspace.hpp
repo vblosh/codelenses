@@ -15,6 +15,29 @@ enum class WorkspaceStatus {
     error,
 };
 
+// Library indexes are represented as backing workspaces with a distinct kind.
+enum class WorkspaceKind {
+    project,
+    library,
+};
+
+[[nodiscard]] inline std::string to_string(WorkspaceKind kind) {
+    switch (kind) {
+    case WorkspaceKind::project:
+        return "project";
+    case WorkspaceKind::library:
+        return "library";
+    }
+    return "project";
+}
+
+[[nodiscard]] inline WorkspaceKind workspace_kind_from_string(std::string_view str) {
+    if (str == "library") {
+        return WorkspaceKind::library;
+    }
+    return WorkspaceKind::project;
+}
+
 [[nodiscard]] inline std::string to_string(WorkspaceStatus status) {
     switch (status) {
     case WorkspaceStatus::idle:
@@ -46,6 +69,7 @@ struct Workspace {
     int64_t id = 0;
     std::string root_path = "";
     std::string name = "";
+    WorkspaceKind kind = WorkspaceKind::project;
     std::vector<std::string> include_patterns = {};
     std::vector<std::string> exclude_patterns = {};
     std::vector<std::string> default_ignores = {};

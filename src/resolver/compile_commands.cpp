@@ -111,92 +111,91 @@ namespace {
 void parse_flags_into_entry(CompileCommand& entry, const std::vector<std::string>& args,
                             const std::filesystem::path& dir_path,
                             const std::filesystem::path& workspace_root) {
+    // 1. Pre-scan for sysroot
+    for (std::size_t i = 0; i < args.size(); ++i) {
+        const auto& arg = args[i];
+        if (arg == "--sysroot" && i + 1 < args.size()) {
+            std::filesystem::path p = args[i + 1];
+            if (p.is_relative() && !dir_path.empty()) p = (dir_path / p).lexically_normal();
+            entry.sysroot = p;
+        } else if (arg.starts_with("--sysroot=")) {
+            std::filesystem::path p = arg.substr(10);
+            if (p.is_relative() && !dir_path.empty()) p = (dir_path / p).lexically_normal();
+            entry.sysroot = p;
+        } else if (arg == "-isysroot" && i + 1 < args.size()) {
+            std::filesystem::path p = args[i + 1];
+            if (p.is_relative() && !dir_path.empty()) p = (dir_path / p).lexically_normal();
+            entry.sysroot = p;
+        } else if (arg.starts_with("-isysroot") && arg.size() > 9) {
+            std::filesystem::path p = arg.substr(9);
+            if (p.is_relative() && !dir_path.empty()) p = (dir_path / p).lexically_normal();
+            entry.sysroot = p;
+        }
+    }
+
+    std::size_t search_pos = 0;
+
+    auto resolve_inc_path = [&](std::string_view raw_path) -> std::filesystem::path {
+        std::filesystem::path p;
+        if (raw_path.starts_with('=') && entry.sysroot.has_value()) {
+            p = (*entry.sysroot / raw_path.substr(1)).lexically_normal();
+        } else if (raw_path.starts_with("$SYSROOT") && entry.sysroot.has_value()) {
+            p = (*entry.sysroot / raw_path.substr(8)).lexically_normal();
+        } else {
+            p = raw_path;
+            if (p.is_relative() && !dir_path.empty()) {
+                p = (dir_path / p).lexically_normal();
+            }
+        }
+        return p;
+    };
+
+    auto add_include_entry = [&](const std::filesystem::path& inc_path, adapters::IncludeCategory cat) {
+        entry.search_entries.push_back(adapters::IncludeSearchEntry{
+            .directory = inc_path,
+            .category = cat,
+            .original_position = search_pos++,
+            .origin = adapters::IncludeOrigin::compile_command,
+            .role = adapters::RootRole::unspecified,
+        });
+
+        if (!workspace_root.empty()) {
+            std::error_code ec;
+            auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
+            if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
+                entry.include_dirs.push_back(rel);
+                return;
+            }
+        }
+        entry.include_dirs.push_back(inc_path);
+    };
+
     for (std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
 
         // Include directories
-        if (arg == "-I" || arg == "-isystem" || arg == "-iquote" || arg == "-idirafter") {
-            if (i + 1 < args.size()) {
-                std::filesystem::path inc_path = args[++i];
-                if (inc_path.is_relative() && !dir_path.empty()) {
-                    inc_path = (dir_path / inc_path).lexically_normal();
-                }
-                if (!workspace_root.empty()) {
-                    std::error_code ec;
-                    auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                    if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                        entry.include_dirs.push_back(rel);
-                    } else {
-                        entry.include_dirs.push_back(inc_path);
-                    }
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            }
+        if (arg == "-I" && i + 1 < args.size()) {
+            add_include_entry(resolve_inc_path(args[++i]), adapters::IncludeCategory::standard);
         } else if (arg.starts_with("-I") && arg.size() > 2) {
-            std::filesystem::path inc_path = arg.substr(2);
-            if (inc_path.is_relative() && !dir_path.empty()) {
-                inc_path = (dir_path / inc_path).lexically_normal();
-            }
-            if (!workspace_root.empty()) {
-                std::error_code ec;
-                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                    entry.include_dirs.push_back(rel);
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else {
-                entry.include_dirs.push_back(inc_path);
-            }
+            add_include_entry(resolve_inc_path(arg.substr(2)), adapters::IncludeCategory::standard);
+        } else if (arg == "-isystem" && i + 1 < args.size()) {
+            add_include_entry(resolve_inc_path(args[++i]), adapters::IncludeCategory::system);
         } else if (arg.starts_with("-isystem") && arg.size() > 8) {
-            std::filesystem::path inc_path = arg.substr(8);
-            if (inc_path.is_relative() && !dir_path.empty()) {
-                inc_path = (dir_path / inc_path).lexically_normal();
-            }
-            if (!workspace_root.empty()) {
-                std::error_code ec;
-                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                    entry.include_dirs.push_back(rel);
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else {
-                entry.include_dirs.push_back(inc_path);
-            }
+            add_include_entry(resolve_inc_path(arg.substr(8)), adapters::IncludeCategory::system);
+        } else if (arg == "-iquote" && i + 1 < args.size()) {
+            add_include_entry(resolve_inc_path(args[++i]), adapters::IncludeCategory::quoted);
         } else if (arg.starts_with("-iquote") && arg.size() > 7) {
-            std::filesystem::path inc_path = arg.substr(7);
-            if (inc_path.is_relative() && !dir_path.empty()) {
-                inc_path = (dir_path / inc_path).lexically_normal();
-            }
-            if (!workspace_root.empty()) {
-                std::error_code ec;
-                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                    entry.include_dirs.push_back(rel);
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else {
-                entry.include_dirs.push_back(inc_path);
-            }
+            add_include_entry(resolve_inc_path(arg.substr(7)), adapters::IncludeCategory::quoted);
+        } else if (arg == "-idirafter" && i + 1 < args.size()) {
+            add_include_entry(resolve_inc_path(args[++i]), adapters::IncludeCategory::after);
         } else if (arg.starts_with("-idirafter") && arg.size() > 10) {
-            std::filesystem::path inc_path = arg.substr(10);
-            if (inc_path.is_relative() && !dir_path.empty()) {
-                inc_path = (dir_path / inc_path).lexically_normal();
-            }
-            if (!workspace_root.empty()) {
-                std::error_code ec;
-                auto rel = std::filesystem::relative(inc_path, workspace_root, ec);
-                if (!ec && !rel.empty() && !rel.generic_string().starts_with("..")) {
-                    entry.include_dirs.push_back(rel);
-                } else {
-                    entry.include_dirs.push_back(inc_path);
-                }
-            } else {
-                entry.include_dirs.push_back(inc_path);
-            }
+            add_include_entry(resolve_inc_path(arg.substr(10)), adapters::IncludeCategory::after);
+        }
+        // System include suppression
+        else if (arg == "-nostdinc") {
+            entry.nostdinc = true;
+        } else if (arg == "-nostdinc++") {
+            entry.nostdincxx = true;
         }
         // Defines (-D, -U)
         else if (arg == "-D") {

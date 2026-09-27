@@ -151,11 +151,39 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
     const auto& adapter_res = *parse_res;
 
     // 1. Process symbols
+    struct DeclKey {
+        uint64_t start;
+        uint64_t end;
+        std::string_view name;
+
+        bool operator==(const DeclKey& o) const noexcept {
+            return start == o.start && end == o.end && name == o.name;
+        }
+    };
+    struct DeclKeyHash {
+        size_t operator()(const DeclKey& k) const noexcept {
+            size_t h1 = std::hash<uint64_t>{}(k.start);
+            size_t h2 = std::hash<uint64_t>{}(k.end);
+            size_t h3 = std::hash<std::string_view>{}(k.name);
+            return h1 ^ (h2 << 1) ^ (h3 << 2);
+        }
+    };
+    std::unordered_map<DeclKey, bool, DeclKeyHash> decl_defs;
+    decl_defs.reserve(adapter_res.declarations.size());
+    for (const auto& d : adapter_res.declarations) {
+        decl_defs[{d.range.start, d.range.end, d.symbol_name}] = d.is_definition;
+    }
+
     result.index_data.symbols.reserve(adapter_res.symbols.size());
     for (size_t i = 0; i < adapter_res.symbols.size(); ++i) {
         const auto& s = adapter_res.symbols[i];
         const auto sym_start = static_cast<int64_t>(s.range.start + bom_offset);
         const auto sym_end = static_cast<int64_t>(s.range.end + bom_offset);
+        bool is_def = true;
+        auto dit = decl_defs.find({s.range.start, s.range.end, s.name});
+        if (dit != decl_defs.end()) {
+            is_def = dit->second;
+        }
         Symbol sym{
             .id = static_cast<int64_t>(i + 1), // temporary 1-based ID for within-file remapping
             .workspace_id = workspace_id,
@@ -169,7 +197,7 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
             .language = result.index_data.language,
             .signature = s.signature.empty() ? std::nullopt : std::make_optional(s.signature),
             .container_name = s.enclosing_scope,
-            .is_definition = true,
+            .is_definition = is_def,
             .range =
                 SourceRange{
                     .start_byte = sym_start,
@@ -487,6 +515,29 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     disc_opts.default_ignores = ws->default_ignores;
     disc_opts.max_file_size_bytes = options_.max_file_size_bytes;
 
+    std::optional<LibraryProfile> lib_profile;
+    if (ws->kind == WorkspaceKind::library) {
+        lib_profile = db_.libraries().get_profile_by_workspace(workspace_id);
+        if (lib_profile.has_value()) {
+            if (!lib_profile->include_patterns.empty()) {
+                disc_opts.include_patterns = lib_profile->include_patterns;
+            }
+            if (!lib_profile->exclude_patterns.empty()) {
+                disc_opts.exclude_patterns = lib_profile->exclude_patterns;
+            }
+            if (lib_profile->language == "cpp") {
+                disc_opts.allow_extensionless_headers = true;
+                disc_opts.extensionless_language = Language::cpp;
+                disc_opts.extension_overrides[".tcc"] = Language::cpp;
+                disc_opts.extension_overrides[".inc"] = Language::cpp;
+                disc_opts.ambiguous_header_mode = Language::cpp;
+            } else if (lib_profile->language == "c") {
+                disc_opts.extension_overrides[".inc"] = Language::c;
+                disc_opts.ambiguous_header_mode = Language::c;
+            }
+        }
+    }
+
     filesystem::FileDiscovery discovery(disc_opts);
     auto disc_res = discovery.discover(canonical_root);
     if (!disc_res) {
@@ -573,6 +624,35 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         if (parsed) {
             default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(*parsed));
         }
+    }
+
+    if (ws->kind == WorkspaceKind::library) {
+        adapters::CompileCommandContext lib_cmd;
+        if (default_cmd != nullptr) {
+            lib_cmd = *default_cmd;
+        }
+        lib_cmd.conservative_preproc = true;
+        if (lib_profile.has_value()) {
+            if (!lib_cmd.language_standard.has_value() && lib_profile->language_standard.has_value()) {
+                lib_cmd.language_standard = lib_profile->language_standard;
+            }
+            if (lib_profile->sysroot.has_value() && !lib_profile->sysroot->empty()) {
+                lib_cmd.sysroot = std::filesystem::path(*lib_profile->sysroot);
+            }
+            for (const auto& d : lib_profile->defines) {
+                lib_cmd.defines.push_back(d);
+            }
+            for (const auto& r : lib_profile->default_include_roots) {
+                lib_cmd.search_entries.push_back(adapters::IncludeSearchEntry{
+                    .directory = std::filesystem::path(r),
+                    .category = adapters::IncludeCategory::default_toolchain,
+                    .origin = adapters::IncludeOrigin::configured_profile,
+                    .role = (lib_profile->language == "cpp") ? adapters::RootRole::cpp_library
+                                                             : adapters::RootRole::c_runtime,
+                });
+            }
+        }
+        default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(lib_cmd));
     }
     const auto* raw_default_cmd = default_cmd.get();
 
@@ -739,6 +819,20 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
             .workspace_revision = std::nullopt,
             .error_message = "Indexing job was cancelled during resolution",
         };
+    }
+
+    // Refresh consuming projects when a library index changed, even though their own files
+    // did not change.
+    if (resolve_res && ws->kind == WorkspaceKind::library) {
+        auto profile = db_.libraries().get_profile_by_workspace(workspace_id);
+        if (profile.has_value()) {
+            for (int64_t consumer_id : db_.libraries().list_consumers(profile->id)) {
+                if (job_stop.stop_requested()) {
+                    break;
+                }
+                static_cast<void>(workspace_resolver.resolve_workspace(consumer_id, job_stop));
+            }
+        }
     }
 
     // Job completion and revision increment (D-06)

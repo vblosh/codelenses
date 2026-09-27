@@ -272,6 +272,9 @@ TEST_CASE("Sample configuration file is valid and parses successfully (I-09)", "
     if (!std::filesystem::exists(sample_path)) {
         sample_path = "../../config/codelenses.sample.json";
     }
+    if (!std::filesystem::exists(sample_path)) {
+        sample_path = "../../../config/codelenses.sample.json";
+    }
     REQUIRE(std::filesystem::exists(sample_path));
 
     auto config = codelenses::AppConfig::from_json_file(sample_path);

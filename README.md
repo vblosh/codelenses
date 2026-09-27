@@ -254,3 +254,11 @@ The repository includes a complete GitHub Actions workflow (`.github/workflows/c
 2. **GCC Release Build**: Optimized build verification.
 3. **Clang Debug Build with ASan/UBSan**: Memory and undefined behavior sanitizers.
 4. **Code Quality**: `clang-format --check` and `clang-tidy` analysis.
+
+---
+
+## Standard Library Indexing
+
+CodeLenses provides local-first indexing for C and C++ standard libraries and platform toolchain headers (e.g. GCC libstdc++, Clang libc++, glibc) with strict caller isolation, deterministic search ordering, and include-evidence symbol resolution.
+
+For setup instructions, REST API examples, and configuration guides, refer to the [User Guide: C/C++ Standard Library Indexing](docs/user_guide_standard_libraries.md).

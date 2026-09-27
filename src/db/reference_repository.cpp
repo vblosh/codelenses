@@ -231,6 +231,38 @@ std::vector<CallerCalleeResult> ReferenceRepository::find_callers(int64_t symbol
     return results;
 }
 
+std::vector<CallerCalleeResult> ReferenceRepository::find_callers(int64_t workspace_id,
+                                                                   int64_t symbol_id) {
+    // Phase 6 / Section 16: Scoped callers to avoid leaking cross-project callers
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT DISTINCT
+            r.source_symbol_id,
+            s.name,
+            s.qualified_name,
+            s.file_id
+        FROM reference_occurrence AS r
+        JOIN symbol AS s ON s.id = r.source_symbol_id
+        WHERE r.workspace_id = ?
+          AND r.target_symbol_id = ?
+          AND r.reference_kind IN ('call', 'invocation')
+        ORDER BY s.name;
+    )SQL");
+
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_int64(2, symbol_id);
+
+    std::vector<CallerCalleeResult> results;
+    while (stmt.step()) {
+        CallerCalleeResult res;
+        res.symbol_id = stmt.column_optional_int64(0);
+        res.name = stmt.column_text(1);
+        res.qualified_name = stmt.column_optional_text(2);
+        res.file_id = stmt.column_int64(3);
+        results.push_back(res);
+    }
+    return results;
+}
+
 std::vector<CallerCalleeResult> ReferenceRepository::find_callees(int64_t symbol_id) {
     // Section 8: Callees: symbols referenced by the selected function.
     Statement stmt(conn_.handle(), R"SQL(
@@ -247,6 +279,37 @@ std::vector<CallerCalleeResult> ReferenceRepository::find_callees(int64_t symbol
     )SQL");
 
     stmt.bind_int64(1, symbol_id);
+
+    std::vector<CallerCalleeResult> results;
+    while (stmt.step()) {
+        CallerCalleeResult res;
+        res.symbol_id = stmt.column_optional_int64(0);
+        res.name = stmt.column_text(1);
+        res.qualified_name = stmt.column_optional_text(2);
+        res.file_id = stmt.column_int64(3);
+        results.push_back(res);
+    }
+    return results;
+}
+
+std::vector<CallerCalleeResult> ReferenceRepository::find_callees(int64_t workspace_id,
+                                                                 int64_t symbol_id) {
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT DISTINCT
+            r.target_symbol_id,
+            s.name,
+            s.qualified_name,
+            s.file_id
+        FROM reference_occurrence AS r
+        JOIN symbol AS s ON s.id = r.target_symbol_id
+        WHERE r.workspace_id = ?
+          AND r.source_symbol_id = ?
+          AND r.reference_kind IN ('call', 'invocation')
+        ORDER BY s.name;
+    )SQL");
+
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_int64(2, symbol_id);
 
     std::vector<CallerCalleeResult> results;
     while (stmt.step()) {

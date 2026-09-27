@@ -123,17 +123,154 @@ struct ParseDiagnostic {
     friend bool operator==(const ParseDiagnostic&, const ParseDiagnostic&) = default;
 };
 
+enum class IncludeCategory {
+    quoted,            // -iquote
+    standard,          // -I
+    system,            // -isystem
+    default_toolchain, // explicitly configured default toolchain search roots
+    after,             // -idirafter
+};
+
+[[nodiscard]] constexpr std::string_view to_string(IncludeCategory cat) noexcept {
+    switch (cat) {
+    case IncludeCategory::quoted:
+        return "quoted";
+    case IncludeCategory::standard:
+        return "standard";
+    case IncludeCategory::system:
+        return "system";
+    case IncludeCategory::default_toolchain:
+        return "default_toolchain";
+    case IncludeCategory::after:
+        return "after";
+    }
+    return "standard";
+}
+
+enum class IncludeOrigin {
+    compile_command,
+    configured_profile,
+};
+
+enum class RootRole {
+    unspecified,
+    c_runtime,
+    cpp_library,
+    compiler_headers,
+    platform_headers,
+};
+
+struct IncludeSearchEntry {
+    std::filesystem::path directory{};
+    IncludeCategory category{IncludeCategory::standard};
+    std::size_t original_position{0};
+    IncludeOrigin origin{IncludeOrigin::compile_command};
+    RootRole role{RootRole::unspecified};
+
+    friend bool operator==(const IncludeSearchEntry&, const IncludeSearchEntry&) = default;
+};
+
 struct CompileCommandContext {
     std::filesystem::path directory{};
     std::filesystem::path file{};
     std::optional<std::filesystem::path> output{std::nullopt};
     std::vector<std::string> arguments{};
     std::vector<std::filesystem::path> include_dirs{};
+    std::vector<IncludeSearchEntry> search_entries{};
+    std::optional<std::filesystem::path> sysroot{std::nullopt};
+    bool nostdinc{false};
+    bool nostdincxx{false};
+    bool conservative_preproc{false};
     std::vector<std::string> defines{};
     std::optional<std::string> language_standard{std::nullopt};
     bool parsed_from_arguments{false};
 
     friend bool operator==(const CompileCommandContext&, const CompileCommandContext&) = default;
+
+    // Computes deterministic ordered search directories according to standard GCC/Clang semantics.
+    // For quoted includes:
+    // 1. Including file's directory
+    // 2. -iquote entries
+    // 3. -I entries
+    // 4. -isystem entries
+    // 5. Default toolchain entries (unless disabled by nostdinc, or nostdincxx for C++)
+    // 6. -idirafter entries
+    // For angle includes: omit 1 and 2.
+    // Preserves order within categories; deduplicates directories (first seen wins).
+    [[nodiscard]] std::vector<std::filesystem::path> get_ordered_include_paths(
+        bool is_quote,
+        const std::filesystem::path& source_file_dir = {},
+        const std::vector<std::filesystem::path>& default_toolchain_dirs = {},
+        bool is_cpp = true) const {
+        std::vector<std::filesystem::path> ordered;
+        std::vector<std::string> seen;
+
+        auto add_dir = [&](const std::filesystem::path& p) {
+            if (p.empty())
+                return;
+            auto norm = p.lexically_normal();
+            std::string key = norm.generic_string();
+            for (const auto& s : seen) {
+                if (s == key)
+                    return;
+            }
+            seen.push_back(key);
+            ordered.push_back(norm);
+        };
+
+        // 1. Including file's directory (quote only)
+        if (is_quote && !source_file_dir.empty()) {
+            add_dir(source_file_dir);
+        }
+
+        // 2. -iquote entries (quote only)
+        if (is_quote) {
+            for (const auto& entry : search_entries) {
+                if (entry.category == IncludeCategory::quoted) {
+                    add_dir(entry.directory);
+                }
+            }
+        }
+
+        // 3. -I entries
+        for (const auto& entry : search_entries) {
+            if (entry.category == IncludeCategory::standard) {
+                add_dir(entry.directory);
+            }
+        }
+
+        // 4. -isystem entries
+        for (const auto& entry : search_entries) {
+            if (entry.category == IncludeCategory::system) {
+                add_dir(entry.directory);
+            }
+        }
+
+        // 5. Explicitly configured default toolchain directories
+        bool suppress_default = nostdinc;
+        if (!suppress_default) {
+            for (const auto& entry : search_entries) {
+                if (entry.category == IncludeCategory::default_toolchain) {
+                    if (is_cpp && nostdincxx && entry.role == RootRole::cpp_library) {
+                        continue;
+                    }
+                    add_dir(entry.directory);
+                }
+            }
+            for (const auto& d : default_toolchain_dirs) {
+                add_dir(d);
+            }
+        }
+
+        // 6. -idirafter entries
+        for (const auto& entry : search_entries) {
+            if (entry.category == IncludeCategory::after) {
+                add_dir(entry.directory);
+            }
+        }
+
+        return ordered;
+    }
 
     struct ActiveDefine {
         std::string name;

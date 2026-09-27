@@ -23,6 +23,10 @@ public:
     // Adds a symbol to the resolution index.
     void add_symbol(const SymbolCandidate& candidate);
     void add_symbol(const Symbol& symbol, const std::string& file_path);
+    // Adds a symbol owned by another workspace (e.g. an attached library). The key index is
+    // scoped by the owner so identical relative paths across owners cannot collide.
+    void add_symbol(const Symbol& symbol, const std::string& file_path,
+                    int64_t owner_workspace_id);
 
     // Clears all indexed symbols.
     void clear();

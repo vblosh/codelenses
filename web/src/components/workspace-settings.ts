@@ -1,4 +1,5 @@
 import type { StateStore } from "../state";
+import type { LibraryDto } from "../types";
 import { api } from "../api";
 
 export interface WorkspaceSettingsCallbacks {
@@ -17,6 +18,14 @@ export class WorkspaceSettingsModal {
   private cdbStatusElem!: HTMLElement;
   private defaultCmdInput!: HTMLInputElement;
   private defaultCmdPreviewElem!: HTMLElement;
+  private attachedLibsListElem!: HTMLElement;
+  private attachLibBtn!: HTMLButtonElement;
+  private attachLibFormElem!: HTMLElement;
+  private availableLibsSelect!: HTMLSelectElement;
+  private confirmAttachBtn!: HTMLButtonElement;
+  private cancelAttachBtn!: HTMLButtonElement;
+  private allLibraries: LibraryDto[] = [];
+  private attachedLibraries: LibraryDto[] = [];
   private saveAndIndexBtn!: HTMLButtonElement;
   private saveBtn!: HTMLButtonElement;
   private cancelBtn!: HTMLButtonElement;
@@ -84,6 +93,25 @@ export class WorkspaceSettingsModal {
               <div class="preview-content" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"></div>
             </div>
           </div>
+
+          <div class="form-group ws-libraries-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label class="form-label" style="margin-bottom: 0;">Standard Libraries & Toolchain SDKs</label>
+              <button type="button" class="btn btn-sm attach-lib-btn">+ Attach Library</button>
+            </div>
+            <div class="form-hint" style="margin-bottom: 8px;">
+              Attached C/C++ standard libraries or platform SDKs. Direct file/symbol inspection requires active attachment; workspace re-indexing resolves or unlinks persisted references.
+            </div>
+            <div class="attached-libraries-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            <div class="attach-lib-form" style="display: none; margin-top: 8px; padding: 10px; background: var(--bg-secondary); border-radius: 4px; border: 1px solid var(--border-color);">
+              <div style="font-weight: 600; margin-bottom: 6px; font-size: 12px;">Select Library Profile to Attach</div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <select class="form-select available-libs-select" style="flex: 1; padding: 4px 8px; font-size: 12px;"></select>
+                <button type="button" class="btn btn-primary btn-sm confirm-attach-btn">Attach</button>
+                <button type="button" class="btn btn-sm cancel-attach-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -100,6 +128,12 @@ export class WorkspaceSettingsModal {
     this.cdbStatusElem = this.element.querySelector(".cdb-status-banner")!;
     this.defaultCmdInput = this.element.querySelector(".ws-default-cmd-input")!;
     this.defaultCmdPreviewElem = this.element.querySelector(".ws-default-cmd-preview")!;
+    this.attachedLibsListElem = this.element.querySelector(".attached-libraries-list")!;
+    this.attachLibBtn = this.element.querySelector(".attach-lib-btn")!;
+    this.attachLibFormElem = this.element.querySelector(".attach-lib-form")!;
+    this.availableLibsSelect = this.element.querySelector(".available-libs-select")!;
+    this.confirmAttachBtn = this.element.querySelector(".confirm-attach-btn")!;
+    this.cancelAttachBtn = this.element.querySelector(".cancel-attach-btn")!;
     this.saveAndIndexBtn = this.element.querySelector(".save-index-settings-btn")!;
     this.saveBtn = this.element.querySelector(".save-settings-btn")!;
     this.cancelBtn = this.element.querySelector(".cancel-settings-btn")!;
@@ -124,6 +158,18 @@ export class WorkspaceSettingsModal {
 
     this.defaultCmdInput.addEventListener("input", () => {
       this.updateDefaultCmdPreview(this.defaultCmdInput.value);
+    });
+
+    this.attachLibBtn.addEventListener("click", () => {
+      this.showAttachForm();
+    });
+
+    this.cancelAttachBtn.addEventListener("click", () => {
+      this.attachLibFormElem.style.display = "none";
+    });
+
+    this.confirmAttachBtn.addEventListener("click", () => {
+      this.handleAttachLibrary();
     });
 
     this.saveBtn.addEventListener("click", () => this.handleSave(false));
@@ -151,6 +197,7 @@ export class WorkspaceSettingsModal {
 
       this.renderCdbStatus(cdbInfo);
       this.updateDefaultCmdPreview(this.defaultCmdInput.value);
+      await this.loadLibraries(wsId);
 
       if (focusDefaultCmd) {
         setTimeout(() => {
@@ -159,12 +206,119 @@ export class WorkspaceSettingsModal {
         }, 50);
       }
     } catch (err: any) {
-      this.cdbStatusElem.innerHTML = `<span class="badge badge-error">Error loading settings: ${err.message}</span>`;
+      this.cdbStatusElem.innerHTML = `<span class="badge badge-error">Error loading settings: ${escapeHtml(err.message || String(err))}</span>`;
     }
   }
 
   close(): void {
     this.element.style.display = "none";
+    this.attachLibFormElem.style.display = "none";
+  }
+
+  private async loadLibraries(wsId: number): Promise<void> {
+    try {
+      this.attachedLibsListElem.innerHTML = `<span style="font-size: 11px; opacity: 0.7;">Loading attached libraries...</span>`;
+      const [attachedRes, allRes] = await Promise.all([
+        api.getWorkspaceLibraries(wsId),
+        api.getLibraries(),
+      ]);
+      this.attachedLibraries = attachedRes.libraries || [];
+      this.allLibraries = allRes.libraries || [];
+      this.renderAttachedLibraries();
+    } catch (err: any) {
+      this.attachedLibsListElem.innerHTML = `<span class="badge badge-error">Failed to load libraries: ${escapeHtml(err.message || String(err))}</span>`;
+    }
+  }
+
+  private renderAttachedLibraries(): void {
+    if (!this.attachedLibraries.length) {
+      this.attachedLibsListElem.innerHTML = `
+        <div style="font-size: 12px; color: var(--text-secondary); font-style: italic;">
+          No standard libraries attached to this workspace.
+        </div>
+      `;
+      return;
+    }
+
+    this.attachedLibsListElem.innerHTML = this.attachedLibraries
+      .map((lib) => {
+        const langBadge = `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 10px;">${escapeHtml(lib.language.toUpperCase())}</span>`;
+        const stdBadge = lib.languageStandard
+          ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.languageStandard)}</span>`
+          : "";
+        const rootsCount = lib.sourceRoots?.length ?? 0;
+        const rootsInfo = `<span style="font-size: 11px; color: var(--text-secondary);">${rootsCount} root${rootsCount === 1 ? "" : "s"}</span>`;
+
+        return `
+          <div class="library-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <strong style="font-size: 12px;">${escapeHtml(lib.name)}</strong>
+              ${langBadge}
+              ${stdBadge}
+              ${rootsInfo}
+            </div>
+            <button type="button" class="btn btn-sm detach-lib-btn" data-lib-id="${lib.id}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" title="Detach library from this workspace">Detach</button>
+          </div>
+        `;
+      })
+      .join("");
+
+    this.attachedLibsListElem.querySelectorAll(".detach-lib-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const libId = Number((e.currentTarget as HTMLElement).getAttribute("data-lib-id"));
+        if (!this.currentWsId || !libId) return;
+        const button = btn as HTMLButtonElement;
+        try {
+          button.disabled = true;
+          await api.detachLibrary(this.currentWsId, libId);
+          await this.loadLibraries(this.currentWsId);
+          // Trigger re-resolution so persisted symbol links and dependencies are updated
+          api.triggerIndexing(this.currentWsId, "incremental", false).catch(() => {});
+        } catch (err: any) {
+          alert(`Failed to detach library: ${err.message || String(err)}`);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  private showAttachForm(): void {
+    const attachedIds = new Set(this.attachedLibraries.map((l) => l.id));
+    const available = this.allLibraries.filter((l) => !attachedIds.has(l.id));
+
+    if (!available.length) {
+      alert("No additional library profiles available to attach. Create a library profile first via API.");
+      return;
+    }
+
+    this.availableLibsSelect.innerHTML = available
+      .map(
+        (l) =>
+          `<option value="${l.id}">${escapeHtml(l.name)} (${escapeHtml(l.language.toUpperCase())}${l.languageStandard ? ` / ${escapeHtml(l.languageStandard)}` : ""})</option>`
+      )
+      .join("");
+
+    this.attachLibFormElem.style.display = "block";
+  }
+
+  private async handleAttachLibrary(): Promise<void> {
+    if (!this.currentWsId) return;
+    const profileId = Number(this.availableLibsSelect.value);
+    if (!profileId) return;
+
+    try {
+      this.confirmAttachBtn.disabled = true;
+      await api.attachLibrary(this.currentWsId, profileId);
+      this.attachLibFormElem.style.display = "none";
+      await this.loadLibraries(this.currentWsId);
+      // Trigger incremental indexing so references resolve against newly attached library headers
+      api.triggerIndexing(this.currentWsId, "incremental", false).catch(() => {});
+    } catch (err: any) {
+      alert(`Failed to attach library: ${err.message || String(err)}`);
+    } finally {
+      this.confirmAttachBtn.disabled = false;
+    }
   }
 
   private updateDefaultCmdPreview(cmdStr: string): void {

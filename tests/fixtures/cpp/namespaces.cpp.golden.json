@@ -127,23 +127,25 @@
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "Core::Diagnostics::Logger",
       "end_byte": 104,
       "kind": "reference",
-      "start_byte": 98,
-      "written_name": "string"
+      "start_byte": 93,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "Core::Diagnostics::Logger",
       "end_byte": 143,
       "kind": "reference",
-      "start_byte": 137,
-      "written_name": "string"
+      "start_byte": 132,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [
@@ -157,13 +159,14 @@
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "Core::Diagnostics",
       "end_byte": 190,
       "kind": "reference",
-      "start_byte": 184,
-      "written_name": "string"
+      "start_byte": 179,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [
@@ -177,13 +180,14 @@
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "Core::Diagnostics",
       "end_byte": 236,
       "kind": "reference",
-      "start_byte": 230,
-      "written_name": "string"
+      "start_byte": 225,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [
@@ -258,13 +262,14 @@
     },
     {
       "candidate_targets": [
+        "diag::Logger",
         "Logger"
       ],
       "enclosing_scope": "test_namespaces",
       "end_byte": 600,
       "kind": "reference",
-      "start_byte": 594,
-      "written_name": "Logger"
+      "start_byte": 588,
+      "written_name": "diag::Logger"
     },
     {
       "candidate_targets": [

@@ -41,6 +41,7 @@ Workspace read_workspace_row(Statement& stmt) {
     ws.revision = stmt.column_int64(10);
     ws.status = workspace_status_from_string(stmt.column_text(11));
     ws.last_error = stmt.column_optional_text(12);
+    ws.kind = workspace_kind_from_string(stmt.column_text(13));
     return ws;
 }
 
@@ -52,8 +53,8 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
     Statement stmt(conn_.handle(), R"SQL(
         INSERT INTO workspace (
             root_path, name, include_json, exclude_json, default_ignores_json,
-            compile_commands_path, default_compile_command, revision, status, last_error
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            compile_commands_path, default_compile_command, revision, status, last_error, kind
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )SQL");
 
     stmt.bind_text(1, ws.root_path);
@@ -66,6 +67,7 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
     stmt.bind_int64(8, ws.revision);
     stmt.bind_text(9, to_string(ws.status));
     stmt.bind_optional_text(10, ws.last_error);
+    stmt.bind_text(11, to_string(ws.kind));
 
     stmt.execute();
     return conn_.last_insert_rowid();
@@ -74,7 +76,7 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
 std::optional<Workspace> WorkspaceRepository::get_by_id(int64_t id) {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error, kind
         FROM workspace
         WHERE id = ?;
     )SQL");
@@ -89,7 +91,7 @@ std::optional<Workspace> WorkspaceRepository::get_by_id(int64_t id) {
 std::optional<Workspace> WorkspaceRepository::get_by_root_path(const std::string& root_path) {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error, kind
         FROM workspace
         WHERE root_path = ?;
     )SQL");
@@ -104,10 +106,27 @@ std::optional<Workspace> WorkspaceRepository::get_by_root_path(const std::string
 std::vector<Workspace> WorkspaceRepository::list_all() {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error, kind
         FROM workspace
         ORDER BY id ASC;
     )SQL");
+
+    std::vector<Workspace> results;
+    while (stmt.step()) {
+        results.push_back(read_workspace_row(stmt));
+    }
+    return results;
+}
+
+std::vector<Workspace> WorkspaceRepository::list_by_kind(WorkspaceKind kind) {
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
+               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error, kind
+        FROM workspace
+        WHERE kind = ?
+        ORDER BY id ASC;
+    )SQL");
+    stmt.bind_text(1, to_string(kind));
 
     std::vector<Workspace> results;
     while (stmt.step()) {

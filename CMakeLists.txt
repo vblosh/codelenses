@@ -117,6 +117,7 @@ set(CODELENSES_CORE_SOURCES
     src/db/transaction.cpp
     src/db/migration.cpp
     src/db/workspace_repository.cpp
+    src/db/library_repository.cpp
     src/db/file_repository.cpp
     src/db/symbol_repository.cpp
     src/db/occurrence_repository.cpp
@@ -258,4 +259,3 @@ set(CPACK_SOURCE_IGNORE_FILES
     "\\\\.db-shm$"
 )
 include(CPack)
-

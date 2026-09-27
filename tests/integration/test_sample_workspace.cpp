@@ -250,10 +250,9 @@ TEST_CASE("Sample workspace end-to-end indexing pipeline (I-01)", "[sample_works
         auto aggregate_syms = env.db->symbols().find_by_name(ws_id, "aggregate_events");
         CHECK_FALSE(aggregate_syms.empty());
 
-        // Verify that diagnostics are stored for unlinked grammars rather than crashing
+        // Verify diagnostics (clean when all grammars are active)
         auto diagnostics = env.db->diagnostics().list_by_workspace(ws_id);
-        // Diagnostics should exist for languages without active tree-sitter grammars
-        CHECK_FALSE(diagnostics.empty());
+        CHECK(diagnostics.empty());
     }
 
     SECTION("Incremental indexing skips unchanged files") {

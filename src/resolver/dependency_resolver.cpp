@@ -257,40 +257,72 @@ DependencyResolver::resolve_c_cpp(const std::filesystem::path& source_file,
     std::filesystem::path header_path(clean);
     std::vector<std::filesystem::path> search_dirs;
 
-    // 1. For quote includes: directory of the source file
-    if (is_quote) {
-        search_dirs.push_back(source_file.parent_path());
-    }
-
-    // 2. Check compilation database for include directories of this file
-    if (const auto* cmd = compilation_db_.find_for_file(source_file)) {
-        for (const auto& inc : cmd->include_dirs) {
-            search_dirs.push_back(inc);
+    const auto* cmd = compilation_db_.find_for_file(source_file);
+    bool is_cpp = (source_file.extension() != ".c");
+    if (cmd != nullptr && !cmd->search_entries.empty()) {
+        std::vector<std::filesystem::path> extra_defaults;
+        for (const auto& s : default_include_dirs_.system_dirs) {
+            extra_defaults.push_back(s);
         }
-    }
+        search_dirs =
+            cmd->get_ordered_include_paths(is_quote, source_file.parent_path(), extra_defaults, is_cpp);
 
-    // 3. Check explicit include directories for this file
-    auto file_key = source_file.lexically_normal().generic_string();
-    auto it = file_include_dirs_.find(file_key);
-    if (it != file_include_dirs_.end()) {
+        // Consult explicit per-file include directories (quote + system)
+        auto file_key = source_file.lexically_normal().generic_string();
+        auto it = file_include_dirs_.find(file_key);
+        if (it != file_include_dirs_.end()) {
+            if (is_quote) {
+                for (const auto& q : it->second.quote_dirs) {
+                    search_dirs.push_back(q);
+                }
+            }
+            for (const auto& s : it->second.system_dirs) {
+                search_dirs.push_back(s);
+            }
+        }
+
+        // Consult default quote directories for quote includes
         if (is_quote) {
-            for (const auto& q : it->second.quote_dirs) {
+            for (const auto& q : default_include_dirs_.quote_dirs) {
                 search_dirs.push_back(q);
             }
         }
-        for (const auto& s : it->second.system_dirs) {
+    } else {
+        // 1. For quote includes: directory of the source file
+        if (is_quote) {
+            search_dirs.push_back(source_file.parent_path());
+        }
+
+        // 2. Check compilation database for include directories of this file
+        if (cmd != nullptr) {
+            for (const auto& inc : cmd->include_dirs) {
+                search_dirs.push_back(inc);
+            }
+        }
+
+        // 3. Check explicit include directories for this file
+        auto file_key = source_file.lexically_normal().generic_string();
+        auto it = file_include_dirs_.find(file_key);
+        if (it != file_include_dirs_.end()) {
+            if (is_quote) {
+                for (const auto& q : it->second.quote_dirs) {
+                    search_dirs.push_back(q);
+                }
+            }
+            for (const auto& s : it->second.system_dirs) {
+                search_dirs.push_back(s);
+            }
+        }
+
+        // 4. Check default include directories
+        if (is_quote) {
+            for (const auto& q : default_include_dirs_.quote_dirs) {
+                search_dirs.push_back(q);
+            }
+        }
+        for (const auto& s : default_include_dirs_.system_dirs) {
             search_dirs.push_back(s);
         }
-    }
-
-    // 4. Check default include directories
-    if (is_quote) {
-        for (const auto& q : default_include_dirs_.quote_dirs) {
-            search_dirs.push_back(q);
-        }
-    }
-    for (const auto& s : default_include_dirs_.system_dirs) {
-        search_dirs.push_back(s);
     }
 
     // 5. Conventional workspace include directories
@@ -329,24 +361,26 @@ DependencyResolver::resolve_c_cpp(const std::filesystem::path& source_file,
     }
 
     // 8. Unique filename suffix fallback
-    std::string suffix = "/" + header_path.generic_string();
-    const RegisteredFile* unique_match = nullptr;
-    size_t match_count = 0;
-    for (const auto& [path_str, rf] : files_by_rel_path_) {
-        if (path_str == header_path.generic_string() || path_str.ends_with(suffix)) {
-            unique_match = &rf;
-            match_count++;
+    if (allow_suffix_fallback_) {
+        std::string suffix = "/" + header_path.generic_string();
+        const RegisteredFile* unique_match = nullptr;
+        size_t match_count = 0;
+        for (const auto& [path_str, rf] : files_by_rel_path_) {
+            if (path_str == header_path.generic_string() || path_str.ends_with(suffix)) {
+                unique_match = &rf;
+                match_count++;
+            }
         }
-    }
-    if (match_count == 1 && unique_match != nullptr) {
-        return {CandidateTarget{
-            .target_symbol_id = std::nullopt,
-            .target_symbol_key = std::nullopt,
-            .target_file_path = unique_match->relative_path.generic_string(),
-            .rank = 2,
-            .confidence = 0.8,
-            .reason = "include",
-        }};
+        if (match_count == 1 && unique_match != nullptr) {
+            return {CandidateTarget{
+                .target_symbol_id = std::nullopt,
+                .target_symbol_key = std::nullopt,
+                .target_file_path = unique_match->relative_path.generic_string(),
+                .rank = 2,
+                .confidence = 0.8,
+                .reason = "include",
+            }};
+        }
     }
 
     // External header (system headers like <iostream>, <stdio.h>, etc.)

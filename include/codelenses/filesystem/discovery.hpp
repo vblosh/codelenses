@@ -39,6 +39,8 @@ struct DiscoveryOptions {
     std::unordered_map<std::string, Language> extension_overrides{};
     std::unordered_map<std::string, Language> path_overrides{};
     std::optional<Language> ambiguous_header_mode{std::nullopt};
+    bool allow_extensionless_headers{false};
+    std::optional<Language> extensionless_language{std::nullopt};
     bool respect_ignore_files{true}; // parse .gitignore and .codelensignore
     size_t max_file_size_bytes{32U * 1024U * 1024U};
     size_t max_discovered_files{1000000U};

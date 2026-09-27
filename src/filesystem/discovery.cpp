@@ -361,6 +361,10 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
             if (shebang_lang.has_value()) {
                 return *shebang_lang;
             }
+            if (ext.empty() && options_.allow_extensionless_headers &&
+                options_.extensionless_language.has_value()) {
+                return *options_.extensionless_language;
+            }
         }
 
         return Language::unknown;

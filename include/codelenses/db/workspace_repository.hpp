@@ -19,6 +19,7 @@ public:
     [[nodiscard]] std::optional<Workspace> get_by_id(int64_t id);
     [[nodiscard]] std::optional<Workspace> get_by_root_path(const std::string& root_path);
     [[nodiscard]] std::vector<Workspace> list_all();
+    [[nodiscard]] std::vector<Workspace> list_by_kind(WorkspaceKind kind);
     bool update(const Workspace& ws);
     bool update_status(int64_t id, WorkspaceStatus status,
                        const std::optional<std::string>& last_error = std::nullopt);

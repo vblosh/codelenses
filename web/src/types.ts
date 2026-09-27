@@ -19,6 +19,59 @@ export interface WorkspaceListResponse {
   total: number;
 }
 
+export interface LibraryDto {
+  id: number;
+  workspaceId: number;
+  name: string;
+  language: string;
+  provider: string;
+  sdkVersion?: string | null;
+  targetEnvironment?: string | null;
+  languageStandard?: string | null;
+  sysroot?: string | null;
+  sourceRoots: string[];
+  defaultIncludeRoots: string[];
+  defines: string[];
+  includePatterns: string[];
+  excludePatterns: string[];
+  fingerprint: string;
+  status: string;
+  lastError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryListResponse {
+  libraries: LibraryDto[];
+  total: number;
+}
+
+export interface WorkspaceLibrariesResponse {
+  workspaceId: number;
+  libraries: LibraryDto[];
+  total: number;
+}
+
+export interface CreateLibraryRequest {
+  name: string;
+  language: string;
+  sourceRoots: string[];
+  rootPath?: string;
+  provider?: string;
+  sdkVersion?: string | null;
+  targetEnvironment?: string | null;
+  languageStandard?: string | null;
+  sysroot?: string | null;
+  defaultIncludeRoots?: string[];
+  defines?: string[];
+  includePatterns?: string[];
+  excludePatterns?: string[];
+}
+
+export interface AttachLibraryRequest {
+  profileId: number;
+}
+
 export interface DiagnosticCountsDto {
   total: number;
   errors: number;

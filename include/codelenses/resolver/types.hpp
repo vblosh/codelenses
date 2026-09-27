@@ -50,6 +50,8 @@ struct CandidateTarget {
     int32_t rank{0};
     double confidence{1.0};
     std::string reason{};
+    std::optional<int64_t> owner_workspace_id{std::nullopt};
+    std::optional<int64_t> target_file_id{std::nullopt};
 
     friend bool operator==(const CandidateTarget&, const CandidateTarget&) = default;
 };
@@ -84,6 +86,7 @@ struct SymbolCandidate {
     SourceRange range{};
     bool is_definition{true};
     int32_t scope_distance{0};
+    int64_t owner_workspace_id{0}; // 0 = current/project, >0 = library
 
     friend bool operator==(const SymbolCandidate&, const SymbolCandidate&) = default;
 };

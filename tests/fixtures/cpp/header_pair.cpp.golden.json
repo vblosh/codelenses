@@ -95,13 +95,14 @@
     },
     {
       "candidate_targets": [
+        "std::string",
         "string"
       ],
       "enclosing_scope": "App",
       "end_byte": 73,
       "kind": "reference",
-      "start_byte": 67,
-      "written_name": "string"
+      "start_byte": 62,
+      "written_name": "std::string"
     },
     {
       "candidate_targets": [
@@ -146,13 +147,14 @@
     },
     {
       "candidate_targets": [
+        "ServiceStatus::Stopped",
         "Stopped"
       ],
       "enclosing_scope": "App",
       "end_byte": 136,
       "kind": "reference",
-      "start_byte": 129,
-      "written_name": "Stopped"
+      "start_byte": 114,
+      "written_name": "ServiceStatus::Stopped"
     },
     {
       "candidate_targets": [
@@ -162,16 +164,6 @@
       "end_byte": 149,
       "kind": "reference",
       "start_byte": 142,
-      "written_name": "Service"
-    },
-    {
-      "candidate_targets": [
-        "Service"
-      ],
-      "enclosing_scope": "App",
-      "end_byte": 159,
-      "kind": "reference",
-      "start_byte": 152,
       "written_name": "Service"
     },
     {
@@ -196,13 +188,14 @@
     },
     {
       "candidate_targets": [
+        "ServiceStatus::Running",
         "Running"
       ],
       "enclosing_scope": "App::Service::start",
       "end_byte": 234,
       "kind": "reference",
-      "start_byte": 227,
-      "written_name": "Running"
+      "start_byte": 212,
+      "written_name": "ServiceStatus::Running"
     },
     {
       "candidate_targets": [
@@ -226,13 +219,14 @@
     },
     {
       "candidate_targets": [
+        "ServiceStatus::Stopped",
         "Stopped"
       ],
       "enclosing_scope": "App::Service::stop",
       "end_byte": 315,
       "kind": "reference",
-      "start_byte": 308,
-      "written_name": "Stopped"
+      "start_byte": 293,
+      "written_name": "ServiceStatus::Stopped"
     },
     {
       "candidate_targets": [
@@ -266,13 +260,14 @@
     },
     {
       "candidate_targets": [
+        "App::Service",
         "Service"
       ],
       "enclosing_scope": "run_application",
       "end_byte": 444,
       "kind": "reference",
-      "start_byte": 437,
-      "written_name": "Service"
+      "start_byte": 432,
+      "written_name": "App::Service"
     },
     {
       "candidate_targets": [
@@ -316,13 +311,14 @@
     },
     {
       "candidate_targets": [
-        "Running"
+        "App::ServiceStatus::Running",
+        "ServiceStatus::Running"
       ],
       "enclosing_scope": "run_application",
       "end_byte": 527,
       "kind": "reference",
-      "start_byte": 520,
-      "written_name": "Running"
+      "start_byte": 500,
+      "written_name": "App::ServiceStatus::Running"
     },
     {
       "candidate_targets": [

@@ -8,6 +8,7 @@
 #include "codelenses/domain/diagnostic.hpp"
 #include "codelenses/domain/file.hpp"
 #include "codelenses/domain/job.hpp"
+#include "codelenses/domain/library.hpp"
 #include "codelenses/domain/occurrence.hpp"
 #include "codelenses/domain/range.hpp"
 #include "codelenses/domain/reference.hpp"
@@ -948,6 +949,143 @@ inline void to_json(nlohmann::json& j, const SymbolSearchHitDto& h) {
         {"kind", h.kind},
         {"rank", h.rank},
     };
+}
+
+// ==========================================
+// Library Profile DTOs (Standard-library indexing)
+// ==========================================
+struct CreateLibraryRequest {
+    std::string name;
+    std::string language;
+    std::string provider;
+    std::optional<std::string> sdk_version{std::nullopt};
+    std::optional<std::string> target_environment{std::nullopt};
+    std::optional<std::string> language_standard{std::nullopt};
+    std::optional<std::string> sysroot{std::nullopt};
+    std::vector<std::string> source_roots; // first entry is the backing library root
+    std::vector<std::string> default_include_roots;
+    std::vector<std::string> defines;
+    std::vector<std::string> include_patterns;
+    std::vector<std::string> exclude_patterns;
+};
+
+inline void from_json(const nlohmann::json& j, CreateLibraryRequest& req) {
+    auto get_str = [&](const char* camel, const char* snake, std::string& out) {
+        if (j.contains(camel))
+            out = j[camel].get<std::string>();
+        else if (j.contains(snake))
+            out = j[snake].get<std::string>();
+    };
+    get_str("name", "name", req.name);
+    get_str("language", "language", req.language);
+    get_str("provider", "provider", req.provider);
+
+    if (j.contains("sdkVersion") && !j["sdkVersion"].is_null())
+        req.sdk_version = j["sdkVersion"].get<std::string>();
+    else if (j.contains("sdk_version") && !j["sdk_version"].is_null())
+        req.sdk_version = j["sdk_version"].get<std::string>();
+
+    if (j.contains("targetEnvironment") && !j["targetEnvironment"].is_null())
+        req.target_environment = j["targetEnvironment"].get<std::string>();
+    else if (j.contains("target_environment") && !j["target_environment"].is_null())
+        req.target_environment = j["target_environment"].get<std::string>();
+
+    if (j.contains("languageStandard") && !j["languageStandard"].is_null())
+        req.language_standard = j["languageStandard"].get<std::string>();
+    else if (j.contains("language_standard") && !j["language_standard"].is_null())
+        req.language_standard = j["language_standard"].get<std::string>();
+
+    if (j.contains("sysroot") && !j["sysroot"].is_null())
+        req.sysroot = j["sysroot"].get<std::string>();
+
+    if (j.contains("sourceRoots"))
+        req.source_roots = j["sourceRoots"].get<std::vector<std::string>>();
+    else if (j.contains("source_roots"))
+        req.source_roots = j["source_roots"].get<std::vector<std::string>>();
+    else {
+        std::string root_path;
+        get_str("rootPath", "root_path", root_path);
+        if (!root_path.empty()) {
+            req.source_roots.push_back(root_path);
+        }
+    }
+
+    if (j.contains("defaultIncludeRoots"))
+        req.default_include_roots = j["defaultIncludeRoots"].get<std::vector<std::string>>();
+    else if (j.contains("default_include_roots"))
+        req.default_include_roots = j["default_include_roots"].get<std::vector<std::string>>();
+
+    if (j.contains("defines"))
+        req.defines = j["defines"].get<std::vector<std::string>>();
+
+    if (j.contains("includePatterns"))
+        req.include_patterns = j["includePatterns"].get<std::vector<std::string>>();
+    else if (j.contains("include_patterns"))
+        req.include_patterns = j["include_patterns"].get<std::vector<std::string>>();
+
+    if (j.contains("excludePatterns"))
+        req.exclude_patterns = j["excludePatterns"].get<std::vector<std::string>>();
+    else if (j.contains("exclude_patterns"))
+        req.exclude_patterns = j["exclude_patterns"].get<std::vector<std::string>>();
+}
+
+struct LibraryDto {
+    int64_t id{0};
+    int64_t workspace_id{0};
+    std::string name;
+    std::string language;
+    std::string provider;
+    std::optional<std::string> sdk_version;
+    std::optional<std::string> target_environment;
+    std::optional<std::string> language_standard;
+    std::optional<std::string> sysroot;
+    std::vector<std::string> source_roots;
+    std::vector<std::string> default_include_roots;
+    std::vector<std::string> defines;
+    std::vector<std::string> include_patterns;
+    std::vector<std::string> exclude_patterns;
+    std::string fingerprint;
+    std::string status{"idle"};
+    std::optional<std::string> last_error;
+    std::string created_at;
+    std::string updated_at;
+};
+
+inline void to_json(nlohmann::json& j, const LibraryDto& lib) {
+    j = nlohmann::json{
+        {"id", lib.id},
+        {"workspaceId", lib.workspace_id},
+        {"name", lib.name},
+        {"language", lib.language},
+        {"provider", lib.provider},
+        {"sdkVersion", lib.sdk_version ? nlohmann::json(*lib.sdk_version) : nullptr},
+        {"targetEnvironment",
+         lib.target_environment ? nlohmann::json(*lib.target_environment) : nullptr},
+        {"languageStandard",
+         lib.language_standard ? nlohmann::json(*lib.language_standard) : nullptr},
+        {"sysroot", lib.sysroot ? nlohmann::json(*lib.sysroot) : nullptr},
+        {"sourceRoots", lib.source_roots},
+        {"defaultIncludeRoots", lib.default_include_roots},
+        {"defines", lib.defines},
+        {"includePatterns", lib.include_patterns},
+        {"excludePatterns", lib.exclude_patterns},
+        {"fingerprint", lib.fingerprint},
+        {"status", lib.status},
+        {"lastError", lib.last_error ? nlohmann::json(*lib.last_error) : nullptr},
+        {"createdAt", lib.created_at},
+        {"updatedAt", lib.updated_at},
+    };
+}
+
+struct AttachLibraryRequest {
+    int64_t profile_id{0};
+};
+
+inline void from_json(const nlohmann::json& j, AttachLibraryRequest& req) {
+    if (j.contains("profileId"))
+        req.profile_id = j["profileId"].get<int64_t>();
+    else if (j.contains("profile_id"))
+        req.profile_id = j["profile_id"].get<int64_t>();
 }
 
 } // namespace codelenses::server

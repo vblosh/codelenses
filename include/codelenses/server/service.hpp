@@ -45,6 +45,16 @@ public:
     JobDto get_job(int64_t job_id);
     JobDto cancel_job(int64_t job_id);
 
+    // Library profiles (standard-library indexing)
+    LibraryDto create_library(const CreateLibraryRequest& req);
+    std::vector<LibraryDto> list_libraries();
+    LibraryDto get_library(int64_t profile_id);
+    void delete_library(int64_t profile_id);
+    JobDto trigger_library_index(int64_t profile_id, const IndexJobRequest& req);
+    std::vector<LibraryDto> list_workspace_libraries(int64_t workspace_id);
+    LibraryDto attach_library(int64_t workspace_id, const AttachLibraryRequest& req);
+    void detach_library(int64_t workspace_id, int64_t profile_id);
+
     // Tree, File Metadata & Range Content (F-06, F-10)
     WorkspaceTreeDto get_tree(int64_t workspace_id, const std::string& path);
     FileMetadataDto get_file(int64_t workspace_id, int64_t file_id);

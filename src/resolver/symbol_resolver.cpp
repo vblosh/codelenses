@@ -22,11 +22,20 @@ void SymbolResolver::add_symbol(const SymbolCandidate& candidate) {
     symbols_by_file_id_[candidate.file_id].push_back(idx);
 
     if (!candidate.symbol_key.empty()) {
-        symbol_by_key_[candidate.symbol_key] = idx;
+        auto it = symbol_by_key_.find(candidate.symbol_key);
+        if (it == symbol_by_key_.end() ||
+            (candidate.owner_workspace_id == 0 && symbols_[it->second].owner_workspace_id != 0)) {
+            symbol_by_key_[candidate.symbol_key] = idx;
+        }
     }
 }
 
 void SymbolResolver::add_symbol(const Symbol& symbol, const std::string& file_path) {
+    add_symbol(symbol, file_path, 0);
+}
+
+void SymbolResolver::add_symbol(const Symbol& symbol, const std::string& file_path,
+                                int64_t owner_workspace_id) {
     SymbolCandidate cand{
         .symbol_id = symbol.id,
         .file_id = symbol.file_id,
@@ -40,6 +49,8 @@ void SymbolResolver::add_symbol(const Symbol& symbol, const std::string& file_pa
         .enclosing_scope = symbol.container_name,
         .range = symbol.range,
         .is_definition = symbol.is_definition,
+        .scope_distance = 0,
+        .owner_workspace_id = owner_workspace_id,
     };
     add_symbol(cand);
 }
@@ -156,8 +167,27 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                 const auto& sym = symbols_[idx];
                 auto sym_lang = language_from_string(sym.language).value_or(Language::unknown);
                 if (languages_compatible(lang, sym_lang)) {
+                    // Visibility filtering: library symbols are visible only if their file is in imported_file_ids!
+                    if (sym.owner_workspace_id != 0) {
+                        if (std::find(imported_file_ids.begin(), imported_file_ids.end(),
+                                      sym.file_id) == imported_file_ids.end()) {
+                            continue;
+                        }
+                    }
                     matches.push_back(&sym);
                 }
+            }
+        }
+
+        if (matches.size() > 1) {
+            std::vector<const SymbolCandidate*> project_matches;
+            for (const auto* m : matches) {
+                if (m->owner_workspace_id == 0) {
+                    project_matches.push_back(m);
+                }
+            }
+            if (!project_matches.empty()) {
+                matches = std::move(project_matches);
             }
         }
 
@@ -171,6 +201,10 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                 .rank = 1,
                 .confidence = 1.0,
                 .reason = "explicit_qualification",
+                .owner_workspace_id = (matches[0]->owner_workspace_id != 0)
+                                          ? std::make_optional(matches[0]->owner_workspace_id)
+                                          : std::nullopt,
+                .target_file_id = matches[0]->file_id,
             });
         } else if (matches.size() > 1) {
             res.resolution = Resolution::ambiguous;
@@ -183,6 +217,10 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                     .rank = 0,
                     .confidence = 0.5,
                     .reason = "overload",
+                    .owner_workspace_id = (m->owner_workspace_id != 0)
+                                              ? std::make_optional(m->owner_workspace_id)
+                                              : std::nullopt,
+                    .target_file_id = m->file_id,
                 });
             }
         } else {
@@ -329,6 +367,10 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                     .rank = 1,
                     .confidence = 0.9,
                     .reason = "import",
+                    .owner_workspace_id = (imported_matches[0]->owner_workspace_id != 0)
+                                              ? std::make_optional(imported_matches[0]->owner_workspace_id)
+                                              : std::nullopt,
+                    .target_file_id = imported_matches[0]->file_id,
                 });
             } else {
                 res.resolution = Resolution::ambiguous;
@@ -341,6 +383,10 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                         .rank = 0,
                         .confidence = 0.5,
                         .reason = "overload",
+                        .owner_workspace_id = (m->owner_workspace_id != 0)
+                                                  ? std::make_optional(m->owner_workspace_id)
+                                                  : std::nullopt,
+                        .target_file_id = m->file_id,
                     });
                 }
             }
@@ -354,6 +400,10 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
     if (it_name != symbols_by_name_.end()) {
         for (std::size_t idx : it_name->second) {
             const auto& sym = symbols_[idx];
+            // Library symbols must NEVER match in workspace fallback without include evidence!
+            if (sym.owner_workspace_id != 0) {
+                continue;
+            }
             auto sym_lang = language_from_string(sym.language).value_or(Language::unknown);
             if (languages_compatible(lang, sym_lang)) {
                 global_matches.push_back(&sym);
@@ -372,6 +422,8 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                 .rank = 1,
                 .confidence = 0.8,
                 .reason = "workspace_fallback",
+                .owner_workspace_id = std::nullopt,
+                .target_file_id = global_matches[0]->file_id,
             });
         } else {
             res.resolution = Resolution::ambiguous;
@@ -384,6 +436,8 @@ SymbolResolver::resolve_occurrence(const Occurrence& occ, const std::string& fil
                     .rank = 0,
                     .confidence = 0.5,
                     .reason = "ambiguous_name",
+                    .owner_workspace_id = std::nullopt,
+                    .target_file_id = m->file_id,
                 });
             }
         }

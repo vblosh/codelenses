@@ -34,6 +34,9 @@ public:
 
     void set_go_module(std::string module_path);
 
+    void set_allow_suffix_fallback(bool allow) noexcept { allow_suffix_fallback_ = allow; }
+    [[nodiscard]] bool allow_suffix_fallback() const noexcept { return allow_suffix_fallback_; }
+
     [[nodiscard]] CandidateTarget resolve_dependency(Language lang,
                                                      const std::filesystem::path& source_file,
                                                      std::string_view raw_name) const;
@@ -89,6 +92,7 @@ private:
     std::unordered_map<std::string, std::vector<std::string>> ts_paths_;
 
     std::string go_module_;
+    bool allow_suffix_fallback_{true};
 };
 
 } // namespace codelenses::resolver

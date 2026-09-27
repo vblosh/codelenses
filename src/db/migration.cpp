@@ -450,11 +450,107 @@ END;
 )SQL";
 }
 
+namespace {
+
+std::string library_indexes_sql() {
+    return R"SQL(
+-- 002_library_indexes: Library index support
+
+PRAGMA foreign_keys = OFF;
+
+CREATE TABLE IF NOT EXISTS workspace_migration (
+    id                  INTEGER PRIMARY KEY,
+    root_path           TEXT NOT NULL,
+    name                TEXT NOT NULL,
+    include_json        TEXT NOT NULL DEFAULT '[]',
+    exclude_json        TEXT NOT NULL DEFAULT '[]',
+    default_ignores_json TEXT NOT NULL DEFAULT '[]',
+    compile_commands_path TEXT,
+    default_compile_command TEXT,
+    created_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revision            INTEGER NOT NULL DEFAULT 0,
+    status              TEXT NOT NULL DEFAULT 'idle'
+                        CHECK (status IN ('idle', 'indexing', 'ready', 'error')),
+    last_error          TEXT,
+    kind                TEXT NOT NULL DEFAULT 'project'
+);
+
+INSERT INTO workspace_migration (id, root_path, name, include_json, exclude_json, default_ignores_json,
+                                 compile_commands_path, default_compile_command, created_at, updated_at,
+                                 revision, status, last_error, kind)
+SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
+       compile_commands_path, default_compile_command, created_at, updated_at,
+       revision, status, last_error, 'project'
+FROM workspace;
+
+DROP TABLE workspace;
+
+ALTER TABLE workspace_migration RENAME TO workspace;
+
+CREATE UNIQUE INDEX IF NOT EXISTS workspace_project_root_idx
+    ON workspace(root_path) WHERE kind = 'project';
+
+CREATE INDEX IF NOT EXISTS workspace_status_idx
+    ON workspace(status);
+
+CREATE INDEX IF NOT EXISTS workspace_kind_idx
+    ON workspace(kind);
+
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS library_profile (
+    id                          INTEGER PRIMARY KEY,
+    workspace_id                INTEGER NOT NULL UNIQUE
+                                REFERENCES workspace(id) ON DELETE CASCADE,
+    name                        TEXT NOT NULL,
+    language                    TEXT NOT NULL,
+    provider                    TEXT NOT NULL DEFAULT '',
+    sdk_version                 TEXT,
+    target_environment          TEXT,
+    language_standard           TEXT,
+    sysroot                     TEXT,
+    source_roots_json           TEXT NOT NULL DEFAULT '[]',
+    default_include_roots_json  TEXT NOT NULL DEFAULT '[]',
+    defines_json                TEXT NOT NULL DEFAULT '[]',
+    include_json                TEXT NOT NULL DEFAULT '[]',
+    exclude_json                TEXT NOT NULL DEFAULT '[]',
+    header_rules_json           TEXT NOT NULL DEFAULT '{}',
+    resource_limits_json        TEXT NOT NULL DEFAULT '{}',
+    fingerprint                 TEXT NOT NULL DEFAULT '',
+    created_at                  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS library_profile_language_idx
+    ON library_profile(language);
+
+CREATE TABLE IF NOT EXISTS workspace_library (
+    workspace_id        INTEGER NOT NULL
+                        REFERENCES workspace(id) ON DELETE CASCADE,
+    profile_id          INTEGER NOT NULL
+                        REFERENCES library_profile(id) ON DELETE CASCADE,
+    attached_at         TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (workspace_id, profile_id)
+);
+
+CREATE INDEX IF NOT EXISTS workspace_library_profile_idx
+    ON workspace_library(profile_id);
+)SQL";
+}
+
+} // namespace
+
 MigrationRunner::MigrationRunner() {
     register_migration(Migration{
         .version = 1,
         .name = "001_initial_schema",
         .up_sql = initial_schema_sql(),
+    });
+    register_migration(Migration{
+        .version = 2,
+        .name = "002_library_indexes",
+        .up_sql = library_indexes_sql(),
     });
 }
 
@@ -522,6 +618,20 @@ void MigrationRunner::apply_pending(Connection& conn) {
     auto applied_vec = get_applied_versions(conn);
     std::unordered_set<int64_t> applied(applied_vec.begin(), applied_vec.end());
 
+    // Disable foreign key enforcement before running migrations that may alter/rebuild tables.
+    // In SQLite, PRAGMA foreign_keys is a no-op inside an active transaction, so it MUST be toggled
+    // outside the transaction.
+    conn.execute("PRAGMA foreign_keys = OFF;");
+    struct FkGuard {
+        Connection& c;
+        ~FkGuard() {
+            try {
+                c.execute("PRAGMA foreign_keys = ON;");
+            } catch (...) {
+            }
+        }
+    } fk_guard{conn};
+
     for (const auto& migration : migrations_) {
         if (applied.find(migration.version) != applied.end()) {
             continue;
@@ -537,6 +647,16 @@ void MigrationRunner::apply_pending(Connection& conn) {
         insert_stmt.execute();
 
         tx.commit();
+    }
+
+    // Verify foreign key integrity after all pending migrations have committed.
+    Statement fk_check(conn.handle(), "PRAGMA foreign_key_check;");
+    if (fk_check.step()) {
+        std::string table = fk_check.column_text(0);
+        int64_t rowid = fk_check.column_int64(1);
+        std::string parent = fk_check.column_text(2);
+        throw MigrationError("Foreign key constraint violation after migration in table " + table +
+                             " (rowid " + std::to_string(rowid) + ") referencing " + parent);
     }
 }
 
