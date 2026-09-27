@@ -1,0 +1,1640 @@
+{
+  "declarations": [
+    {
+      "end_byte": 28,
+      "is_definition": true,
+      "kind": "package",
+      "qualified_name": "com.example.generics",
+      "start_byte": 8,
+      "symbol_name": "com.example.generics"
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 148,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "com.example.generics.Identifiable",
+      "start_byte": 136,
+      "symbol_name": "Identifiable"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Identifiable",
+      "end_byte": 190,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Identifiable.getId",
+      "start_byte": 185,
+      "symbol_name": "getId"
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 224,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "com.example.generics.Repository",
+      "start_byte": 214,
+      "symbol_name": "Repository"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 296,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Repository.findById",
+      "start_byte": 288,
+      "symbol_name": "findById"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 318,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Repository.save",
+      "start_byte": 314,
+      "symbol_name": "save"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 349,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Repository.findAll",
+      "start_byte": 342,
+      "symbol_name": "findAll"
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 383,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.generics.BaseRepository",
+      "start_byte": 369,
+      "symbol_name": "BaseRepository"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 508,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.generics.BaseRepository.storage",
+      "start_byte": 501,
+      "symbol_name": "storage"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 536,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.BaseRepository",
+      "start_byte": 522,
+      "symbol_name": "BaseRepository"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 625,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.findById",
+      "start_byte": 617,
+      "symbol_name": "findById"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 831,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.save",
+      "start_byte": 827,
+      "symbol_name": "save"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 925,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.findAll",
+      "start_byte": 918,
+      "symbol_name": "findAll"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1017,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.mapEntities",
+      "start_byte": 1006,
+      "symbol_name": "mapEntities"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1229,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.find",
+      "start_byte": 1225,
+      "symbol_name": "find"
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1292,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.BaseRepository.find",
+      "start_byte": 1288,
+      "symbol_name": "find"
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 1375,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.generics.Account",
+      "start_byte": 1368,
+      "symbol_name": "Account"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1433,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.generics.Account.id",
+      "start_byte": 1431,
+      "symbol_name": "id"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1464,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.generics.Account.name",
+      "start_byte": 1460,
+      "symbol_name": "name"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1485,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Account.Account",
+      "start_byte": 1478,
+      "symbol_name": "Account"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1600,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Account.getId",
+      "start_byte": 1595,
+      "symbol_name": "getId"
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1661,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.Account.getName",
+      "start_byte": 1654,
+      "symbol_name": "getName"
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 1728,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.generics.AccountService",
+      "start_byte": 1714,
+      "symbol_name": "AccountService"
+    },
+    {
+      "enclosing_scope": "com.example.generics.AccountService",
+      "end_byte": 1754,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.generics.AccountService.execute",
+      "start_byte": 1747,
+      "symbol_name": "execute"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Java",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "java.util.ArrayList",
+        "ArrayList"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 57,
+      "kind": "import",
+      "start_byte": 38,
+      "written_name": "java.util.ArrayList"
+    },
+    {
+      "candidate_targets": [
+        "java.util.List",
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 80,
+      "kind": "import",
+      "start_byte": 66,
+      "written_name": "java.util.List"
+    },
+    {
+      "candidate_targets": [
+        "java.util.function.Function",
+        "Function"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 116,
+      "kind": "import",
+      "start_byte": 89,
+      "written_name": "java.util.function.Function"
+    },
+    {
+      "candidate_targets": [
+        "Comparable"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 170,
+      "kind": "reference",
+      "start_byte": 160,
+      "written_name": "Comparable"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 173,
+      "kind": "reference",
+      "start_byte": 171,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics.Identifiable",
+      "end_byte": 184,
+      "kind": "reference",
+      "start_byte": 182,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "Identifiable"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 247,
+      "kind": "reference",
+      "start_byte": 235,
+      "written_name": "Identifiable"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 250,
+      "kind": "reference",
+      "start_byte": 248,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "Comparable"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 274,
+      "kind": "reference",
+      "start_byte": 264,
+      "written_name": "Comparable"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 277,
+      "kind": "reference",
+      "start_byte": 275,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 299,
+      "kind": "reference",
+      "start_byte": 297,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 287,
+      "kind": "reference",
+      "start_byte": 286,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 320,
+      "kind": "reference",
+      "start_byte": 319,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 338,
+      "kind": "reference",
+      "start_byte": 334,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 340,
+      "kind": "reference",
+      "start_byte": 339,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "Identifiable"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 406,
+      "kind": "reference",
+      "start_byte": 394,
+      "written_name": "Identifiable"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 409,
+      "kind": "reference",
+      "start_byte": 407,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "Comparable"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 433,
+      "kind": "reference",
+      "start_byte": 423,
+      "written_name": "Comparable"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 436,
+      "kind": "reference",
+      "start_byte": 434,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "Repository<T, ID>",
+        "Repository"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 471,
+      "kind": "implementation",
+      "start_byte": 454,
+      "written_name": "Repository<T, ID>"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 497,
+      "kind": "reference",
+      "start_byte": 493,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 499,
+      "kind": "reference",
+      "start_byte": 498,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "this.storage",
+        "storage"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.BaseRepository",
+      "end_byte": 561,
+      "kind": "reference",
+      "start_byte": 549,
+      "written_name": "this.storage"
+    },
+    {
+      "candidate_targets": [
+        "ArrayList<>",
+        "ArrayList"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.BaseRepository",
+      "end_byte": 579,
+      "kind": "call",
+      "start_byte": 568,
+      "written_name": "ArrayList<>"
+    },
+    {
+      "candidate_targets": [
+        "Override"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 603,
+      "kind": "reference",
+      "metadata_json": "{\"is_annotation\":true,\"is_override\":true}",
+      "start_byte": 595,
+      "written_name": "Override"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 628,
+      "kind": "reference",
+      "start_byte": 626,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 616,
+      "kind": "reference",
+      "start_byte": 615,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 649,
+      "kind": "reference",
+      "start_byte": 648,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "this.storage",
+        "storage"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 669,
+      "kind": "reference",
+      "start_byte": 657,
+      "written_name": "this.storage"
+    },
+    {
+      "candidate_targets": [
+        "item.getId().equals",
+        "equals"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 708,
+      "kind": "call",
+      "start_byte": 689,
+      "written_name": "item.getId().equals"
+    },
+    {
+      "candidate_targets": [
+        "item.getId",
+        "getId"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 699,
+      "kind": "call",
+      "start_byte": 689,
+      "written_name": "item.getId"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 693,
+      "kind": "reference",
+      "start_byte": 689,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 711,
+      "kind": "reference",
+      "start_byte": 709,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findById",
+      "end_byte": 743,
+      "kind": "reference",
+      "start_byte": 739,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "Override"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.save",
+      "end_byte": 810,
+      "kind": "reference",
+      "metadata_json": "{\"is_annotation\":true,\"is_override\":true}",
+      "start_byte": 802,
+      "written_name": "Override"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 833,
+      "kind": "reference",
+      "start_byte": 832,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "this.storage.add",
+        "add"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.save",
+      "end_byte": 868,
+      "kind": "call",
+      "start_byte": 852,
+      "written_name": "this.storage.add"
+    },
+    {
+      "candidate_targets": [
+        "this.storage",
+        "storage"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.save",
+      "end_byte": 864,
+      "kind": "reference",
+      "start_byte": 852,
+      "written_name": "this.storage"
+    },
+    {
+      "candidate_targets": [
+        "entity"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.save",
+      "end_byte": 875,
+      "kind": "reference",
+      "start_byte": 869,
+      "written_name": "entity"
+    },
+    {
+      "candidate_targets": [
+        "Override"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findAll",
+      "end_byte": 898,
+      "kind": "reference",
+      "metadata_json": "{\"is_annotation\":true,\"is_override\":true}",
+      "start_byte": 890,
+      "written_name": "Override"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 914,
+      "kind": "reference",
+      "start_byte": 910,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 916,
+      "kind": "reference",
+      "start_byte": 915,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "ArrayList<>",
+        "ArrayList"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findAll",
+      "end_byte": 960,
+      "kind": "call",
+      "start_byte": 949,
+      "written_name": "ArrayList<>"
+    },
+    {
+      "candidate_targets": [
+        "this.storage",
+        "storage"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.findAll",
+      "end_byte": 973,
+      "kind": "reference",
+      "start_byte": 961,
+      "written_name": "this.storage"
+    },
+    {
+      "candidate_targets": [
+        "Function"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1026,
+      "kind": "reference",
+      "start_byte": 1018,
+      "written_name": "Function"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1028,
+      "kind": "reference",
+      "start_byte": 1027,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "R"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1031,
+      "kind": "reference",
+      "start_byte": 1030,
+      "written_name": "R"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1002,
+      "kind": "reference",
+      "start_byte": 998,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "R"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1004,
+      "kind": "reference",
+      "start_byte": 1003,
+      "written_name": "R"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1055,
+      "kind": "reference",
+      "start_byte": 1051,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "R"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1057,
+      "kind": "reference",
+      "start_byte": 1056,
+      "written_name": "R"
+    },
+    {
+      "candidate_targets": [
+        "ArrayList<>",
+        "ArrayList"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1084,
+      "kind": "call",
+      "start_byte": 1073,
+      "written_name": "ArrayList<>"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1102,
+      "kind": "reference",
+      "start_byte": 1101,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "this.storage",
+        "storage"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1122,
+      "kind": "reference",
+      "start_byte": 1110,
+      "written_name": "this.storage"
+    },
+    {
+      "candidate_targets": [
+        "results.add",
+        "add"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1149,
+      "kind": "call",
+      "start_byte": 1138,
+      "written_name": "results.add"
+    },
+    {
+      "candidate_targets": [
+        "results"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1145,
+      "kind": "reference",
+      "start_byte": 1138,
+      "written_name": "results"
+    },
+    {
+      "candidate_targets": [
+        "mapper.apply",
+        "apply"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1162,
+      "kind": "call",
+      "start_byte": 1150,
+      "written_name": "mapper.apply"
+    },
+    {
+      "candidate_targets": [
+        "mapper"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1156,
+      "kind": "reference",
+      "start_byte": 1150,
+      "written_name": "mapper"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1167,
+      "kind": "reference",
+      "start_byte": 1163,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "results"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.mapEntities",
+      "end_byte": 1203,
+      "kind": "reference",
+      "start_byte": 1196,
+      "written_name": "results"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1232,
+      "kind": "reference",
+      "start_byte": 1230,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1224,
+      "kind": "reference",
+      "start_byte": 1223,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "findById"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.find",
+      "end_byte": 1262,
+      "kind": "call",
+      "start_byte": 1254,
+      "written_name": "findById"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.find",
+      "end_byte": 1265,
+      "kind": "reference",
+      "start_byte": 1263,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1295,
+      "kind": "reference",
+      "start_byte": 1293,
+      "written_name": "ID"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1306,
+      "kind": "reference",
+      "start_byte": 1300,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "T"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1287,
+      "kind": "reference",
+      "start_byte": 1286,
+      "written_name": "T"
+    },
+    {
+      "candidate_targets": [
+        "findById"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.find",
+      "end_byte": 1340,
+      "kind": "call",
+      "start_byte": 1332,
+      "written_name": "findById"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "com.example.generics.BaseRepository.find",
+      "end_byte": 1343,
+      "kind": "reference",
+      "start_byte": 1341,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "Identifiable<Long>",
+        "Identifiable"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1405,
+      "kind": "implementation",
+      "start_byte": 1387,
+      "written_name": "Identifiable<Long>"
+    },
+    {
+      "candidate_targets": [
+        "Long"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1430,
+      "kind": "reference",
+      "start_byte": 1426,
+      "written_name": "Long"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1459,
+      "kind": "reference",
+      "start_byte": 1453,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "Long"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1490,
+      "kind": "reference",
+      "start_byte": 1486,
+      "written_name": "Long"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1501,
+      "kind": "reference",
+      "start_byte": 1495,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "this.id",
+        "id"
+      ],
+      "enclosing_scope": "com.example.generics.Account.Account",
+      "end_byte": 1525,
+      "kind": "reference",
+      "start_byte": 1518,
+      "written_name": "this.id"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "com.example.generics.Account.Account",
+      "end_byte": 1530,
+      "kind": "reference",
+      "start_byte": 1528,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "this.name",
+        "name"
+      ],
+      "enclosing_scope": "com.example.generics.Account.Account",
+      "end_byte": 1549,
+      "kind": "reference",
+      "start_byte": 1540,
+      "written_name": "this.name"
+    },
+    {
+      "candidate_targets": [
+        "name"
+      ],
+      "enclosing_scope": "com.example.generics.Account.Account",
+      "end_byte": 1556,
+      "kind": "reference",
+      "start_byte": 1552,
+      "written_name": "name"
+    },
+    {
+      "candidate_targets": [
+        "Override"
+      ],
+      "enclosing_scope": "com.example.generics.Account.getId",
+      "end_byte": 1578,
+      "kind": "reference",
+      "metadata_json": "{\"is_annotation\":true,\"is_override\":true}",
+      "start_byte": 1570,
+      "written_name": "Override"
+    },
+    {
+      "candidate_targets": [
+        "Long"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1594,
+      "kind": "reference",
+      "start_byte": 1590,
+      "written_name": "Long"
+    },
+    {
+      "candidate_targets": [
+        "this.id",
+        "id"
+      ],
+      "enclosing_scope": "com.example.generics.Account.getId",
+      "end_byte": 1627,
+      "kind": "reference",
+      "start_byte": 1620,
+      "written_name": "this.id"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1653,
+      "kind": "reference",
+      "start_byte": 1647,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "this.name",
+        "name"
+      ],
+      "enclosing_scope": "com.example.generics.Account.getName",
+      "end_byte": 1690,
+      "kind": "reference",
+      "start_byte": 1681,
+      "written_name": "this.name"
+    },
+    {
+      "candidate_targets": [
+        "BaseRepository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1781,
+      "kind": "reference",
+      "start_byte": 1767,
+      "written_name": "BaseRepository"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1789,
+      "kind": "reference",
+      "start_byte": 1782,
+      "written_name": "Account"
+    },
+    {
+      "candidate_targets": [
+        "Long"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1795,
+      "kind": "reference",
+      "start_byte": 1791,
+      "written_name": "Long"
+    },
+    {
+      "candidate_targets": [
+        "BaseRepository<>",
+        "BaseRepository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1830,
+      "kind": "call",
+      "start_byte": 1814,
+      "written_name": "BaseRepository<>"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1849,
+      "kind": "reference",
+      "start_byte": 1842,
+      "written_name": "Account"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1871,
+      "kind": "call",
+      "start_byte": 1864,
+      "written_name": "Account"
+    },
+    {
+      "candidate_targets": [
+        "repository.save",
+        "save"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1911,
+      "kind": "call",
+      "start_byte": 1896,
+      "written_name": "repository.save"
+    },
+    {
+      "candidate_targets": [
+        "repository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1906,
+      "kind": "reference",
+      "start_byte": 1896,
+      "written_name": "repository"
+    },
+    {
+      "candidate_targets": [
+        "account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1919,
+      "kind": "reference",
+      "start_byte": 1912,
+      "written_name": "account"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1937,
+      "kind": "reference",
+      "start_byte": 1930,
+      "written_name": "Account"
+    },
+    {
+      "candidate_targets": [
+        "repository.findById",
+        "findById"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1965,
+      "kind": "call",
+      "start_byte": 1946,
+      "written_name": "repository.findById"
+    },
+    {
+      "candidate_targets": [
+        "repository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1956,
+      "kind": "reference",
+      "start_byte": 1946,
+      "written_name": "repository"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 1986,
+      "kind": "reference",
+      "start_byte": 1979,
+      "written_name": "Account"
+    },
+    {
+      "candidate_targets": [
+        "repository.find",
+        "find"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2009,
+      "kind": "call",
+      "start_byte": 1994,
+      "written_name": "repository.find"
+    },
+    {
+      "candidate_targets": [
+        "repository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2004,
+      "kind": "reference",
+      "start_byte": 1994,
+      "written_name": "repository"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2030,
+      "kind": "reference",
+      "start_byte": 2023,
+      "written_name": "Account"
+    },
+    {
+      "candidate_targets": [
+        "repository.find",
+        "find"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2057,
+      "kind": "call",
+      "start_byte": 2042,
+      "written_name": "repository.find"
+    },
+    {
+      "candidate_targets": [
+        "repository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2052,
+      "kind": "reference",
+      "start_byte": 2042,
+      "written_name": "repository"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2085,
+      "kind": "reference",
+      "start_byte": 2081,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2092,
+      "kind": "reference",
+      "start_byte": 2086,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "repository.mapEntities",
+        "mapEntities"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2124,
+      "kind": "call",
+      "start_byte": 2102,
+      "written_name": "repository.mapEntities"
+    },
+    {
+      "candidate_targets": [
+        "repository"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2112,
+      "kind": "reference",
+      "start_byte": 2102,
+      "written_name": "repository"
+    },
+    {
+      "candidate_targets": [
+        "Account.getName",
+        "getName"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2141,
+      "kind": "call",
+      "start_byte": 2134,
+      "written_name": "getName"
+    },
+    {
+      "candidate_targets": [
+        "Account"
+      ],
+      "enclosing_scope": "com.example.generics.AccountService.execute",
+      "end_byte": 2132,
+      "kind": "reference",
+      "start_byte": 2125,
+      "written_name": "Account"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 28,
+      "end_column": 29,
+      "end_line": 1,
+      "kind": "package",
+      "name": "com.example.generics",
+      "qualified_name": "com.example.generics",
+      "signature": "package com.example.generics",
+      "start_byte": 8,
+      "start_column": 9,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 148,
+      "end_column": 30,
+      "end_line": 7,
+      "kind": "interface",
+      "name": "Identifiable",
+      "qualified_name": "com.example.generics.Identifiable",
+      "signature": "public interface Identifiable<ID extends Comparable<ID>>",
+      "start_byte": 136,
+      "start_column": 18,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "com.example.generics.Identifiable",
+      "end_byte": 190,
+      "end_column": 13,
+      "end_line": 8,
+      "kind": "method",
+      "name": "getId",
+      "qualified_name": "com.example.generics.Identifiable.getId",
+      "signature": "ID getId()",
+      "start_byte": 185,
+      "start_column": 8,
+      "start_line": 8
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 224,
+      "end_column": 28,
+      "end_line": 11,
+      "kind": "interface",
+      "name": "Repository",
+      "qualified_name": "com.example.generics.Repository",
+      "signature": "public interface Repository<T extends Identifiable<ID>, ID extends Comparable<ID>>",
+      "start_byte": 214,
+      "start_column": 18,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 296,
+      "end_column": 15,
+      "end_line": 12,
+      "kind": "method",
+      "name": "findById",
+      "qualified_name": "com.example.generics.Repository.findById",
+      "signature": "T findById(ID id)",
+      "start_byte": 288,
+      "start_column": 7,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 318,
+      "end_column": 14,
+      "end_line": 13,
+      "kind": "method",
+      "name": "save",
+      "qualified_name": "com.example.generics.Repository.save",
+      "signature": "void save(T entity)",
+      "start_byte": 314,
+      "start_column": 10,
+      "start_line": 13
+    },
+    {
+      "enclosing_scope": "com.example.generics.Repository",
+      "end_byte": 349,
+      "end_column": 20,
+      "end_line": 14,
+      "kind": "method",
+      "name": "findAll",
+      "qualified_name": "com.example.generics.Repository.findAll",
+      "signature": "List<T> findAll()",
+      "start_byte": 342,
+      "start_column": 13,
+      "start_line": 14
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 383,
+      "end_column": 28,
+      "end_line": 17,
+      "kind": "class",
+      "name": "BaseRepository",
+      "qualified_name": "com.example.generics.BaseRepository",
+      "signature": "public class BaseRepository<T extends Identifiable<ID>, ID extends Comparable<ID>> implements Repository<T, ID>",
+      "start_byte": 369,
+      "start_column": 14,
+      "start_line": 17
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 508,
+      "end_column": 34,
+      "end_line": 20,
+      "kind": "field",
+      "name": "storage",
+      "qualified_name": "com.example.generics.BaseRepository.storage",
+      "signature": "private final List<T> storage",
+      "start_byte": 501,
+      "start_column": 27,
+      "start_line": 20
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 536,
+      "end_column": 26,
+      "end_line": 22,
+      "kind": "method",
+      "name": "BaseRepository",
+      "qualified_name": "com.example.generics.BaseRepository.BaseRepository",
+      "signature": "public BaseRepository()",
+      "start_byte": 522,
+      "start_column": 12,
+      "start_line": 22
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 625,
+      "end_column": 22,
+      "end_line": 27,
+      "kind": "method",
+      "name": "findById",
+      "qualified_name": "com.example.generics.BaseRepository.findById",
+      "signature": "public T findById(ID id)",
+      "start_byte": 617,
+      "start_column": 14,
+      "start_line": 27
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 831,
+      "end_column": 21,
+      "end_line": 37,
+      "kind": "method",
+      "name": "save",
+      "qualified_name": "com.example.generics.BaseRepository.save",
+      "signature": "public void save(T entity)",
+      "start_byte": 827,
+      "start_column": 17,
+      "start_line": 37
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 925,
+      "end_column": 27,
+      "end_line": 42,
+      "kind": "method",
+      "name": "findAll",
+      "qualified_name": "com.example.generics.BaseRepository.findAll",
+      "signature": "public List<T> findAll()",
+      "start_byte": 918,
+      "start_column": 20,
+      "start_line": 42
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1017,
+      "end_column": 35,
+      "end_line": 46,
+      "kind": "method",
+      "name": "mapEntities",
+      "qualified_name": "com.example.generics.BaseRepository.mapEntities",
+      "signature": "public <R> List<R> mapEntities(Function<T, R> mapper)",
+      "start_byte": 1006,
+      "start_column": 24,
+      "start_line": 46
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1229,
+      "end_column": 18,
+      "end_line": 54,
+      "kind": "method",
+      "name": "find",
+      "qualified_name": "com.example.generics.BaseRepository.find",
+      "signature": "public T find(ID id)",
+      "start_byte": 1225,
+      "start_column": 14,
+      "start_line": 54
+    },
+    {
+      "enclosing_scope": "com.example.generics.BaseRepository",
+      "end_byte": 1292,
+      "end_column": 18,
+      "end_line": 58,
+      "kind": "method",
+      "name": "find",
+      "qualified_name": "com.example.generics.BaseRepository.find",
+      "signature": "public T find(ID id, String filter)",
+      "start_byte": 1288,
+      "start_column": 14,
+      "start_line": 58
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 1375,
+      "end_column": 21,
+      "end_line": 63,
+      "kind": "class",
+      "name": "Account",
+      "qualified_name": "com.example.generics.Account",
+      "signature": "public class Account implements Identifiable<Long>",
+      "start_byte": 1368,
+      "start_column": 14,
+      "start_line": 63
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1433,
+      "end_column": 26,
+      "end_line": 64,
+      "kind": "field",
+      "name": "id",
+      "qualified_name": "com.example.generics.Account.id",
+      "signature": "private final Long id",
+      "start_byte": 1431,
+      "start_column": 24,
+      "start_line": 64
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1464,
+      "end_column": 30,
+      "end_line": 65,
+      "kind": "field",
+      "name": "name",
+      "qualified_name": "com.example.generics.Account.name",
+      "signature": "private final String name",
+      "start_byte": 1460,
+      "start_column": 26,
+      "start_line": 65
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1485,
+      "end_column": 19,
+      "end_line": 67,
+      "kind": "method",
+      "name": "Account",
+      "qualified_name": "com.example.generics.Account.Account",
+      "signature": "public Account(Long id, String name)",
+      "start_byte": 1478,
+      "start_column": 12,
+      "start_line": 67
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1600,
+      "end_column": 22,
+      "end_line": 73,
+      "kind": "method",
+      "name": "getId",
+      "qualified_name": "com.example.generics.Account.getId",
+      "signature": "public Long getId()",
+      "start_byte": 1595,
+      "start_column": 17,
+      "start_line": 73
+    },
+    {
+      "enclosing_scope": "com.example.generics.Account",
+      "end_byte": 1661,
+      "end_column": 26,
+      "end_line": 77,
+      "kind": "method",
+      "name": "getName",
+      "qualified_name": "com.example.generics.Account.getName",
+      "signature": "public String getName()",
+      "start_byte": 1654,
+      "start_column": 19,
+      "start_line": 77
+    },
+    {
+      "enclosing_scope": "com.example.generics",
+      "end_byte": 1728,
+      "end_column": 28,
+      "end_line": 82,
+      "kind": "class",
+      "name": "AccountService",
+      "qualified_name": "com.example.generics.AccountService",
+      "signature": "public class AccountService",
+      "start_byte": 1714,
+      "start_column": 14,
+      "start_line": 82
+    },
+    {
+      "enclosing_scope": "com.example.generics.AccountService",
+      "end_byte": 1754,
+      "end_column": 24,
+      "end_line": 83,
+      "kind": "method",
+      "name": "execute",
+      "qualified_name": "com.example.generics.AccountService.execute",
+      "signature": "public void execute()",
+      "start_byte": 1747,
+      "start_column": 17,
+      "start_line": 83
+    }
+  ]
+}

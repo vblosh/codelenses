@@ -1,0 +1,1280 @@
+{
+  "declarations": [
+    {
+      "end_byte": 30,
+      "is_definition": true,
+      "kind": "package",
+      "qualified_name": "com.example.structures",
+      "start_byte": 8,
+      "symbol_name": "com.example.structures"
+    },
+    {
+      "enclosing_scope": "com.example.structures",
+      "end_byte": 112,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.structures.OuterContainer",
+      "start_byte": 98,
+      "symbol_name": "OuterContainer"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 136,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.structures.OuterContainer.id",
+      "start_byte": 134,
+      "symbol_name": "id"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 172,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.structures.OuterContainer.status",
+      "start_byte": 166,
+      "symbol_name": "status"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 206,
+      "is_definition": true,
+      "kind": "enum",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus",
+      "start_byte": 191,
+      "symbol_name": "ContainerStatus"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.ContainerStatus",
+      "end_byte": 222,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus.EMPTY",
+      "start_byte": 217,
+      "symbol_name": "EMPTY"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.ContainerStatus",
+      "end_byte": 238,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus.ACTIVE",
+      "start_byte": 232,
+      "symbol_name": "ACTIVE"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.ContainerStatus",
+      "end_byte": 252,
+      "is_definition": true,
+      "kind": "enum_member",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus.FULL",
+      "start_byte": 248,
+      "symbol_name": "FULL"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 300,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "com.example.structures.OuterContainer.StateChangeListener",
+      "start_byte": 281,
+      "symbol_name": "StateChangeListener"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.StateChangeListener",
+      "end_byte": 330,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.StateChangeListener.onStateChanged",
+      "start_byte": 316,
+      "symbol_name": "onStateChanged"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 430,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration",
+      "start_byte": 417,
+      "symbol_name": "Configuration"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 470,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.maxCapacity",
+      "start_byte": 459,
+      "symbol_name": "maxCapacity"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 515,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.allowOverflow",
+      "start_byte": 502,
+      "symbol_name": "allowOverflow"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 546,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.Configuration",
+      "start_byte": 533,
+      "symbol_name": "Configuration"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 725,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.getMaxCapacity",
+      "start_byte": 711,
+      "symbol_name": "getMaxCapacity"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 816,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.isAllowOverflow",
+      "start_byte": 801,
+      "symbol_name": "isAllowOverflow"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 905,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker",
+      "start_byte": 894,
+      "symbol_name": "InnerWorker"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 942,
+      "is_definition": true,
+      "kind": "field",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.processedCount",
+      "start_byte": 928,
+      "symbol_name": "processedCount"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 971,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.InnerWorker",
+      "start_byte": 960,
+      "symbol_name": "InnerWorker"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 1055,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.performWork",
+      "start_byte": 1044,
+      "symbol_name": "performWork"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 1203,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.getProcessedCount",
+      "start_byte": 1186,
+      "symbol_name": "getProcessedCount"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1290,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.OuterContainer",
+      "start_byte": 1276,
+      "symbol_name": "OuterContainer"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1415,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.processWithLocalClass",
+      "start_byte": 1394,
+      "symbol_name": "processWithLocalClass"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1466,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor",
+      "start_byte": 1452,
+      "symbol_name": "LocalProcessor"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor",
+      "end_byte": 1502,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor.countItems",
+      "start_byte": 1492,
+      "symbol_name": "countItems"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1815,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.registerListener",
+      "start_byte": 1799,
+      "symbol_name": "registerListener"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1993,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.execute",
+      "start_byte": 1986,
+      "symbol_name": "execute"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2388,
+      "is_definition": true,
+      "kind": "class",
+      "qualified_name": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "start_byte": 2173,
+      "symbol_name": "$anon_StateChangeListener_1"
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "end_byte": 2261,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "start_byte": 2247,
+      "symbol_name": "onStateChanged"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Java",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "java.util.ArrayList",
+        "ArrayList"
+      ],
+      "enclosing_scope": "com.example.structures",
+      "end_byte": 59,
+      "kind": "import",
+      "start_byte": 40,
+      "written_name": "java.util.ArrayList"
+    },
+    {
+      "candidate_targets": [
+        "java.util.List",
+        "List"
+      ],
+      "enclosing_scope": "com.example.structures",
+      "end_byte": 82,
+      "kind": "import",
+      "start_byte": 68,
+      "written_name": "java.util.List"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 133,
+      "kind": "reference",
+      "start_byte": 127,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 165,
+      "kind": "reference",
+      "start_byte": 150,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.StateChangeListener",
+      "end_byte": 346,
+      "kind": "reference",
+      "start_byte": 331,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.StateChangeListener",
+      "end_byte": 373,
+      "kind": "reference",
+      "start_byte": 358,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "this.maxCapacity",
+        "maxCapacity"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration.Configuration",
+      "end_byte": 617,
+      "kind": "reference",
+      "start_byte": 601,
+      "written_name": "this.maxCapacity"
+    },
+    {
+      "candidate_targets": [
+        "maxCapacity"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration.Configuration",
+      "end_byte": 631,
+      "kind": "reference",
+      "start_byte": 620,
+      "written_name": "maxCapacity"
+    },
+    {
+      "candidate_targets": [
+        "this.allowOverflow",
+        "allowOverflow"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration.Configuration",
+      "end_byte": 663,
+      "kind": "reference",
+      "start_byte": 645,
+      "written_name": "this.allowOverflow"
+    },
+    {
+      "candidate_targets": [
+        "allowOverflow"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration.Configuration",
+      "end_byte": 679,
+      "kind": "reference",
+      "start_byte": 666,
+      "written_name": "allowOverflow"
+    },
+    {
+      "candidate_targets": [
+        "this.maxCapacity",
+        "maxCapacity"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration.getMaxCapacity",
+      "end_byte": 765,
+      "kind": "reference",
+      "start_byte": 749,
+      "written_name": "this.maxCapacity"
+    },
+    {
+      "candidate_targets": [
+        "this.allowOverflow",
+        "allowOverflow"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration.isAllowOverflow",
+      "end_byte": 858,
+      "kind": "reference",
+      "start_byte": 840,
+      "written_name": "this.allowOverflow"
+    },
+    {
+      "candidate_targets": [
+        "this.processedCount",
+        "processedCount"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker.InnerWorker",
+      "end_byte": 1007,
+      "kind": "reference",
+      "start_byte": 988,
+      "written_name": "this.processedCount"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 1062,
+      "kind": "reference",
+      "start_byte": 1056,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "item"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker.performWork",
+      "end_byte": 1091,
+      "kind": "reference",
+      "start_byte": 1087,
+      "written_name": "item"
+    },
+    {
+      "candidate_targets": [
+        "this.processedCount",
+        "processedCount"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker.performWork",
+      "end_byte": 1138,
+      "kind": "reference",
+      "start_byte": 1119,
+      "written_name": "this.processedCount"
+    },
+    {
+      "candidate_targets": [
+        "this.processedCount",
+        "processedCount"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker.getProcessedCount",
+      "end_byte": 1246,
+      "kind": "reference",
+      "start_byte": 1227,
+      "written_name": "this.processedCount"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1297,
+      "kind": "reference",
+      "start_byte": 1291,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "this.id",
+        "id"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.OuterContainer",
+      "end_byte": 1319,
+      "kind": "reference",
+      "start_byte": 1312,
+      "written_name": "this.id"
+    },
+    {
+      "candidate_targets": [
+        "id"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.OuterContainer",
+      "end_byte": 1324,
+      "kind": "reference",
+      "start_byte": 1322,
+      "written_name": "id"
+    },
+    {
+      "candidate_targets": [
+        "this.status",
+        "status"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.OuterContainer",
+      "end_byte": 1345,
+      "kind": "reference",
+      "start_byte": 1334,
+      "written_name": "this.status"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus.EMPTY",
+        "EMPTY"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.OuterContainer",
+      "end_byte": 1369,
+      "kind": "reference",
+      "start_byte": 1348,
+      "written_name": "ContainerStatus.EMPTY"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.OuterContainer",
+      "end_byte": 1363,
+      "kind": "reference",
+      "start_byte": 1348,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1420,
+      "kind": "reference",
+      "start_byte": 1416,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1427,
+      "kind": "reference",
+      "start_byte": 1421,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "List"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor",
+      "end_byte": 1507,
+      "kind": "reference",
+      "start_byte": 1503,
+      "written_name": "List"
+    },
+    {
+      "candidate_targets": [
+        "String"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor",
+      "end_byte": 1514,
+      "kind": "reference",
+      "start_byte": 1508,
+      "written_name": "String"
+    },
+    {
+      "candidate_targets": [
+        "list.size",
+        "size"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor.countItems",
+      "end_byte": 1556,
+      "kind": "call",
+      "start_byte": 1547,
+      "written_name": "list.size"
+    },
+    {
+      "candidate_targets": [
+        "list"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor.countItems",
+      "end_byte": 1551,
+      "kind": "reference",
+      "start_byte": 1547,
+      "written_name": "list"
+    },
+    {
+      "candidate_targets": [
+        "LocalProcessor"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1607,
+      "kind": "reference",
+      "start_byte": 1593,
+      "written_name": "LocalProcessor"
+    },
+    {
+      "candidate_targets": [
+        "LocalProcessor"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1638,
+      "kind": "call",
+      "start_byte": 1624,
+      "written_name": "LocalProcessor"
+    },
+    {
+      "candidate_targets": [
+        "processor.countItems",
+        "countItems"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1682,
+      "kind": "call",
+      "start_byte": 1662,
+      "written_name": "processor.countItems"
+    },
+    {
+      "candidate_targets": [
+        "processor"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1671,
+      "kind": "reference",
+      "start_byte": 1662,
+      "written_name": "processor"
+    },
+    {
+      "candidate_targets": [
+        "items"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1688,
+      "kind": "reference",
+      "start_byte": 1683,
+      "written_name": "items"
+    },
+    {
+      "candidate_targets": [
+        "total"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1708,
+      "kind": "reference",
+      "start_byte": 1703,
+      "written_name": "total"
+    },
+    {
+      "candidate_targets": [
+        "this.status",
+        "status"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1739,
+      "kind": "reference",
+      "start_byte": 1728,
+      "written_name": "this.status"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus.ACTIVE",
+        "ACTIVE"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1764,
+      "kind": "reference",
+      "start_byte": 1742,
+      "written_name": "ContainerStatus.ACTIVE"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1757,
+      "kind": "reference",
+      "start_byte": 1742,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "StateChangeListener"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1835,
+      "kind": "reference",
+      "start_byte": 1816,
+      "written_name": "StateChangeListener"
+    },
+    {
+      "candidate_targets": [
+        "listener"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.registerListener",
+      "end_byte": 1868,
+      "kind": "reference",
+      "start_byte": 1860,
+      "written_name": "listener"
+    },
+    {
+      "candidate_targets": [
+        "listener.onStateChanged",
+        "onStateChanged"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.registerListener",
+      "end_byte": 1915,
+      "kind": "call",
+      "start_byte": 1892,
+      "written_name": "listener.onStateChanged"
+    },
+    {
+      "candidate_targets": [
+        "listener"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.registerListener",
+      "end_byte": 1900,
+      "kind": "reference",
+      "start_byte": 1892,
+      "written_name": "listener"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus.EMPTY",
+        "EMPTY"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.registerListener",
+      "end_byte": 1937,
+      "kind": "reference",
+      "start_byte": 1916,
+      "written_name": "ContainerStatus.EMPTY"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.registerListener",
+      "end_byte": 1931,
+      "kind": "reference",
+      "start_byte": 1916,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "this.status",
+        "status"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.registerListener",
+      "end_byte": 1950,
+      "kind": "reference",
+      "start_byte": 1939,
+      "written_name": "this.status"
+    },
+    {
+      "candidate_targets": [
+        "Configuration"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2019,
+      "kind": "reference",
+      "start_byte": 2006,
+      "written_name": "Configuration"
+    },
+    {
+      "candidate_targets": [
+        "Configuration"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2046,
+      "kind": "call",
+      "start_byte": 2033,
+      "written_name": "Configuration"
+    },
+    {
+      "candidate_targets": [
+        "InnerWorker"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2079,
+      "kind": "reference",
+      "start_byte": 2068,
+      "written_name": "InnerWorker"
+    },
+    {
+      "candidate_targets": [
+        "InnerWorker"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2104,
+      "kind": "call",
+      "start_byte": 2093,
+      "written_name": "InnerWorker"
+    },
+    {
+      "candidate_targets": [
+        "worker.performWork",
+        "performWork"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2134,
+      "kind": "call",
+      "start_byte": 2116,
+      "written_name": "worker.performWork"
+    },
+    {
+      "candidate_targets": [
+        "worker"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2122,
+      "kind": "reference",
+      "start_byte": 2116,
+      "written_name": "worker"
+    },
+    {
+      "candidate_targets": [
+        "registerListener"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2172,
+      "kind": "call",
+      "start_byte": 2156,
+      "written_name": "registerListener"
+    },
+    {
+      "candidate_targets": [
+        "StateChangeListener"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2196,
+      "kind": "call",
+      "start_byte": 2177,
+      "written_name": "StateChangeListener"
+    },
+    {
+      "candidate_targets": [
+        "StateChangeListener"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "end_byte": 2196,
+      "kind": "implementation",
+      "start_byte": 2177,
+      "written_name": "StateChangeListener"
+    },
+    {
+      "candidate_targets": [
+        "Override"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "end_byte": 2222,
+      "kind": "reference",
+      "metadata_json": "{\"is_annotation\":true,\"is_override\":true}",
+      "start_byte": 2214,
+      "written_name": "Override"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "end_byte": 2277,
+      "kind": "reference",
+      "start_byte": 2262,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "ContainerStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "end_byte": 2304,
+      "kind": "reference",
+      "start_byte": 2289,
+      "written_name": "ContainerStatus"
+    },
+    {
+      "candidate_targets": [
+        "System.out.println",
+        "println"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "end_byte": 2352,
+      "kind": "call",
+      "start_byte": 2334,
+      "written_name": "System.out.println"
+    },
+    {
+      "candidate_targets": [
+        "System.out",
+        "out"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "end_byte": 2344,
+      "kind": "reference",
+      "start_byte": 2334,
+      "written_name": "System.out"
+    },
+    {
+      "candidate_targets": [
+        "System"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "end_byte": 2340,
+      "kind": "reference",
+      "start_byte": 2334,
+      "written_name": "System"
+    },
+    {
+      "candidate_targets": [
+        "newStatus"
+      ],
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "end_byte": 2362,
+      "kind": "reference",
+      "start_byte": 2353,
+      "written_name": "newStatus"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 30,
+      "end_column": 31,
+      "end_line": 1,
+      "kind": "package",
+      "name": "com.example.structures",
+      "qualified_name": "com.example.structures",
+      "signature": "package com.example.structures",
+      "start_byte": 8,
+      "start_column": 9,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "com.example.structures",
+      "end_byte": 112,
+      "end_column": 28,
+      "end_line": 6,
+      "kind": "class",
+      "name": "OuterContainer",
+      "qualified_name": "com.example.structures.OuterContainer",
+      "signature": "public class OuterContainer",
+      "start_byte": 98,
+      "start_column": 14,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 136,
+      "end_column": 22,
+      "end_line": 7,
+      "kind": "field",
+      "name": "id",
+      "qualified_name": "com.example.structures.OuterContainer.id",
+      "signature": "private String id",
+      "start_byte": 134,
+      "start_column": 20,
+      "start_line": 7
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 172,
+      "end_column": 35,
+      "end_line": 8,
+      "kind": "field",
+      "name": "status",
+      "qualified_name": "com.example.structures.OuterContainer.status",
+      "signature": "private ContainerStatus status",
+      "start_byte": 166,
+      "start_column": 29,
+      "start_line": 8
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 206,
+      "end_column": 32,
+      "end_line": 10,
+      "kind": "enum",
+      "name": "ContainerStatus",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus",
+      "signature": "public enum ContainerStatus",
+      "start_byte": 191,
+      "start_column": 17,
+      "start_line": 10
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.ContainerStatus",
+      "end_byte": 222,
+      "end_column": 14,
+      "end_line": 11,
+      "kind": "enum_member",
+      "name": "EMPTY",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus.EMPTY",
+      "signature": "EMPTY",
+      "start_byte": 217,
+      "start_column": 9,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.ContainerStatus",
+      "end_byte": 238,
+      "end_column": 15,
+      "end_line": 12,
+      "kind": "enum_member",
+      "name": "ACTIVE",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus.ACTIVE",
+      "signature": "ACTIVE",
+      "start_byte": 232,
+      "start_column": 9,
+      "start_line": 12
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.ContainerStatus",
+      "end_byte": 252,
+      "end_column": 13,
+      "end_line": 13,
+      "kind": "enum_member",
+      "name": "FULL",
+      "qualified_name": "com.example.structures.OuterContainer.ContainerStatus.FULL",
+      "signature": "FULL",
+      "start_byte": 248,
+      "start_column": 9,
+      "start_line": 13
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 300,
+      "end_column": 41,
+      "end_line": 16,
+      "kind": "interface",
+      "name": "StateChangeListener",
+      "qualified_name": "com.example.structures.OuterContainer.StateChangeListener",
+      "signature": "public interface StateChangeListener",
+      "start_byte": 281,
+      "start_column": 22,
+      "start_line": 16
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.StateChangeListener",
+      "end_byte": 330,
+      "end_column": 28,
+      "end_line": 17,
+      "kind": "method",
+      "name": "onStateChanged",
+      "qualified_name": "com.example.structures.OuterContainer.StateChangeListener.onStateChanged",
+      "signature": "void onStateChanged(ContainerStatus oldStatus, ContainerStatus newStatus)",
+      "start_byte": 316,
+      "start_column": 14,
+      "start_line": 17
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 430,
+      "end_column": 38,
+      "end_line": 20,
+      "kind": "class",
+      "name": "Configuration",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration",
+      "signature": "public static class Configuration",
+      "start_byte": 417,
+      "start_column": 25,
+      "start_line": 20
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 470,
+      "end_column": 38,
+      "end_line": 21,
+      "kind": "field",
+      "name": "maxCapacity",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.maxCapacity",
+      "signature": "private final int maxCapacity",
+      "start_byte": 459,
+      "start_column": 27,
+      "start_line": 21
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 515,
+      "end_column": 44,
+      "end_line": 22,
+      "kind": "field",
+      "name": "allowOverflow",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.allowOverflow",
+      "signature": "private final boolean allowOverflow",
+      "start_byte": 502,
+      "start_column": 31,
+      "start_line": 22
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 546,
+      "end_column": 29,
+      "end_line": 24,
+      "kind": "method",
+      "name": "Configuration",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.Configuration",
+      "signature": "public Configuration(int maxCapacity, boolean allowOverflow)",
+      "start_byte": 533,
+      "start_column": 16,
+      "start_line": 24
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 725,
+      "end_column": 34,
+      "end_line": 29,
+      "kind": "method",
+      "name": "getMaxCapacity",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.getMaxCapacity",
+      "signature": "public int getMaxCapacity()",
+      "start_byte": 711,
+      "start_column": 20,
+      "start_line": 29
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.Configuration",
+      "end_byte": 816,
+      "end_column": 39,
+      "end_line": 33,
+      "kind": "method",
+      "name": "isAllowOverflow",
+      "qualified_name": "com.example.structures.OuterContainer.Configuration.isAllowOverflow",
+      "signature": "public boolean isAllowOverflow()",
+      "start_byte": 801,
+      "start_column": 24,
+      "start_line": 33
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 905,
+      "end_column": 29,
+      "end_line": 38,
+      "kind": "class",
+      "name": "InnerWorker",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker",
+      "signature": "public class InnerWorker",
+      "start_byte": 894,
+      "start_column": 18,
+      "start_line": 38
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 942,
+      "end_column": 35,
+      "end_line": 39,
+      "kind": "field",
+      "name": "processedCount",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.processedCount",
+      "signature": "private int processedCount",
+      "start_byte": 928,
+      "start_column": 21,
+      "start_line": 39
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 971,
+      "end_column": 27,
+      "end_line": 41,
+      "kind": "method",
+      "name": "InnerWorker",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.InnerWorker",
+      "signature": "public InnerWorker()",
+      "start_byte": 960,
+      "start_column": 16,
+      "start_line": 41
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 1055,
+      "end_column": 32,
+      "end_line": 45,
+      "kind": "method",
+      "name": "performWork",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.performWork",
+      "signature": "public void performWork(String item)",
+      "start_byte": 1044,
+      "start_column": 21,
+      "start_line": 45
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.InnerWorker",
+      "end_byte": 1203,
+      "end_column": 37,
+      "end_line": 51,
+      "kind": "method",
+      "name": "getProcessedCount",
+      "qualified_name": "com.example.structures.OuterContainer.InnerWorker.getProcessedCount",
+      "signature": "public int getProcessedCount()",
+      "start_byte": 1186,
+      "start_column": 20,
+      "start_line": 51
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1290,
+      "end_column": 26,
+      "end_line": 56,
+      "kind": "method",
+      "name": "OuterContainer",
+      "qualified_name": "com.example.structures.OuterContainer.OuterContainer",
+      "signature": "public OuterContainer(String id)",
+      "start_byte": 1276,
+      "start_column": 12,
+      "start_line": 56
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1415,
+      "end_column": 38,
+      "end_line": 61,
+      "kind": "method",
+      "name": "processWithLocalClass",
+      "qualified_name": "com.example.structures.OuterContainer.processWithLocalClass",
+      "signature": "public void processWithLocalClass(List<String> items)",
+      "start_byte": 1394,
+      "start_column": 17,
+      "start_line": 61
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass",
+      "end_byte": 1466,
+      "end_column": 29,
+      "end_line": 62,
+      "kind": "class",
+      "name": "LocalProcessor",
+      "qualified_name": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor",
+      "signature": "class LocalProcessor",
+      "start_byte": 1452,
+      "start_column": 15,
+      "start_line": 62
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor",
+      "end_byte": 1502,
+      "end_column": 34,
+      "end_line": 63,
+      "kind": "method",
+      "name": "countItems",
+      "qualified_name": "com.example.structures.OuterContainer.processWithLocalClass.LocalProcessor.countItems",
+      "signature": "public int countItems(List<String> list)",
+      "start_byte": 1492,
+      "start_column": 24,
+      "start_line": 63
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1815,
+      "end_column": 33,
+      "end_line": 75,
+      "kind": "method",
+      "name": "registerListener",
+      "qualified_name": "com.example.structures.OuterContainer.registerListener",
+      "signature": "public void registerListener(StateChangeListener listener)",
+      "start_byte": 1799,
+      "start_column": 17,
+      "start_line": 75
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer",
+      "end_byte": 1993,
+      "end_column": 24,
+      "end_line": 81,
+      "kind": "method",
+      "name": "execute",
+      "qualified_name": "com.example.structures.OuterContainer.execute",
+      "signature": "public void execute()",
+      "start_byte": 1986,
+      "start_column": 17,
+      "start_line": 81
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.execute",
+      "end_byte": 2388,
+      "end_column": 10,
+      "end_line": 91,
+      "kind": "class",
+      "name": "$anon_StateChangeListener_1",
+      "qualified_name": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "signature": "new StateChangeListener()",
+      "start_byte": 2173,
+      "start_column": 26,
+      "start_line": 86
+    },
+    {
+      "enclosing_scope": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1",
+      "end_byte": 2261,
+      "end_column": 39,
+      "end_line": 88,
+      "kind": "method",
+      "name": "onStateChanged",
+      "qualified_name": "com.example.structures.OuterContainer.execute.$anon_StateChangeListener_1.onStateChanged",
+      "signature": "public void onStateChanged(ContainerStatus oldStatus, ContainerStatus newStatus)",
+      "start_byte": 2247,
+      "start_column": 25,
+      "start_line": 88
+    }
+  ]
+}

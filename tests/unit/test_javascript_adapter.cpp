@@ -104,8 +104,7 @@ TEST_CASE("H6-01: JavaScript adapter grammar registration, capabilities, and pro
     REQUIRE(jsx_adapter == reg_adapter);
 }
 
-TEST_CASE("H6-01: JavaScript CommonJS and ES module IR extraction",
-          "[adapter][javascript][h6]") {
+TEST_CASE("H6-01: JavaScript CommonJS and ES module IR extraction", "[adapter][javascript][h6]") {
     JavaScriptAdapter adapter;
 
     std::string_view source = R"(
@@ -537,7 +536,8 @@ TEST_CASE("H6-03: JavaScript adapter golden fixture validation",
     auto find_fixture_dir = []() -> std::filesystem::path {
 #ifdef CODELENSES_SOURCE_DIR
         {
-            auto candidate = std::filesystem::path(CODELENSES_SOURCE_DIR) / "tests/fixtures/javascript";
+            auto candidate =
+                std::filesystem::path(CODELENSES_SOURCE_DIR) / "tests/fixtures/javascript";
             if (std::filesystem::exists(candidate)) {
                 return candidate;
             }

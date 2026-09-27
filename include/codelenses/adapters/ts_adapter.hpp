@@ -12,9 +12,7 @@ public:
     ~TypeScriptAdapter() override = default;
 
     [[nodiscard]] Language language() const noexcept override { return lang_; }
-    [[nodiscard]] std::string_view name() const noexcept override {
-        return "TypeScriptAdapter";
-    }
+    [[nodiscard]] std::string_view name() const noexcept override { return "TypeScriptAdapter"; }
     [[nodiscard]] const LanguageCapabilities& capabilities() const noexcept override;
 
     [[nodiscard]] Result<AdapterResult> parse(std::string_view source,

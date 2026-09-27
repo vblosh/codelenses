@@ -183,9 +183,9 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H8 Java adapter
 
-- [ ] H8-01 Extract packages, imports, classes, interfaces, enums, fields, methods.
-- [ ] H8-02 Extract inheritance, overrides, overload metadata, and calls.
-- [ ] H8-03 Add fixtures for nested classes and generics.
+- [x] H8-01 Extract packages, imports, classes, interfaces, enums, fields, methods.
+- [x] H8-02 Extract inheritance, overrides, overload metadata, and calls.
+- [x] H8-03 Add fixtures for nested classes and generics.
 
 ### H9 POSIX shell/Bash adapter
 

@@ -102,7 +102,7 @@ void process_function(treesitter::Node node, ASTContext& ctx) {
         const auto scope = ctx.current_scope();
         const std::string qname = scope ? *scope + "." + fn_name : fn_name;
         const size_t cut_pos = !body_node.is_null() ? (body_node.start_byte() - node.start_byte())
-                                                     : node.text(ctx.source).find('{');
+                                                    : node.text(ctx.source).find('{');
         const std::string signature =
             std::string(node.text(ctx.source).substr(0, std::min<size_t>(cut_pos, 128)));
 
@@ -681,7 +681,7 @@ void process_method(treesitter::Node node, ASTContext& ctx) {
         const auto scope = ctx.current_scope();
         const std::string qname = scope ? *scope + "." + fn_name : fn_name;
         const size_t cut_pos = !body_node.is_null() ? (body_node.start_byte() - node.start_byte())
-                                                     : node.text(ctx.source).find('{');
+                                                    : node.text(ctx.source).find('{');
         const std::string signature =
             std::string(node.text(ctx.source).substr(0, std::min<size_t>(cut_pos, 128)));
 
@@ -1437,9 +1437,9 @@ void process_assignment_expression(treesitter::Node node, ASTContext& ctx) {
                     ctx.handled_identifier_byte_starts.insert(inner_obj.start_byte());
 
                     const std::string qname = class_name + "." + prop_name;
-                    const bool is_func = !right.is_null() &&
-                                         (right.type() == "function_expression" ||
-                                          right.type() == "arrow_function");
+                    const bool is_func =
+                        !right.is_null() &&
+                        (right.type() == "function_expression" || right.type() == "arrow_function");
 
                     ctx.result.symbols.push_back(SymbolFact{
                         .name = prop_name,
@@ -1479,9 +1479,8 @@ void process_assignment_expression(treesitter::Node node, ASTContext& ctx) {
 
                 const auto scope = ctx.current_scope();
                 const std::string qname = scope ? *scope + "." + prop_name : prop_name;
-                const bool is_func = !right.is_null() &&
-                                     (right.type() == "function_expression" ||
-                                      right.type() == "arrow_function");
+                const bool is_func = !right.is_null() && (right.type() == "function_expression" ||
+                                                          right.type() == "arrow_function");
 
                 ctx.result.symbols.push_back(SymbolFact{
                     .name = prop_name,
@@ -2184,14 +2183,14 @@ std::string_view TypeScriptAdapter::tsx_highlighting_query() noexcept {
 Result<std::vector<HighlightToken>> TypeScriptAdapter::highlight(std::string_view source,
                                                                  const treesitter::Tree& tree) {
     const auto* tree_lang = tree.language();
-    const bool is_js = (tree_lang == treesitter::grammar_for_language(Language::javascript)) ||
-                       (lang_ == Language::javascript && tree_lang != treesitter::grammar_for_tsx());
+    const bool is_js =
+        (tree_lang == treesitter::grammar_for_language(Language::javascript)) ||
+        (lang_ == Language::javascript && tree_lang != treesitter::grammar_for_tsx());
     const bool is_tsx = (tree_lang == treesitter::grammar_for_tsx());
 
-    const auto* ts_lang =
-        is_js ? treesitter::grammar_for_language(Language::javascript)
-              : (is_tsx ? treesitter::grammar_for_tsx()
-                        : treesitter::grammar_for_language(Language::typescript));
+    const auto* ts_lang = is_js ? treesitter::grammar_for_language(Language::javascript)
+                                : (is_tsx ? treesitter::grammar_for_tsx()
+                                          : treesitter::grammar_for_language(Language::typescript));
     if (ts_lang == nullptr) {
         return unexpected_result<std::vector<HighlightToken>>(ErrorCode::invalid_argument,
                                                               "Grammar not available");
@@ -2296,7 +2295,7 @@ TypeScriptAdapter::highlight(std::string_view source, const std::filesystem::pat
     }
     const bool is_tsx = (ext == ".tsx" || ext == ".jsx");
     const auto* ts_lang = is_tsx ? treesitter::grammar_for_tsx()
-                        : (lang_ == Language::javascript)
+                          : (lang_ == Language::javascript)
                               ? treesitter::grammar_for_language(Language::javascript)
                               : treesitter::grammar_for_language(Language::typescript);
     if (ts_lang == nullptr) {
