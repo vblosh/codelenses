@@ -1,0 +1,95 @@
+{
+  "declarations": [
+    {
+      "end_byte": 13,
+      "is_definition": true,
+      "kind": "package",
+      "qualified_name": "queue",
+      "start_byte": 8,
+      "symbol_name": "queue"
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 24,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "queue.Task",
+      "start_byte": 20,
+      "symbol_name": "Task"
+    },
+    {
+      "enclosing_scope": "queue.Task",
+      "end_byte": 73,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "queue.Task.IDString",
+      "start_byte": 65,
+      "symbol_name": "IDString"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Go",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "task"
+      ],
+      "enclosing_scope": "queue.Task.IDString",
+      "end_byte": 97,
+      "kind": "reference",
+      "start_byte": 93,
+      "written_name": "task"
+    },
+    {
+      "candidate_targets": [
+        "ID"
+      ],
+      "enclosing_scope": "queue.Task.IDString",
+      "end_byte": 100,
+      "kind": "reference",
+      "start_byte": 98,
+      "written_name": "ID"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 13,
+      "end_column": 14,
+      "end_line": 1,
+      "kind": "package",
+      "name": "queue",
+      "qualified_name": "queue",
+      "signature": "package queue",
+      "start_byte": 8,
+      "start_column": 9,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 24,
+      "end_column": 10,
+      "end_line": 3,
+      "kind": "struct",
+      "name": "Task",
+      "qualified_name": "queue.Task",
+      "signature": "type Task struct",
+      "start_byte": 20,
+      "start_column": 6,
+      "start_line": 3
+    },
+    {
+      "enclosing_scope": "queue.Task",
+      "end_byte": 73,
+      "end_column": 26,
+      "end_line": 7,
+      "kind": "method",
+      "name": "IDString",
+      "qualified_name": "queue.Task.IDString",
+      "signature": "func (task Task) IDString() string",
+      "start_byte": 65,
+      "start_column": 18,
+      "start_line": 7
+    }
+  ]
+}

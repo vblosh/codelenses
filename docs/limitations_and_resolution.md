@@ -139,14 +139,15 @@ The CodeLenses database schema and HTTP REST API return the following resolution
 ### 3.6 Go (`Language::go`)
 
 #### Extraction & Resolution
-- **Symbols Extracted:** Package declarations, imports, structs, interfaces, functions, methods with receiver types, constants, variables, and type definitions.
+- **Symbols Extracted:** Package declarations, imports, structs, interfaces and their method sets, functions, receiver methods, variables, type aliases, and named types. Go named types without a struct or interface shape use the normalized `type_alias` kind because the shared model has no general named-type kind; their signatures preserve the source declaration, including generic type parameters.
+- **Interface Implementations:** Same-file, non-generic structs are linked to same-file, non-generic interfaces when value-receiver methods satisfy every explicitly declared interface method with a matching signature. These are candidate-only results. Pointer receiver method sets, embedded interfaces, aliases, and methods declared in another file are not inferred.
 - **Module & Package Resolution:**
   - Module path extraction from `go.mod`.
   - Imports matching module prefixes (`github.com/org/repo/pkg`) are resolved to their workspace subdirectories.
   - Multi-file package support: all files sharing `package foo` within a directory share package scope.
 
 #### Known Limitations
-1. **Implicit Interface Implementation:** Go interfaces are satisfied implicitly without `implements` keywords; structural satisfaction is indexed where syntactically discernible, but complex method sets may be labeled `ambiguous`.
+1. **Implicit Interface Implementation:** Go interfaces are satisfied implicitly without `implements` keywords. The adapter only emits same-file, exact-signature matches for value receiver methods on non-generic structs; it leaves other cases unresolved until workspace-wide method-set analysis is available.
 2. **Build Tags (`//go:build`):** Architecture- or OS-specific files (`_linux.go`, `_windows.go`) are indexed collectively, which may introduce homonyms across build targets.
 3. **External Dependencies:** Vendor or `$GOPATH`/`pkg/mod` modules outside the workspace directory are classified as `external`.
 

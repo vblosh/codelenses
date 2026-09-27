@@ -177,9 +177,9 @@ Tasks are grouped by independent workstream. Each task has a suggested identifie
 
 ### H7 Go adapter
 
-- [ ] H7-01 Extract package, imports, types, structs, interfaces, functions, methods.
-- [ ] H7-02 Extract receiver methods, calls, and interface implementations where detectable.
-- [ ] H7-03 Add fixtures for aliases and multi-file packages.
+- [x] H7-01 Extract package, imports, types, structs, interfaces, functions, methods.
+- [x] H7-02 Extract receiver methods, calls, and interface implementations where detectable.
+- [x] H7-03 Add fixtures for aliases and multi-file packages.
 
 ### H8 Java adapter
 

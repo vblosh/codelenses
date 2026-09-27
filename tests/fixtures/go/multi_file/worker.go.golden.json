@@ -1,0 +1,351 @@
+{
+  "declarations": [
+    {
+      "end_byte": 13,
+      "is_definition": true,
+      "kind": "package",
+      "qualified_name": "queue",
+      "start_byte": 8,
+      "symbol_name": "queue"
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 40,
+      "is_definition": true,
+      "kind": "interface",
+      "qualified_name": "queue.Worker",
+      "start_byte": 34,
+      "symbol_name": "Worker"
+    },
+    {
+      "enclosing_scope": "queue.Worker",
+      "end_byte": 58,
+      "is_definition": false,
+      "kind": "method",
+      "qualified_name": "queue.Worker.Work",
+      "start_byte": 54,
+      "symbol_name": "Work"
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 90,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "queue.LocalWorker",
+      "start_byte": 79,
+      "symbol_name": "LocalWorker"
+    },
+    {
+      "enclosing_scope": "queue.LocalWorker",
+      "end_byte": 124,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "queue.LocalWorker.Work",
+      "start_byte": 120,
+      "symbol_name": "Work"
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 208,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "queue.WrongSignature",
+      "start_byte": 194,
+      "symbol_name": "WrongSignature"
+    },
+    {
+      "enclosing_scope": "queue.WrongSignature",
+      "end_byte": 245,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "queue.WrongSignature.Work",
+      "start_byte": 241,
+      "symbol_name": "Work"
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 291,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "queue.PointerOnly",
+      "start_byte": 280,
+      "symbol_name": "PointerOnly"
+    },
+    {
+      "enclosing_scope": "queue.PointerOnly",
+      "end_byte": 326,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "queue.PointerOnly.Work",
+      "start_byte": 322,
+      "symbol_name": "Work"
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 374,
+      "is_definition": true,
+      "kind": "struct",
+      "qualified_name": "queue.GenericWorker",
+      "start_byte": 361,
+      "symbol_name": "GenericWorker"
+    },
+    {
+      "enclosing_scope": "queue.GenericWorker",
+      "end_byte": 420,
+      "is_definition": true,
+      "kind": "method",
+      "qualified_name": "queue.GenericWorker.Work",
+      "start_byte": 416,
+      "symbol_name": "Work"
+    }
+  ],
+  "diagnostics": [],
+  "language": "Go",
+  "occurrences": [
+    {
+      "candidate_targets": [
+        "fmt"
+      ],
+      "enclosing_scope": "queue",
+      "end_byte": 27,
+      "kind": "import",
+      "start_byte": 22,
+      "written_name": "fmt"
+    },
+    {
+      "candidate_targets": [
+        "Task"
+      ],
+      "enclosing_scope": "queue.Worker",
+      "end_byte": 63,
+      "kind": "reference",
+      "start_byte": 59,
+      "written_name": "Task"
+    },
+    {
+      "candidate_targets": [
+        "Task"
+      ],
+      "enclosing_scope": "queue.LocalWorker.Work",
+      "end_byte": 134,
+      "kind": "reference",
+      "start_byte": 130,
+      "written_name": "Task"
+    },
+    {
+      "candidate_targets": [
+        "Println"
+      ],
+      "enclosing_scope": "queue.LocalWorker.Work",
+      "end_byte": 156,
+      "kind": "call",
+      "start_byte": 149,
+      "written_name": "Println"
+    },
+    {
+      "candidate_targets": [
+        "fmt"
+      ],
+      "enclosing_scope": "queue.LocalWorker.Work",
+      "end_byte": 148,
+      "kind": "reference",
+      "start_byte": 145,
+      "written_name": "fmt"
+    },
+    {
+      "candidate_targets": [
+        "IDString"
+      ],
+      "enclosing_scope": "queue.LocalWorker.Work",
+      "end_byte": 170,
+      "kind": "call",
+      "start_byte": 162,
+      "written_name": "IDString"
+    },
+    {
+      "candidate_targets": [
+        "task"
+      ],
+      "enclosing_scope": "queue.LocalWorker.Work",
+      "end_byte": 161,
+      "kind": "reference",
+      "start_byte": 157,
+      "written_name": "task"
+    },
+    {
+      "candidate_targets": [
+        "Task"
+      ],
+      "enclosing_scope": "queue.WrongSignature.Work",
+      "end_byte": 250,
+      "kind": "reference",
+      "start_byte": 246,
+      "written_name": "Task"
+    },
+    {
+      "candidate_targets": [
+        "Task"
+      ],
+      "enclosing_scope": "queue.PointerOnly.Work",
+      "end_byte": 331,
+      "kind": "reference",
+      "start_byte": 327,
+      "written_name": "Task"
+    },
+    {
+      "candidate_targets": [
+        "queue.Worker"
+      ],
+      "enclosing_scope": "queue.LocalWorker",
+      "end_byte": 90,
+      "kind": "implementation",
+      "start_byte": 79,
+      "written_name": "queue.Worker"
+    }
+  ],
+  "status": "complete",
+  "symbols": [
+    {
+      "end_byte": 13,
+      "end_column": 14,
+      "end_line": 1,
+      "kind": "package",
+      "name": "queue",
+      "qualified_name": "queue",
+      "signature": "package queue",
+      "start_byte": 8,
+      "start_column": 9,
+      "start_line": 1
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 40,
+      "end_column": 12,
+      "end_line": 5,
+      "kind": "interface",
+      "name": "Worker",
+      "qualified_name": "queue.Worker",
+      "signature": "type Worker interface",
+      "start_byte": 34,
+      "start_column": 6,
+      "start_line": 5
+    },
+    {
+      "enclosing_scope": "queue.Worker",
+      "end_byte": 58,
+      "end_column": 6,
+      "end_line": 6,
+      "kind": "method",
+      "name": "Work",
+      "qualified_name": "queue.Worker.Work",
+      "signature": "Work(Task) error",
+      "start_byte": 54,
+      "start_column": 2,
+      "start_line": 6
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 90,
+      "end_column": 17,
+      "end_line": 9,
+      "kind": "struct",
+      "name": "LocalWorker",
+      "qualified_name": "queue.LocalWorker",
+      "signature": "type LocalWorker struct",
+      "start_byte": 79,
+      "start_column": 6,
+      "start_line": 9
+    },
+    {
+      "enclosing_scope": "queue.LocalWorker",
+      "end_byte": 124,
+      "end_column": 24,
+      "end_line": 11,
+      "kind": "method",
+      "name": "Work",
+      "qualified_name": "queue.LocalWorker.Work",
+      "signature": "func (LocalWorker) Work(task Task) error",
+      "start_byte": 120,
+      "start_column": 20,
+      "start_line": 11
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 208,
+      "end_column": 20,
+      "end_line": 16,
+      "kind": "struct",
+      "name": "WrongSignature",
+      "qualified_name": "queue.WrongSignature",
+      "signature": "type WrongSignature struct",
+      "start_byte": 194,
+      "start_column": 6,
+      "start_line": 16
+    },
+    {
+      "enclosing_scope": "queue.WrongSignature",
+      "end_byte": 245,
+      "end_column": 27,
+      "end_line": 18,
+      "kind": "method",
+      "name": "Work",
+      "qualified_name": "queue.WrongSignature.Work",
+      "signature": "func (WrongSignature) Work(Task) string",
+      "start_byte": 241,
+      "start_column": 23,
+      "start_line": 18
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 291,
+      "end_column": 17,
+      "end_line": 22,
+      "kind": "struct",
+      "name": "PointerOnly",
+      "qualified_name": "queue.PointerOnly",
+      "signature": "type PointerOnly struct",
+      "start_byte": 280,
+      "start_column": 6,
+      "start_line": 22
+    },
+    {
+      "enclosing_scope": "queue.PointerOnly",
+      "end_byte": 326,
+      "end_column": 25,
+      "end_line": 24,
+      "kind": "method",
+      "name": "Work",
+      "qualified_name": "queue.PointerOnly.Work",
+      "signature": "func (*PointerOnly) Work(Task) error",
+      "start_byte": 322,
+      "start_column": 21,
+      "start_line": 24
+    },
+    {
+      "enclosing_scope": "queue",
+      "end_byte": 374,
+      "end_column": 19,
+      "end_line": 28,
+      "kind": "struct",
+      "name": "GenericWorker",
+      "qualified_name": "queue.GenericWorker",
+      "signature": "type GenericWorker[T any] struct",
+      "start_byte": 361,
+      "start_column": 6,
+      "start_line": 28
+    },
+    {
+      "enclosing_scope": "queue.GenericWorker",
+      "end_byte": 420,
+      "end_column": 29,
+      "end_line": 30,
+      "kind": "method",
+      "name": "Work",
+      "qualified_name": "queue.GenericWorker.Work",
+      "signature": "func (GenericWorker[T]) Work(Task) error",
+      "start_byte": 416,
+      "start_column": 25,
+      "start_line": 30
+    }
+  ]
+}
