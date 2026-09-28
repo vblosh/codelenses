@@ -168,6 +168,81 @@ export class ReferencesComponent {
       this.headerContainer.appendChild(sigDiv);
     }
 
+    // Resolve target declaration: prefer explicit declaration from declarations,
+    // falling back to symbol's own file and line
+    let targetFileId = detail.file?.id ?? sym.fileId;
+    let targetLine = sym.range?.start?.line ?? 1;
+    let targetFilePath = detail.file?.relativePath || detail.file?.name || "Unknown";
+
+    const decls = detail.declarations || [];
+    const explicitDecl =
+      decls.find((d) => d.isDeclaration && d.id !== sym.id) ||
+      decls.find((d) => !d.isDefinition && d.id !== sym.id) ||
+      decls.find((d) => d.isDeclaration) ||
+      decls.find((d) => !d.isDefinition);
+
+    if (explicitDecl) {
+      targetFileId = explicitDecl.fileId;
+      if (explicitDecl.range?.start?.line) {
+        targetLine = explicitDecl.range.start.line;
+      }
+      if (explicitDecl.relativePath) {
+        targetFilePath = explicitDecl.relativePath;
+      } else if (explicitDecl.fileId === detail.file?.id) {
+        targetFilePath = detail.file?.relativePath || detail.file?.name || "Unknown";
+      } else {
+        targetFilePath = `File #${explicitDecl.fileId}`;
+      }
+    }
+
+    if (!targetLine || targetLine < 1) {
+      targetLine = 1;
+    }
+
+    const declDiv = document.createElement("div");
+    declDiv.className = "symbol-declaration";
+
+    const declLabel = document.createElement("span");
+    declLabel.className = "declaration-label";
+    declLabel.textContent = "Declaration:";
+    declDiv.appendChild(declLabel);
+
+    const declLink = document.createElement("a");
+    declLink.className = "declaration-link";
+    declLink.href = "#";
+    declLink.textContent = `${targetFilePath}:${targetLine}`;
+    declLink.title = `Jump to declaration at ${targetFilePath}:${targetLine}`;
+
+    if (
+      explicitDecl &&
+      explicitDecl.fileId !== detail.file?.id &&
+      !explicitDecl.relativePath
+    ) {
+      const wsId = this.store.getState().workspaceId;
+      if (wsId) {
+        api
+          .getFileMetadata(wsId, explicitDecl.fileId)
+          .then((meta) => {
+            if (meta?.relativePath) {
+              targetFilePath = meta.relativePath;
+              declLink.textContent = `${meta.relativePath}:${targetLine}`;
+              declLink.title = `Jump to declaration at ${meta.relativePath}:${targetLine}`;
+            }
+          })
+          .catch(() => {});
+      }
+    }
+
+    declLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.store.selectFile(targetFileId, targetLine, {
+        relativePath: targetFilePath,
+      });
+    });
+
+    declDiv.appendChild(declLink);
+    this.headerContainer.appendChild(declDiv);
+
     const metricsDiv = document.createElement("div");
     metricsDiv.className = "symbol-metrics";
 

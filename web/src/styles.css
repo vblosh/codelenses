@@ -725,6 +725,32 @@ html, body {
   margin-top: 4px;
   word-break: break-all;
 }
+.symbol-declaration {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.declaration-label {
+  color: var(--text-muted);
+}
+.declaration-link {
+  color: #93c5fd;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  word-break: break-all;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.declaration-link:hover {
+  color: #bfdbfe;
+  text-decoration: underline;
+}
 .symbol-metrics {
   display: flex;
   gap: 12px;

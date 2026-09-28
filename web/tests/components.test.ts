@@ -1000,6 +1000,141 @@ describe("Frontend components", () => {
       expect(elem.querySelectorAll(".reference-item").length).toBe(52);
       expect(elem.querySelector(".load-more-refs-btn")).toBeNull();
     });
+
+    it("renders link to declaration and navigates to explicit declaration when present", async () => {
+      vi.spyOn(api, "getSymbolDetail").mockResolvedValueOnce({
+        symbol: {
+          id: 5,
+          workspaceId: 1,
+          fileId: 1,
+          symbolKey: "sym5",
+          name: "calculateTotal",
+          kind: "function",
+          language: "cpp",
+          range: { start: { line: 10, column: 0, byte: 0 }, end: { line: 15, column: 1, byte: 50 } },
+          isDefinition: true,
+          isDeclaration: false,
+          createdAt: "",
+        },
+        file: {
+          id: 1,
+          workspaceId: 1,
+          path: "/math.cpp",
+          relativePath: "math.cpp",
+          name: "math.cpp",
+          language: "cpp",
+          encoding: "utf-8",
+          sizeBytes: 100,
+          modifiedNs: 0,
+          isBinary: false,
+          isGenerated: false,
+          isDeleted: false,
+          createdAt: "",
+          updatedAt: "",
+        },
+        declarations: [
+          {
+            id: 20,
+            workspaceId: 1,
+            fileId: 3,
+            symbolKey: "sym5",
+            name: "calculateTotal",
+            kind: "function",
+            language: "cpp",
+            range: { start: { line: 5, column: 0, byte: 0 }, end: { line: 5, column: 30, byte: 30 } },
+            isDefinition: false,
+            isDeclaration: true,
+            createdAt: "",
+            relativePath: "math.h",
+          },
+        ],
+        callersCount: 0,
+        calleesCount: 0,
+        referencersCount: 0,
+      });
+
+      vi.spyOn(api, "getSymbolReferences").mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const refs = new ReferencesComponent(store);
+      await refs.loadReferences(5);
+
+      const elem = refs.getElement();
+      const declDiv = elem.querySelector(".symbol-declaration") as HTMLElement;
+      expect(declDiv).not.toBeNull();
+      expect(declDiv.textContent).toContain("Declaration:");
+
+      const declLink = elem.querySelector(".declaration-link") as HTMLElement;
+      expect(declLink).not.toBeNull();
+      expect(declLink.textContent).toBe("math.h:5");
+
+      declLink.click();
+      expect(store.getState().selectedFileId).toBe(3);
+      expect(store.getState().selectedLine).toBe(5);
+    });
+
+    it("falls back to symbol own file and line when no explicit declaration in declarations", async () => {
+      vi.spyOn(api, "getSymbolDetail").mockResolvedValueOnce({
+        symbol: {
+          id: 8,
+          workspaceId: 1,
+          fileId: 4,
+          symbolKey: "sym8",
+          name: "helperFunc",
+          kind: "function",
+          language: "cpp",
+          range: { start: { line: 25, column: 0, byte: 0 }, end: { line: 30, column: 1, byte: 50 } },
+          isDefinition: true,
+          isDeclaration: false,
+          createdAt: "",
+        },
+        file: {
+          id: 4,
+          workspaceId: 1,
+          path: "/helper.cpp",
+          relativePath: "helper.cpp",
+          name: "helper.cpp",
+          language: "cpp",
+          encoding: "utf-8",
+          sizeBytes: 100,
+          modifiedNs: 0,
+          isBinary: false,
+          isGenerated: false,
+          isDeleted: false,
+          createdAt: "",
+          updatedAt: "",
+        },
+        declarations: [],
+        callersCount: 0,
+        calleesCount: 0,
+        referencersCount: 0,
+      });
+
+      vi.spyOn(api, "getSymbolReferences").mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const refs = new ReferencesComponent(store);
+      await refs.loadReferences(8);
+
+      const elem = refs.getElement();
+      const declLink = elem.querySelector(".declaration-link") as HTMLElement;
+      expect(declLink).not.toBeNull();
+      expect(declLink.textContent).toBe("helper.cpp:25");
+
+      declLink.click();
+      expect(store.getState().selectedFileId).toBe(4);
+      expect(store.getState().selectedLine).toBe(25);
+    });
   });
 
   describe("DiagnosticsComponent", () => {

@@ -220,6 +220,7 @@ export interface SymbolDto {
   isDeclaration: boolean;
   range: RangeDto;
   createdAt: string;
+  relativePath?: string | null;
 }
 
 export interface SymbolOutlineNodeDto {
