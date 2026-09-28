@@ -18,6 +18,262 @@ namespace codelenses::adapters {
 
 namespace {
 
+struct SanitizedSource {
+    std::string text;
+    struct MacroOccurrence {
+        std::string name;
+        uint32_t start_byte;
+        uint32_t end_byte;
+    };
+    std::vector<MacroOccurrence> macros;
+};
+
+SanitizedSource sanitize_class_export_macros(std::string_view src) {
+    SanitizedSource out;
+    out.text = std::string(src);
+    const size_t n = out.text.size();
+    size_t i = 0;
+
+    auto is_ident_start = [](char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    };
+    auto is_ident_char = [](char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+    };
+
+    auto is_macro_name = [](std::string_view name) -> bool {
+        if (name.empty()) return false;
+        for (std::string_view suffix : {"_API", "_EXPORT", "_IMPORT", "_DECL", "_DECLS", "_PUBLIC", "_VISIBLE"}) {
+            if (name.ends_with(suffix)) return true;
+        }
+        for (std::string_view prefix : {"DLL_", "API_", "EXPORT_", "IMPORT_", "Q_DECL_", "SK_API", "LLVM_", "CLANG_", "V8_"}) {
+            if (name.starts_with(prefix)) return true;
+        }
+        if (name == "API" || name == "EXPORT" || name == "IMPORT" || name == "DLL_EXPORT" ||
+            name == "DLL_IMPORT" || name == "VISIBLE" || name == "PUBLIC" || name == "CORE_EXPORT") {
+            return true;
+        }
+        bool all_upper = true;
+        for (char c : name) {
+            if (c >= 'a' && c <= 'z') {
+                all_upper = false;
+                break;
+            }
+        }
+        if (all_upper && name.size() >= 2) {
+            return true;
+        }
+        return false;
+    };
+
+    while (i < n) {
+        // Skip preprocessor directives (#include, #define, etc.)
+        if (out.text[i] == '#') {
+            while (i < n && out.text[i] != '\n') {
+                if (out.text[i] == '\\' && i + 1 < n) {
+                    i++;
+                }
+                i++;
+            }
+            continue;
+        }
+        // Skip raw string literals R"delim(...)delim"
+        if (out.text[i] == 'R' && i + 1 < n && out.text[i + 1] == '"') {
+            i += 2;
+            size_t delim_start = i;
+            while (i < n && out.text[i] != '(') {
+                i++;
+            }
+            if (i < n && out.text[i] == '(') {
+                std::string_view delim = std::string_view(out.text).substr(delim_start, i - delim_start);
+                i++; // past '('
+                std::string closing = ")" + std::string(delim) + "\"";
+                size_t pos = out.text.find(closing, i);
+                if (pos != std::string::npos) {
+                    i = pos + closing.size();
+                } else {
+                    i = n;
+                }
+            }
+            continue;
+        }
+        // Skip normal string literals and character literals
+        if (out.text[i] == '"' || out.text[i] == '\'') {
+            char quote = out.text[i++];
+            while (i < n && out.text[i] != quote) {
+                if (out.text[i] == '\\' && i + 1 < n) {
+                    i++;
+                }
+                i++;
+            }
+            if (i < n) i++;
+            continue;
+        }
+        // Skip line comment
+        if (out.text[i] == '/' && i + 1 < n && out.text[i + 1] == '/') {
+            i += 2;
+            while (i < n && out.text[i] != '\n') {
+                i++;
+            }
+            continue;
+        }
+        // Skip block comment
+        if (out.text[i] == '/' && i + 1 < n && out.text[i + 1] == '*') {
+            i += 2;
+            while (i + 1 < n && !(out.text[i] == '*' && out.text[i + 1] == '/')) {
+                i++;
+            }
+            if (i + 1 < n) i += 2;
+            continue;
+        }
+
+        // Check for "class", "struct", "union"
+        auto match_keyword = [&](std::string_view kw) -> bool {
+            if (i + kw.size() <= n && std::string_view(out.text).substr(i, kw.size()) == kw) {
+                if (i > 0 && is_ident_char(out.text[i - 1])) return false;
+                if (i + kw.size() < n && is_ident_char(out.text[i + kw.size()])) return false;
+                return true;
+            }
+            return false;
+        };
+
+        size_t kw_len = 0;
+        if (match_keyword("class")) kw_len = 5;
+        else if (match_keyword("struct")) kw_len = 6;
+        else if (match_keyword("union")) kw_len = 5;
+
+        if (kw_len > 0) {
+            size_t p = i + kw_len;
+
+            auto skip_ws_comments = [&]() {
+                while (p < n) {
+                    if (out.text[p] == ' ' || out.text[p] == '\t' || out.text[p] == '\r' || out.text[p] == '\n') {
+                        p++;
+                    } else if (out.text[p] == '/' && p + 1 < n && out.text[p + 1] == '/') {
+                        p += 2;
+                        while (p < n && out.text[p] != '\n') p++;
+                    } else if (out.text[p] == '/' && p + 1 < n && out.text[p + 1] == '*') {
+                        p += 2;
+                        while (p + 1 < n && !(out.text[p] == '*' && out.text[p + 1] == '/')) p++;
+                        if (p + 1 < n) p += 2;
+                    } else {
+                        break;
+                    }
+                }
+            };
+
+            auto skip_attributes = [&]() {
+                skip_ws_comments();
+                while (p < n) {
+                    if (p + 1 < n && out.text[p] == '[' && out.text[p + 1] == '[') {
+                        p += 2;
+                        while (p + 1 < n && !(out.text[p] == ']' && out.text[p + 1] == ']')) p++;
+                        if (p + 1 < n) p += 2;
+                        skip_ws_comments();
+                        continue;
+                    }
+                    auto match_attr_prefix = [&](std::string_view prefix) {
+                        if (p + prefix.size() <= n && std::string_view(out.text).substr(p, prefix.size()) == prefix) {
+                            if (p + prefix.size() < n && is_ident_char(out.text[p + prefix.size()])) return false;
+                            p += prefix.size();
+                            skip_ws_comments();
+                            if (p < n && out.text[p] == '(') {
+                                int depth = 1;
+                                p++;
+                                while (p < n && depth > 0) {
+                                    if (out.text[p] == '(') depth++;
+                                    else if (out.text[p] == ')') depth--;
+                                    p++;
+                                }
+                            }
+                            skip_ws_comments();
+                            return true;
+                        }
+                        return false;
+                    };
+                    if (match_attr_prefix("alignas") || match_attr_prefix("__attribute__") || match_attr_prefix("__declspec")) {
+                        continue;
+                    }
+                    break;
+                }
+            };
+
+            struct IdentToken { size_t start; size_t end; };
+            std::vector<IdentToken> idents;
+
+            while (p < n) {
+                skip_attributes();
+                if (p < n && is_ident_start(out.text[p])) {
+                    size_t id_start = p;
+                    while (p < n && is_ident_char(out.text[p])) p++;
+                    idents.push_back({id_start, p});
+                    skip_ws_comments();
+                } else {
+                    break;
+                }
+            }
+
+            // Skip attributes, template arguments, or virtual specifiers between class name and { or :
+            skip_attributes();
+            if (p < n && out.text[p] == '<') {
+                int depth = 1;
+                p++;
+                while (p < n && depth > 0) {
+                    if (out.text[p] == '<') depth++;
+                    else if (out.text[p] == '>') depth--;
+                    p++;
+                }
+                skip_attributes();
+            }
+
+            // If the last ident is "final", it is the virtual specifier, not the class name
+            bool has_final = false;
+            if (!idents.empty()) {
+                std::string_view last_id = std::string_view(out.text).substr(idents.back().start, idents.back().end - idents.back().start);
+                if (last_id == "final") {
+                    has_final = true;
+                    idents.pop_back();
+                }
+            }
+
+            // If we have >= 2 identifiers before { or : or final or ;
+            if (idents.size() >= 2) {
+                bool is_class = false;
+                if (has_final) {
+                    is_class = true;
+                } else if (p < n && (out.text[p] == '{' || out.text[p] == ':')) {
+                    is_class = true;
+                } else if (p < n && out.text[p] == ';') {
+                    // For semicolon, only treat as class forward declaration if first ident is a macro
+                    std::string_view first_id = std::string_view(out.text).substr(idents[0].start, idents[0].end - idents[0].start);
+                    if (is_macro_name(first_id)) {
+                        is_class = true;
+                    }
+                }
+
+                if (is_class) {
+                    // All identifiers before the last one are macros!
+                    for (size_t k = 0; k + 1 < idents.size(); ++k) {
+                        std::string mname = std::string(std::string_view(out.text).substr(idents[k].start, idents[k].end - idents[k].start));
+                        out.macros.push_back(SanitizedSource::MacroOccurrence{
+                            .name = std::move(mname),
+                            .start_byte = static_cast<uint32_t>(idents[k].start),
+                            .end_byte = static_cast<uint32_t>(idents[k].end),
+                        });
+                        for (size_t b = idents[k].start; b < idents[k].end; ++b) {
+                            out.text[b] = ' ';
+                        }
+                    }
+                }
+            }
+            i = p;
+            continue;
+        }
+        i++;
+    }
+    return out;
+}
+
 struct ASTContext {
     std::string_view source;
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -1329,6 +1585,73 @@ void process_function_definition(treesitter::Node node, ASTContext& ctx) {
     treesitter::Node type_node = node.child_by_field_name("type");
     DeclaratorInfo info = unwrap_declarator_info(decl_node, ctx.source);
 
+    if (!type_node.is_null()) {
+        const auto ttype = type_node.type();
+        if ((ttype == "class_specifier" || ttype == "struct_specifier" || ttype == "union_specifier") &&
+            type_node.child_by_field_name("body").is_null() &&
+            !has_function_declarator(decl_node)) {
+            const NodeKind kind = (ttype == "class_specifier") ? NodeKind::class_ : NodeKind::struct_;
+            const std::string class_name = info.base_name;
+            if (!class_name.empty() && !info.id_node.is_null()) {
+                ctx.handled_identifier_byte_starts.insert(info.id_node.start_byte());
+                const auto scope = ctx.current_scope();
+                const std::string qname = scope ? *scope + "::" + class_name : class_name;
+
+                std::string_view tag = "union";
+                if (ttype == "class_specifier") {
+                    tag = "class";
+                } else if (ttype == "struct_specifier") {
+                    tag = "struct";
+                }
+                std::string sig = std::string(tag) + " " + class_name;
+
+                ctx.result.symbols.push_back(SymbolFact{
+                    .name = class_name,
+                    .qualified_name = qname,
+                    .kind = kind,
+                    .range = info.id_node.byte_range(),
+                    .display_range = info.id_node.display_range(),
+                    .enclosing_scope = scope,
+                    .signature = sig,
+                });
+
+                ctx.result.declarations.push_back(DeclarationFact{
+                    .symbol_name = class_name,
+                    .qualified_name = qname,
+                    .kind = kind,
+                    .range = info.id_node.byte_range(),
+                    .display_range = info.id_node.display_range(),
+                    .enclosing_scope = scope,
+                    .is_definition = true,
+                });
+
+                treesitter::Node macro_node = type_node.child_by_field_name("name");
+                if (!macro_node.is_null() && !ctx.handled_identifier_byte_starts.contains(macro_node.start_byte())) {
+                    std::string mname = std::string(macro_node.text(ctx.source));
+                    ctx.result.occurrences.push_back(OccurrenceFact{
+                        .kind = worker::FactKind::reference,
+                        .written_name = mname,
+                        .range = macro_node.byte_range(),
+                        .display_range = macro_node.display_range(),
+                        .enclosing_scope = scope,
+                        .candidate_targets = {mname},
+                    });
+                    ctx.handled_identifier_byte_starts.insert(macro_node.start_byte());
+                }
+
+                treesitter::Node body_node = node.child_by_field_name("body");
+                if (!body_node.is_null()) {
+                    ctx.scope_stack.push_back(class_name);
+                    ctx.class_depth++;
+                    walk_node(body_node, ctx);
+                    ctx.class_depth--;
+                    ctx.scope_stack.pop_back();
+                }
+            }
+            return;
+        }
+    }
+
     std::vector<std::string> qualifier_parts;
     std::string fn_name;
 
@@ -2545,7 +2868,8 @@ Result<AdapterResult> CppAdapter::parse(std::string_view source,
         return unexpected_result<AdapterResult>(set_lang.error().code, set_lang.error().message);
     }
 
-    auto tree_res = parser.parse_string(source, nullptr, stop_token);
+    auto sanitized = sanitize_class_export_macros(source);
+    auto tree_res = parser.parse_string(sanitized.text, nullptr, stop_token);
     if (!tree_res) {
         return unexpected_result<AdapterResult>(tree_res.error().code, tree_res.error().message);
     }
@@ -2674,6 +2998,26 @@ Result<AdapterResult> CppAdapter::parse(std::string_view source,
         .undefined_macros = std::move(initial_undefined_macros),
         .class_depth = 0,
     };
+
+    CoordinateConverter converter(source);
+    for (const auto& m : sanitized.macros) {
+        Point p_start = converter.byte_to_point(m.start_byte);
+        Point p_end = converter.byte_to_point(m.end_byte);
+        result.occurrences.push_back(OccurrenceFact{
+            .kind = worker::FactKind::reference,
+            .written_name = m.name,
+            .range = ByteRange{.start = m.start_byte, .end = m.end_byte},
+            .display_range = DisplayRange{
+                .start_line = p_start.line,
+                .start_column = p_start.column,
+                .end_line = p_end.line,
+                .end_column = p_end.column,
+            },
+            .enclosing_scope = std::nullopt,
+            .candidate_targets = {m.name},
+        });
+        ctx.handled_identifier_byte_starts.insert(m.start_byte);
+    }
 
     walk_node(root, ctx);
 
@@ -3001,7 +3345,8 @@ Result<std::vector<HighlightToken>> CppAdapter::highlight(std::string_view sourc
                                                               set_lang.error().message);
     }
 
-    auto tree_res = parser.parse_string(source);
+    auto sanitized = sanitize_class_export_macros(source);
+    auto tree_res = parser.parse_string(sanitized.text);
     if (!tree_res) {
         return unexpected_result<std::vector<HighlightToken>>(tree_res.error().code,
                                                               tree_res.error().message);

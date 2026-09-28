@@ -1171,3 +1171,260 @@ void test_range_for_init() {
     CHECK(count_occ("v", worker::FactKind::reference) == 1);
     CHECK(count_occ("elem", worker::FactKind::reference) == 1);
 }
+
+TEST_CASE("C++ classes decorated with export macros are parsed as classes not functions", "[adapter][cpp][classes]") {
+    CppAdapter adapter;
+    std::string_view source = R"(
+#define FOO_API
+#define DLL_EXPORT
+#define MATH_API
+#define EXPORT
+
+class FOO_API Bar {
+public:
+    Bar();
+    ~Bar();
+    void do_something();
+    int get_val() const { return val_; }
+
+private:
+    int val_;
+    std::string name_;
+};
+
+class DLL_EXPORT BarDerived : public Base {
+public:
+    void do_something();
+};
+
+class API BarFinal final : public Base {
+public:
+    void do_something();
+};
+
+class DLL_EXPORT ALIGN_16 MultiMacro {
+public:
+    void run();
+};
+
+template <typename T>
+class MATH_API Matrix {
+public:
+    Matrix(int r, int c);
+    void transpose();
+private:
+    T* data_;
+};
+
+struct EXPORT Point3D {
+    float x;
+    float y;
+    float z;
+};
+
+union EXPORT ValueUnion {
+    int i;
+    float f;
+};
+
+class FOO_API ForwardClass;
+struct DLL_EXPORT ForwardStruct;
+
+template <class T>
+class Foo {
+public:
+    T val;
+};
+
+template <class T>
+class FooForward;
+
+template <class T>
+class FOO_API FooWithMacro {
+public:
+    T val;
+};
+
+struct Point pt;
+struct Point get_origin() { return Point{}; }
+)";
+
+    auto res = adapter.parse(source, "src/classes.cpp");
+    REQUIRE(res.has_value());
+    const AdapterResult& result = *res;
+
+    auto find_sym = [&](std::string_view name) -> const SymbolFact* {
+        for (const auto& s : result.symbols) {
+            if (s.name == name) return &s;
+        }
+        return nullptr;
+    };
+
+    auto count_sym = [&](std::string_view name, NodeKind kind) -> size_t {
+        size_t count = 0;
+        for (const auto& s : result.symbols) {
+            if (s.name == name && s.kind == kind) ++count;
+        }
+        return count;
+    };
+
+    auto find_decl = [&](std::string_view name) -> const DeclarationFact* {
+        for (const auto& d : result.declarations) {
+            if (d.symbol_name == name) return &d;
+        }
+        return nullptr;
+    };
+
+    // 1. Basic class with export macro
+    const auto* sym_bar = find_sym("Bar");
+    REQUIRE(sym_bar != nullptr);
+    CHECK(sym_bar->kind == NodeKind::class_);
+    CHECK(sym_bar->qualified_name == "Bar");
+
+    // Methods inside Bar must be method, not function
+    CHECK(count_sym("Bar", NodeKind::method) >= 1);
+    const auto* sym_dtor = find_sym("~Bar");
+    REQUIRE(sym_dtor != nullptr);
+    CHECK(sym_dtor->kind == NodeKind::method);
+    CHECK(sym_dtor->enclosing_scope == "Bar");
+
+    const auto* sym_do_something = find_sym("do_something");
+    REQUIRE(sym_do_something != nullptr);
+    CHECK(sym_do_something->kind == NodeKind::method);
+
+    const auto* sym_get_val = find_sym("get_val");
+    REQUIRE(sym_get_val != nullptr);
+    CHECK(sym_get_val->kind == NodeKind::method);
+    CHECK(sym_get_val->enclosing_scope == "Bar");
+
+    // Fields inside Bar must be field, not variable
+    const auto* sym_val = find_sym("val_");
+    REQUIRE(sym_val != nullptr);
+    CHECK(sym_val->kind == NodeKind::field);
+    CHECK(sym_val->enclosing_scope == "Bar");
+
+    const auto* sym_name = find_sym("name_");
+    REQUIRE(sym_name != nullptr);
+    CHECK(sym_name->kind == NodeKind::field);
+    CHECK(sym_name->enclosing_scope == "Bar");
+
+    // 2. Derived class with macro
+    const auto* sym_derived = find_sym("BarDerived");
+    REQUIRE(sym_derived != nullptr);
+    CHECK(sym_derived->kind == NodeKind::class_);
+
+    // Check inheritance occurrence for Base
+    bool found_base_inheritance = false;
+    for (const auto& occ : result.occurrences) {
+        if (occ.kind == worker::FactKind::inheritance && occ.written_name == "Base") {
+            found_base_inheritance = true;
+            break;
+        }
+    }
+    CHECK(found_base_inheritance);
+
+    // 3. Class with final and macro
+    const auto* sym_final = find_sym("BarFinal");
+    REQUIRE(sym_final != nullptr);
+    CHECK(sym_final->kind == NodeKind::class_);
+
+    // 4. Class with multiple macros
+    const auto* sym_multi = find_sym("MultiMacro");
+    REQUIRE(sym_multi != nullptr);
+    CHECK(sym_multi->kind == NodeKind::class_);
+
+    // 5. Template class with macro
+    const auto* sym_matrix = find_sym("Matrix");
+    REQUIRE(sym_matrix != nullptr);
+    CHECK(sym_matrix->kind == NodeKind::class_);
+    const auto* sym_transpose = find_sym("transpose");
+    REQUIRE(sym_transpose != nullptr);
+    CHECK(sym_transpose->kind == NodeKind::method);
+    CHECK(sym_transpose->enclosing_scope == "Matrix");
+    const auto* sym_data = find_sym("data_");
+    REQUIRE(sym_data != nullptr);
+    CHECK(sym_data->kind == NodeKind::field);
+
+    // 6. Struct with macro
+    const auto* sym_point3d = find_sym("Point3D");
+    REQUIRE(sym_point3d != nullptr);
+    CHECK(sym_point3d->kind == NodeKind::struct_);
+    const auto* sym_x = find_sym("x");
+    REQUIRE(sym_x != nullptr);
+    CHECK(sym_x->kind == NodeKind::field);
+
+    // 7. Union with macro
+    const auto* sym_union = find_sym("ValueUnion");
+    REQUIRE(sym_union != nullptr);
+    CHECK(sym_union->kind == NodeKind::struct_);
+
+    // 8. Forward declarations with macros
+    const auto* decl_fwd_class = find_decl("ForwardClass");
+    REQUIRE(decl_fwd_class != nullptr);
+    CHECK(decl_fwd_class->kind == NodeKind::class_);
+    CHECK_FALSE(decl_fwd_class->is_definition);
+
+    const auto* decl_fwd_struct = find_decl("ForwardStruct");
+    REQUIRE(decl_fwd_struct != nullptr);
+    CHECK(decl_fwd_struct->kind == NodeKind::struct_);
+    CHECK_FALSE(decl_fwd_struct->is_definition);
+
+    // 8b. template <class T> class Foo
+    const auto* sym_foo = find_sym("Foo");
+    REQUIRE(sym_foo != nullptr);
+    CHECK(sym_foo->kind == NodeKind::class_);
+    const auto* sym_foo_val = find_sym("val");
+    REQUIRE(sym_foo_val != nullptr);
+    CHECK(sym_foo_val->kind == NodeKind::field);
+
+    const auto* decl_foo_fwd = find_decl("FooForward");
+    REQUIRE(decl_foo_fwd != nullptr);
+    CHECK(decl_foo_fwd->kind == NodeKind::class_);
+    CHECK_FALSE(decl_foo_fwd->is_definition);
+
+    const auto* sym_foo_macro = find_sym("FooWithMacro");
+    REQUIRE(sym_foo_macro != nullptr);
+    CHECK(sym_foo_macro->kind == NodeKind::class_);
+    CHECK(sym_foo_macro->signature == "template <class T> class FOO_API FooWithMacro");
+
+    // 9. Non-class constructs must NOT be misparsed
+    const auto* sym_pt = find_sym("pt");
+    REQUIRE(sym_pt != nullptr);
+    CHECK(sym_pt->kind == NodeKind::variable);
+
+    const auto* sym_get_origin = find_sym("get_origin");
+    REQUIRE(sym_get_origin != nullptr);
+    CHECK(sym_get_origin->kind == NodeKind::function);
+
+    // 10. Check macro reference occurrences
+    bool found_foo_api = false;
+    bool found_dll_export = false;
+    for (const auto& occ : result.occurrences) {
+        if (occ.kind == worker::FactKind::reference) {
+            if (occ.written_name == "FOO_API") found_foo_api = true;
+            if (occ.written_name == "DLL_EXPORT") found_dll_export = true;
+        }
+    }
+    CHECK(found_foo_api);
+    CHECK(found_dll_export);
+
+    // 11. Highlighting verification: Bar must be highlighted as type
+    auto hl_res = adapter.highlight(source);
+    REQUIRE(hl_res.has_value());
+    const auto& tokens = *hl_res;
+    const auto& legend = HighlightLegend::default_legend();
+    auto type_idx = legend.token_type_index("type");
+    REQUIRE(type_idx.has_value());
+
+    CoordinateConverter conv(source);
+    auto bar_point = conv.byte_to_point(sym_bar->range.start);
+    bool bar_highlighted_as_type = false;
+    for (const auto& tok : tokens) {
+        if (tok.line == bar_point.line && tok.start_column == bar_point.column && tok.token_type == *type_idx) {
+            bar_highlighted_as_type = true;
+            break;
+        }
+    }
+    CHECK(bar_highlighted_as_type);
+}
+
