@@ -38,6 +38,7 @@ struct FileStateItem {
     int64_t modified_ns = 0;
     std::optional<std::string> content_hash = std::nullopt;
     bool is_deleted = false;
+    std::string language = "";
 
     bool operator==(const FileStateItem& other) const = default;
 };

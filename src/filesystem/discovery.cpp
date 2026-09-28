@@ -1,9 +1,11 @@
 #include "codelenses/filesystem/discovery.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <regex>
 #include <set>
+#include <unordered_set>
 
 #include "codelenses/filesystem/path.hpp"
 #include <fcntl.h>
@@ -530,11 +532,173 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
             canonical_root.string());
     }
 
+    if (!options_.ambiguous_header_mode.has_value()) {
+        refine_ambiguous_headers(discovered, canonical_root);
+    }
+
     std::ranges::sort(discovered, [](const DiscoveredFile& a, const DiscoveredFile& b) {
         return a.relative_path < b.relative_path;
     });
 
     return discovered;
+}
+
+bool FileDiscovery::looks_like_cpp_content(std::string_view content) {
+    static const std::vector<std::string_view> exact_patterns = {
+        "namespace ",
+        "template<",
+        "template <",
+        "public:",
+        "protected:",
+        "private:",
+        "std::",
+        "nullptr",
+        "constexpr ",
+        "override",
+        "noexcept",
+        "using namespace ",
+        "#include <vector>",
+        "#include <string>",
+        "#include <iostream>",
+        "#include <memory>",
+        "#include <map>",
+        "#include <set>",
+        "#include <algorithm>",
+        "#include <utility>",
+        "#include <type_traits>",
+        "#include <chrono>",
+        "#include <thread>",
+        "#include <mutex>",
+        "#include <atomic>",
+        "#include <array>",
+        "#include <tuple>",
+        "#include <optional>",
+        "#include <variant>",
+        "#include <span>",
+        "#include <ranges>",
+        "#include <concepts>",
+        "#include <format>",
+    };
+
+    for (const auto& pat : exact_patterns) {
+        if (content.find(pat) != std::string_view::npos) {
+            return true;
+        }
+    }
+
+    std::size_t pos = 0;
+    while ((pos = content.find("class ", pos)) != std::string_view::npos) {
+        if (pos == 0 || !std::isalnum(static_cast<unsigned char>(content[pos - 1]))) {
+            auto rest = content.substr(pos + 6);
+            auto id_start = rest.find_first_not_of(" \t\r\n");
+            if (id_start != std::string_view::npos) {
+                auto id_end = rest.find_first_of(" \t\r\n:{;", id_start);
+                if (id_end != std::string_view::npos) {
+                    auto after_id = rest.substr(id_end);
+                    auto next_char_pos = after_id.find_first_not_of(" \t\r\n");
+                    if (next_char_pos != std::string_view::npos) {
+                        char c = after_id[next_char_pos];
+                        if (c == '{' || c == ':') {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        pos += 6;
+    }
+
+    return false;
+}
+
+bool FileDiscovery::looks_like_cpp_file(const std::filesystem::path& file_path) {
+    std::ifstream in(file_path, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+    char buf[65536];
+    in.read(buf, sizeof(buf));
+    const auto n = in.gcount();
+    if (n <= 0) {
+        return false;
+    }
+    return looks_like_cpp_content(std::string_view(buf, static_cast<std::size_t>(n)));
+}
+
+void FileDiscovery::refine_ambiguous_headers(std::vector<DiscoveredFile>& discovered,
+                                             const std::filesystem::path& /*workspace_root*/) {
+    std::unordered_set<std::string> cpp_rel_stems;
+    std::unordered_set<std::string> c_rel_stems;
+    std::unordered_set<std::string> cpp_file_stems;
+    std::unordered_set<std::string> c_file_stems;
+    std::size_t cpp_source_count = 0;
+    std::size_t c_source_count = 0;
+
+    for (const auto& f : discovered) {
+        std::filesystem::path p(f.relative_path);
+        std::string ext = p.extension().string();
+        std::string rel_stem = p.parent_path().empty()
+                                   ? p.stem().string()
+                                   : (p.parent_path() / p.stem()).generic_string();
+        std::string file_stem = p.stem().string();
+
+        if (ext == ".cpp" || ext == ".cc" || ext == ".cxx" || ext == ".c++" ||
+            ext == ".hpp" || ext == ".hh" || ext == ".hxx") {
+            cpp_rel_stems.insert(rel_stem);
+            cpp_file_stems.insert(file_stem);
+            if (ext != ".hpp" && ext != ".hh" && ext != ".hxx") {
+                cpp_source_count++;
+            }
+        } else if (ext == ".c" || ext == ".i") {
+            c_rel_stems.insert(rel_stem);
+            c_file_stems.insert(file_stem);
+            c_source_count++;
+        }
+    }
+
+    for (auto& f : discovered) {
+        std::filesystem::path p(f.relative_path);
+        if (p.extension() != ".h" || f.language != Language::c) {
+            continue;
+        }
+
+        std::string rel_stem = p.parent_path().empty()
+                                   ? p.stem().string()
+                                   : (p.parent_path() / p.stem()).generic_string();
+        std::string file_stem = p.stem().string();
+
+        // 1. Direct path sibling match (e.g. src/foo.h alongside src/foo.cpp)
+        if (cpp_rel_stems.contains(rel_stem) && !c_rel_stems.contains(rel_stem)) {
+            f.language = Language::cpp;
+            continue;
+        }
+        if (c_rel_stems.contains(rel_stem) && !cpp_rel_stems.contains(rel_stem)) {
+            f.language = Language::c;
+            continue;
+        }
+
+        // 2. Filename stem match across project (e.g. include/foo.h and src/foo.cpp)
+        if (cpp_file_stems.contains(file_stem) && !c_file_stems.contains(file_stem)) {
+            f.language = Language::cpp;
+            continue;
+        }
+        if (c_file_stems.contains(file_stem) && !cpp_file_stems.contains(file_stem)) {
+            f.language = Language::c;
+            continue;
+        }
+
+        // 3. Project composition (pure C++ project with C++ sources and NO C sources)
+        if (cpp_source_count > 0 && c_source_count == 0) {
+            f.language = Language::cpp;
+            continue;
+        }
+
+        // 4. Content sniffing
+        if (looks_like_cpp_file(f.absolute_path)) {
+            f.language = Language::cpp;
+            continue;
+        }
+    }
 }
 
 } // namespace codelenses::filesystem

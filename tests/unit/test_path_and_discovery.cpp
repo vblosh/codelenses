@@ -351,3 +351,65 @@ TEST_CASE("Incomplete directory scan and depth limits are treated as errors",
         REQUIRE(res.error().code == ErrorCode::failed);
     }
 }
+
+TEST_CASE("Ambiguous header refinement for C++ projects", "[filesystem][discovery][cpp]") {
+    SECTION("Sibling source file disambiguation") {
+        TempWorkspace ws;
+        ws.write_file("src/filters.h", "int a;");
+        ws.write_file("src/filters.cpp", "int b;");
+        ws.write_file("src/legacy.h", "int c;");
+        ws.write_file("src/legacy.c", "int d;");
+
+        FileDiscovery discovery;
+        auto res = discovery.discover(ws.root);
+        REQUIRE(res.has_value());
+
+        std::unordered_map<std::string, Language> lang_map;
+        for (const auto& f : *res) {
+            lang_map[f.relative_path] = f.language;
+        }
+
+        CHECK(lang_map["src/filters.h"] == Language::cpp);
+        CHECK(lang_map["src/legacy.h"] == Language::c);
+    }
+
+    SECTION("Pure C++ workspace disambiguation") {
+        TempWorkspace ws;
+        ws.write_file("include/filters.h", "int a;");
+        ws.write_file("src/main.cpp", "int main() {}");
+
+        FileDiscovery discovery;
+        auto res = discovery.discover(ws.root);
+        REQUIRE(res.has_value());
+
+        std::unordered_map<std::string, Language> lang_map;
+        for (const auto& f : *res) {
+            lang_map[f.relative_path] = f.language;
+        }
+
+        CHECK(lang_map["include/filters.h"] == Language::cpp);
+    }
+
+    SECTION("Content sniffing disambiguation") {
+        TempWorkspace ws;
+        ws.write_file("include/filters.h",
+                      "#pragma once\n"
+                      "namespace asynclog {\n"
+                      "class AreaFilter : public IFilter {\n"
+                      "public:\n"
+                      "    bool Enabled() override;\n"
+                      "};\n"
+                      "}\n");
+
+        FileDiscovery discovery;
+        auto res = discovery.discover(ws.root);
+        REQUIRE(res.has_value());
+
+        std::unordered_map<std::string, Language> lang_map;
+        for (const auto& f : *res) {
+            lang_map[f.relative_path] = f.language;
+        }
+
+        CHECK(lang_map["include/filters.h"] == Language::cpp);
+    }
+}

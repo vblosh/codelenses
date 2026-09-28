@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <optional>
 #include <stop_token>
@@ -186,6 +188,60 @@ struct CompileCommandContext {
     bool parsed_from_arguments{false};
 
     friend bool operator==(const CompileCommandContext&, const CompileCommandContext&) = default;
+
+    [[nodiscard]] bool is_cpp() const {
+        if (language_standard.has_value()) {
+            std::string std_str = *language_standard;
+            if (std_str.starts_with("-std=")) std_str = std_str.substr(5);
+            else if (std_str.starts_with("--std=")) std_str = std_str.substr(6);
+            std::transform(std_str.begin(), std_str.end(), std_str.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (std_str.starts_with("c++") || std_str.starts_with("gnu++") ||
+                std_str.starts_with("iso14882")) {
+                return true;
+            }
+        }
+        for (const auto& arg : arguments) {
+            if (arg == "-xc++" || arg == "-xc++-header") return true;
+        }
+        if (!arguments.empty()) {
+            auto compiler = std::filesystem::path(arguments.front()).stem().string();
+            std::transform(compiler.begin(), compiler.end(), compiler.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (compiler.ends_with("++") || compiler == "c++" || compiler == "clang++" ||
+                compiler == "g++" || compiler == "cl" || compiler == "cl.exe") {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    [[nodiscard]] bool is_c() const {
+        if (is_cpp()) return false;
+        if (language_standard.has_value()) {
+            std::string std_str = *language_standard;
+            if (std_str.starts_with("-std=")) std_str = std_str.substr(5);
+            else if (std_str.starts_with("--std=")) std_str = std_str.substr(6);
+            std::transform(std_str.begin(), std_str.end(), std_str.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (std_str.starts_with("c") || std_str.starts_with("gnu") ||
+                std_str.starts_with("iso9899")) {
+                return true;
+            }
+        }
+        for (const auto& arg : arguments) {
+            if (arg == "-xc" || arg == "-xc-header") return true;
+        }
+        if (!arguments.empty()) {
+            auto compiler = std::filesystem::path(arguments.front()).stem().string();
+            std::transform(compiler.begin(), compiler.end(), compiler.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (compiler == "gcc" || compiler == "clang") {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // Computes deterministic ordered search directories according to standard GCC/Clang semantics.
     // For quoted includes:

@@ -98,24 +98,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
     result.index_data.is_binary = captured.is_binary;
     result.index_data.last_index_job_id = job_id;
 
-    if (captured.is_binary || planned.language == Language::unknown) {
-        result.index_data.language = "unknown";
-        return result;
-    }
+    Language effective_language = planned.language;
 
-    result.index_data.language = std::string(to_string(planned.language));
-
-    auto* adapter = registry.get_adapter(planned.language);
-    if (!adapter) {
-        adapter = registry.get_adapter_for_path(planned.absolute_path);
-    }
-
-    if (!adapter) {
-        // No adapter registered for this language, keep as unparsed known file
-        return result;
-    }
-
-    Result<adapters::AdapterResult> parse_res;
     const resolver::CompileCommand* cmd = nullptr;
     if (cdb != nullptr) {
         cmd = cdb->find_for_file(planned.relative_path);
@@ -127,6 +111,32 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
         cmd = default_cmd;
     }
 
+    if (effective_language == Language::c && planned.absolute_path.extension() == ".h") {
+        if (cmd != nullptr && cmd->is_cpp()) {
+            effective_language = Language::cpp;
+        } else if (filesystem::FileDiscovery::looks_like_cpp_content(captured.as_string_view())) {
+            effective_language = Language::cpp;
+        }
+    }
+
+    if (captured.is_binary || effective_language == Language::unknown) {
+        result.index_data.language = "unknown";
+        return result;
+    }
+
+    result.index_data.language = std::string(to_string(effective_language));
+
+    auto* adapter = registry.get_adapter(effective_language);
+    if (!adapter) {
+        adapter = registry.get_adapter_for_path(planned.absolute_path);
+    }
+
+    if (!adapter) {
+        // No adapter registered for this language, keep as unparsed known file
+        return result;
+    }
+
+    Result<adapters::AdapterResult> parse_res;
     if (cmd != nullptr) {
         parse_res =
             adapter->parse(captured.as_string_view(), planned.absolute_path, *cmd, stop_token);
@@ -508,6 +518,45 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     }
     const auto canonical_root = *canonical_root_res;
 
+    // Load compilation database if configured or present in workspace
+    std::shared_ptr<const resolver::CompilationDatabase> comp_db;
+    std::filesystem::path cdb_path;
+    if (ws->compile_commands_path.has_value() && !ws->compile_commands_path->empty()) {
+        cdb_path = *ws->compile_commands_path;
+        if (cdb_path.is_relative()) {
+            cdb_path = canonical_root / cdb_path;
+        }
+    } else {
+        std::vector<std::filesystem::path> candidates = {
+            canonical_root / "compile_commands.json",
+            canonical_root / "build" / "compile_commands.json",
+        };
+        for (const auto& c : candidates) {
+            if (std::filesystem::exists(c)) {
+                cdb_path = c;
+                break;
+            }
+        }
+    }
+
+    if (!cdb_path.empty() && std::filesystem::exists(cdb_path)) {
+        auto loaded = resolver::CompilationDatabase::load_file(cdb_path, canonical_root);
+        if (loaded) {
+            comp_db = std::make_shared<const resolver::CompilationDatabase>(std::move(*loaded));
+        }
+    }
+
+    const auto* raw_cdb = comp_db.get();
+
+    std::shared_ptr<const resolver::CompileCommand> default_cmd;
+    if (ws->default_compile_command.has_value() && !ws->default_compile_command->empty()) {
+        auto parsed = resolver::CompilationDatabase::parse_command_string(
+            *ws->default_compile_command, canonical_root, "", canonical_root);
+        if (parsed) {
+            default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(*parsed));
+        }
+    }
+
     // File discovery
     filesystem::DiscoveryOptions disc_opts;
     disc_opts.include_patterns = ws->include_patterns;
@@ -536,7 +585,53 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                 disc_opts.ambiguous_header_mode = Language::c;
             }
         }
+    } else {
+        if (default_cmd != nullptr) {
+            if (default_cmd->is_cpp()) {
+                disc_opts.ambiguous_header_mode = Language::cpp;
+            } else if (default_cmd->is_c()) {
+                disc_opts.ambiguous_header_mode = Language::c;
+            }
+        }
+        if (!disc_opts.ambiguous_header_mode.has_value() && raw_cdb != nullptr && !raw_cdb->empty()) {
+            for (const auto& entry : raw_cdb->entries()) {
+                if (entry.is_cpp()) {
+                    disc_opts.ambiguous_header_mode = Language::cpp;
+                    break;
+                }
+            }
+        }
     }
+
+    if (ws->kind == WorkspaceKind::library) {
+        adapters::CompileCommandContext lib_cmd;
+        if (default_cmd != nullptr) {
+            lib_cmd = *default_cmd;
+        }
+        lib_cmd.conservative_preproc = true;
+        if (lib_profile.has_value()) {
+            if (!lib_cmd.language_standard.has_value() && lib_profile->language_standard.has_value()) {
+                lib_cmd.language_standard = lib_profile->language_standard;
+            }
+            if (lib_profile->sysroot.has_value() && !lib_profile->sysroot->empty()) {
+                lib_cmd.sysroot = std::filesystem::path(*lib_profile->sysroot);
+            }
+            for (const auto& d : lib_profile->defines) {
+                lib_cmd.defines.push_back(d);
+            }
+            for (const auto& r : lib_profile->default_include_roots) {
+                lib_cmd.search_entries.push_back(adapters::IncludeSearchEntry{
+                    .directory = std::filesystem::path(r),
+                    .category = adapters::IncludeCategory::default_toolchain,
+                    .origin = adapters::IncludeOrigin::configured_profile,
+                    .role = (lib_profile->language == "cpp") ? adapters::RootRole::cpp_library
+                                                             : adapters::RootRole::c_runtime,
+                });
+            }
+        }
+        default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(lib_cmd));
+    }
+    const auto* raw_default_cmd = default_cmd.get();
 
     filesystem::FileDiscovery discovery(disc_opts);
     auto disc_res = discovery.discover(canonical_root);
@@ -586,75 +681,6 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
             .error_message = "Indexing job was cancelled",
         };
     }
-
-    // Load compilation database if configured or present in workspace
-    std::shared_ptr<const resolver::CompilationDatabase> comp_db;
-    std::filesystem::path cdb_path;
-    if (ws->compile_commands_path.has_value() && !ws->compile_commands_path->empty()) {
-        cdb_path = *ws->compile_commands_path;
-        if (cdb_path.is_relative()) {
-            cdb_path = canonical_root / cdb_path;
-        }
-    } else {
-        std::vector<std::filesystem::path> candidates = {
-            canonical_root / "compile_commands.json",
-            canonical_root / "build" / "compile_commands.json",
-        };
-        for (const auto& c : candidates) {
-            if (std::filesystem::exists(c)) {
-                cdb_path = c;
-                break;
-            }
-        }
-    }
-
-    if (!cdb_path.empty() && std::filesystem::exists(cdb_path)) {
-        auto loaded = resolver::CompilationDatabase::load_file(cdb_path, canonical_root);
-        if (loaded) {
-            comp_db = std::make_shared<const resolver::CompilationDatabase>(std::move(*loaded));
-        }
-    }
-
-    const auto* raw_cdb = comp_db.get();
-
-    std::shared_ptr<const resolver::CompileCommand> default_cmd;
-    if (ws->default_compile_command.has_value() && !ws->default_compile_command->empty()) {
-        auto parsed = resolver::CompilationDatabase::parse_command_string(
-            *ws->default_compile_command, canonical_root, "", canonical_root);
-        if (parsed) {
-            default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(*parsed));
-        }
-    }
-
-    if (ws->kind == WorkspaceKind::library) {
-        adapters::CompileCommandContext lib_cmd;
-        if (default_cmd != nullptr) {
-            lib_cmd = *default_cmd;
-        }
-        lib_cmd.conservative_preproc = true;
-        if (lib_profile.has_value()) {
-            if (!lib_cmd.language_standard.has_value() && lib_profile->language_standard.has_value()) {
-                lib_cmd.language_standard = lib_profile->language_standard;
-            }
-            if (lib_profile->sysroot.has_value() && !lib_profile->sysroot->empty()) {
-                lib_cmd.sysroot = std::filesystem::path(*lib_profile->sysroot);
-            }
-            for (const auto& d : lib_profile->defines) {
-                lib_cmd.defines.push_back(d);
-            }
-            for (const auto& r : lib_profile->default_include_roots) {
-                lib_cmd.search_entries.push_back(adapters::IncludeSearchEntry{
-                    .directory = std::filesystem::path(r),
-                    .category = adapters::IncludeCategory::default_toolchain,
-                    .origin = adapters::IncludeOrigin::configured_profile,
-                    .role = (lib_profile->language == "cpp") ? adapters::RootRole::cpp_library
-                                                             : adapters::RootRole::c_runtime,
-                });
-            }
-        }
-        default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(lib_cmd));
-    }
-    const auto* raw_default_cmd = default_cmd.get();
 
     // Parallel parsing via ThreadPool and bounded batches
     ThreadPool pool(options_.worker_threads);

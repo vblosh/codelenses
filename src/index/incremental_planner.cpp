@@ -78,7 +78,16 @@ PlanResult plan_indexing(int64_t /*workspace_id*/,
                         }
                     }
 
-                    if (!content_changed) {
+                    bool language_changed = false;
+                    if (!existing->language.empty() && existing->language != "unknown" &&
+                        file.language != Language::unknown) {
+                        auto existing_lang = language_from_string(existing->language);
+                        if (existing_lang && *existing_lang != file.language) {
+                            language_changed = true;
+                        }
+                    }
+
+                    if (!content_changed && !language_changed) {
                         PlannedFile pf{
                             .relative_path = file.relative_path,
                             .absolute_path = file.absolute_path,
@@ -97,7 +106,7 @@ PlanResult plan_indexing(int64_t /*workspace_id*/,
                             .file_id = existing->id,
                             .language = file.language,
                             .action = PlannedAction::parse,
-                            .reason = "source content modified",
+                            .reason = language_changed ? "source language changed" : "source content modified",
                             .file_size = file.file_size,
                             .is_binary = file.is_binary,
                         };

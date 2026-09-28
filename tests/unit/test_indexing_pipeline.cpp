@@ -702,3 +702,144 @@ int other() {
     CHECK(other_has_default_flag == true); // inherited workspace default command!
     CHECK(other_has_build_version == false);
 }
+
+TEST_CASE("C++ header indexed correctly with default_compile_command", "[indexer][pipeline][cpp]") {
+    PipelineTestWorkspace env;
+    auto ws_id = env.create_workspace("Cpp Header Workspace");
+
+    auto ws_opt = env.db->workspaces().get_by_id(ws_id);
+    REQUIRE(ws_opt.has_value());
+    ws_opt->default_compile_command = "g++ -std=c++20";
+    env.db->workspaces().update(*ws_opt);
+
+    std::string filters_h =
+        "#pragma once\n"
+        "#include <vector>\n"
+        "#include <string>\n"
+        "namespace asynclog {\n"
+        "class AreaFilter {\n"
+        "    int logLevel;\n"
+        "public:\n"
+        "    AreaFilter() : logLevel(0) {}\n"
+        "    bool Enabled(int level, int areaId);\n"
+        "    void SetReportingLevel(int level);\n"
+        "    void SetFilter(int areaId, int level);\n"
+        "};\n"
+        "}\n";
+
+    env.write_file("src/filters.h", filters_h);
+    env.write_file("src/filters.cpp", "#include \"filters.h\"\n");
+
+    IndexerOptions opts;
+    opts.worker_threads = 1;
+    IndexingPipeline pipeline(*env.db, opts);
+
+    auto res = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res.has_value());
+    REQUIRE(res->status == "completed");
+    CHECK(res->error_count == 0);
+    CHECK(res->warning_count == 0);
+
+    auto file_rec = env.db->files().get_by_path(ws_id, "src/filters.h");
+    REQUIRE(file_rec.has_value());
+    CHECK(file_rec->language == "C++");
+
+    auto diags = env.db->diagnostics().list_by_file(file_rec->id);
+    CHECK(diags.empty());
+
+    auto syms = env.db->symbols().list_by_file(file_rec->id);
+    bool found_namespace = false;
+    bool found_class = false;
+    bool found_enabled = false;
+    bool found_set_reporting = false;
+    bool found_set_filter = false;
+
+    for (const auto& s : syms) {
+        if (s.name == "asynclog" && s.kind == "namespace") {
+            found_namespace = true;
+        }
+        if (s.name == "AreaFilter" && s.kind == "class") {
+            found_class = true;
+        }
+        if (s.name == "Enabled" && s.kind == "method") {
+            found_enabled = true;
+        }
+        if (s.name == "SetReportingLevel" && s.kind == "method") {
+            found_set_reporting = true;
+        }
+        if (s.name == "SetFilter" && s.kind == "method") {
+            found_set_filter = true;
+        }
+    }
+
+    CHECK(found_namespace);
+    CHECK(found_class);
+    CHECK(found_enabled);
+    CHECK(found_set_reporting);
+    CHECK(found_set_filter);
+}
+
+TEST_CASE("Asynclog project indexed without errors", "[indexer][pipeline][asynclog]") {
+    if (!fs::exists("/home/slava/projects/asynclog/src/filters.h")) {
+        return;
+    }
+    PipelineTestWorkspace env;
+    Workspace ws{
+        .root_path = "/home/slava/projects/asynclog",
+        .name = "asynclog",
+        .include_patterns = {"src/**", "include/**"},
+        .exclude_patterns = {"tests/**"},
+        .default_compile_command = "g++ -std=c++20",
+    };
+    auto ws_id = env.db->workspaces().create(ws);
+
+    IndexerOptions opts;
+    opts.worker_threads = 2;
+    IndexingPipeline pipeline(*env.db, opts);
+
+    auto res = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(res.has_value());
+    REQUIRE(res->status == "completed");
+    CHECK(res->error_count == 0);
+    CHECK(res->warning_count == 0);
+
+    auto filters_h = env.db->files().get_by_path(ws_id, "src/filters.h");
+    REQUIRE(filters_h.has_value());
+    CHECK(filters_h->language == "C++");
+
+    auto diags = env.db->diagnostics().list_by_file(filters_h->id);
+    CHECK(diags.empty());
+
+    auto syms = env.db->symbols().list_by_file(filters_h->id);
+    bool found_namespace = false;
+    bool found_class = false;
+    bool found_enabled = false;
+    bool found_set_reporting = false;
+    bool found_set_filter = false;
+
+    for (const auto& s : syms) {
+        if (s.name == "asynclog" && s.kind == "namespace") {
+            found_namespace = true;
+        }
+        if (s.name == "AreaFilter" && s.kind == "class") {
+            found_class = true;
+        }
+        if (s.name == "Enabled" && s.kind == "method") {
+            found_enabled = true;
+        }
+        if (s.name == "SetReportingLevel" && s.kind == "method") {
+            found_set_reporting = true;
+        }
+        if (s.name == "SetFilter" && s.kind == "method") {
+            found_set_filter = true;
+        }
+    }
+
+    CHECK(found_namespace);
+    CHECK(found_class);
+    CHECK(found_enabled);
+    CHECK(found_set_reporting);
+    CHECK(found_set_filter);
+}
+
+

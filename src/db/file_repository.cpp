@@ -166,7 +166,7 @@ std::vector<FileRecord> FileRepository::list_by_workspace(int64_t workspace_id,
 
 std::vector<FileStateItem> FileRepository::get_file_states(int64_t workspace_id) {
     Statement stmt(conn_.handle(), R"SQL(
-        SELECT id, relative_path, size_bytes, modified_ns, content_hash, is_deleted
+        SELECT id, relative_path, size_bytes, modified_ns, content_hash, is_deleted, language
         FROM file
         WHERE workspace_id = ?
         ORDER BY relative_path ASC;
@@ -182,6 +182,7 @@ std::vector<FileStateItem> FileRepository::get_file_states(int64_t workspace_id)
         item.modified_ns = stmt.column_int64(3);
         item.content_hash = stmt.column_optional_text(4);
         item.is_deleted = stmt.column_bool(5);
+        item.language = stmt.column_text(6);
         results.push_back(item);
     }
     return results;

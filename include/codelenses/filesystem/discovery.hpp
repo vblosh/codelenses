@@ -69,6 +69,16 @@ public:
     // Matches a glob pattern against a relative path (supports *, **, ?)
     [[nodiscard]] static bool match_glob(std::string_view pattern, std::string_view path);
 
+    // Checks whether source text contains C++-specific keywords or patterns
+    [[nodiscard]] static bool looks_like_cpp_content(std::string_view content);
+
+    // Checks whether a header file on disk contains C++-specific keywords or patterns
+    [[nodiscard]] static bool looks_like_cpp_file(const std::filesystem::path& file_path);
+
+    // Disambiguates .h files based on siblings, project composition, and content
+    static void refine_ambiguous_headers(std::vector<DiscoveredFile>& discovered,
+                                         const std::filesystem::path& workspace_root);
+
     [[nodiscard]] const DiscoveryOptions& options() const noexcept { return options_; }
 
 private:
