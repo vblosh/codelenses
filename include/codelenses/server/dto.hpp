@@ -395,6 +395,24 @@ inline void to_json(nlohmann::json& j, const WorkspaceTreeDto& t) {
     };
 }
 
+struct OriginMetadataDto {
+    std::string origin{"project"};
+    int64_t owner_workspace_id{0};
+    std::optional<int64_t> library_profile_id{std::nullopt};
+    std::optional<std::string> target_framework{std::nullopt};
+};
+
+inline void add_origin_fields(nlohmann::json& j, const OriginMetadataDto& origin) {
+    j["origin"] = origin.origin;
+    j["ownerWorkspaceId"] = origin.owner_workspace_id;
+    j["libraryProfileId"] = origin.library_profile_id
+                                 ? nlohmann::json(*origin.library_profile_id)
+                                 : nlohmann::json(nullptr);
+    j["targetFramework"] = origin.target_framework
+                               ? nlohmann::json(*origin.target_framework)
+                               : nlohmann::json(nullptr);
+}
+
 struct FileMetadataDto {
     int64_t id{0};
     int64_t workspace_id{0};
@@ -413,6 +431,7 @@ struct FileMetadataDto {
     std::optional<std::string> indexed_at;
     std::string created_at;
     std::string updated_at;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const FileMetadataDto& f) {
@@ -435,6 +454,7 @@ inline void to_json(nlohmann::json& j, const FileMetadataDto& f) {
         {"createdAt", f.created_at},
         {"updatedAt", f.updated_at},
     };
+    add_origin_fields(j, f.origin_metadata);
 }
 
 inline FileMetadataDto file_to_dto(const FileRecord& f) {
@@ -456,6 +476,7 @@ inline FileMetadataDto file_to_dto(const FileRecord& f) {
         .indexed_at = f.indexed_at,
         .created_at = f.created_at,
         .updated_at = f.updated_at,
+        .origin_metadata = OriginMetadataDto{.owner_workspace_id = f.workspace_id},
     };
 }
 
@@ -471,6 +492,7 @@ struct FileContentDto {
     int64_t end_byte{0};
     bool is_binary{false};
     std::string content_hash;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const FileContentDto& c) {
@@ -482,6 +504,7 @@ inline void to_json(nlohmann::json& j, const FileContentDto& c) {
         {"endByte", c.end_byte},         {"isBinary", c.is_binary},
         {"contentHash", c.content_hash},
     };
+    add_origin_fields(j, c.origin_metadata);
 }
 
 // ==========================================
@@ -638,6 +661,7 @@ struct SymbolDto {
     bool is_declaration{false};
     RangeDto range;
     std::string created_at;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const SymbolDto& s) {
@@ -661,6 +685,7 @@ inline void to_json(nlohmann::json& j, const SymbolDto& s) {
         {"range", s.range},
         {"createdAt", s.created_at},
     };
+    add_origin_fields(j, s.origin_metadata);
 }
 
 inline SymbolDto symbol_to_dto(const Symbol& s) {
@@ -683,6 +708,7 @@ inline SymbolDto symbol_to_dto(const Symbol& s) {
         .is_declaration = s.is_declaration,
         .range = source_range_to_dto(s.range),
         .created_at = s.created_at,
+        .origin_metadata = OriginMetadataDto{.owner_workspace_id = s.workspace_id},
     };
 }
 
@@ -695,6 +721,7 @@ struct SymbolOutlineNodeDto {
     std::optional<int64_t> scope_symbol_id;
     RangeDto range;
     std::vector<SymbolOutlineNodeDto> children;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const SymbolOutlineNodeDto& n) {
@@ -708,6 +735,7 @@ inline void to_json(nlohmann::json& j, const SymbolOutlineNodeDto& n) {
         {"range", n.range},
         {"children", n.children},
     };
+    add_origin_fields(j, n.origin_metadata);
 }
 
 struct FileOutlineDto {
@@ -777,6 +805,7 @@ struct ReferencerDto {
     std::optional<int64_t> containing_symbol_id;
     std::optional<std::string> containing_symbol_name;
     std::optional<std::string> containing_qualified_name;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const ReferencerDto& r) {
@@ -796,6 +825,7 @@ inline void to_json(nlohmann::json& j, const ReferencerDto& r) {
         {"containingQualifiedName",
          r.containing_qualified_name ? nlohmann::json(*r.containing_qualified_name) : nullptr},
     };
+    add_origin_fields(j, r.origin_metadata);
 }
 
 inline ReferencerDto referencer_to_dto(const ReferencerResult& r) {
@@ -824,6 +854,7 @@ struct CallerCalleeDto {
     std::optional<std::string> qualified_name;
     int64_t file_id{0};
     std::string relative_path;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const CallerCalleeDto& c) {
@@ -834,6 +865,7 @@ inline void to_json(nlohmann::json& j, const CallerCalleeDto& c) {
         {"fileId", c.file_id},
         {"relativePath", c.relative_path},
     };
+    add_origin_fields(j, c.origin_metadata);
 }
 
 struct SymbolDetailDto {
@@ -863,6 +895,7 @@ struct GraphNodeDto {
     std::string kind;
     int64_t file_id{0};
     std::string relative_path;
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const GraphNodeDto& n) {
@@ -874,6 +907,7 @@ inline void to_json(nlohmann::json& j, const GraphNodeDto& n) {
         {"fileId", n.file_id},
         {"relativePath", n.relative_path},
     };
+    add_origin_fields(j, n.origin_metadata);
 }
 
 struct GraphEdgeDto {
@@ -918,6 +952,7 @@ struct SourceSearchHitDto {
     std::string relative_path;
     std::string snippet;
     double rank{0.0};
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const SourceSearchHitDto& h) {
@@ -927,6 +962,7 @@ inline void to_json(nlohmann::json& j, const SourceSearchHitDto& h) {
         {"snippet", h.snippet},
         {"rank", h.rank},
     };
+    add_origin_fields(j, h.origin_metadata);
 }
 
 struct SymbolSearchHitDto {
@@ -937,6 +973,8 @@ struct SymbolSearchHitDto {
     std::optional<std::string> qualified_name;
     std::string kind;
     double rank{0.0};
+    std::optional<int64_t> line{std::nullopt};
+    OriginMetadataDto origin_metadata;
 };
 
 inline void to_json(nlohmann::json& j, const SymbolSearchHitDto& h) {
@@ -949,6 +987,12 @@ inline void to_json(nlohmann::json& j, const SymbolSearchHitDto& h) {
         {"kind", h.kind},
         {"rank", h.rank},
     };
+    if (h.line.has_value()) {
+        j["line"] = *h.line;
+    } else {
+        j["line"] = nullptr;
+    }
+    add_origin_fields(j, h.origin_metadata);
 }
 
 // ==========================================
@@ -961,6 +1005,7 @@ struct CreateLibraryRequest {
     std::optional<std::string> sdk_version{std::nullopt};
     std::optional<std::string> target_environment{std::nullopt};
     std::optional<std::string> language_standard{std::nullopt};
+    std::optional<std::string> target_framework{std::nullopt};
     std::optional<std::string> sysroot{std::nullopt};
     std::vector<std::string> source_roots; // first entry is the backing library root
     std::vector<std::string> default_include_roots;
@@ -994,6 +1039,11 @@ inline void from_json(const nlohmann::json& j, CreateLibraryRequest& req) {
         req.language_standard = j["languageStandard"].get<std::string>();
     else if (j.contains("language_standard") && !j["language_standard"].is_null())
         req.language_standard = j["language_standard"].get<std::string>();
+
+    if (j.contains("targetFramework") && !j["targetFramework"].is_null())
+        req.target_framework = j["targetFramework"].get<std::string>();
+    else if (j.contains("target_framework") && !j["target_framework"].is_null())
+        req.target_framework = j["target_framework"].get<std::string>();
 
     if (j.contains("sysroot") && !j["sysroot"].is_null())
         req.sysroot = j["sysroot"].get<std::string>();
@@ -1038,6 +1088,7 @@ struct LibraryDto {
     std::optional<std::string> sdk_version;
     std::optional<std::string> target_environment;
     std::optional<std::string> language_standard;
+    std::optional<std::string> target_framework;
     std::optional<std::string> sysroot;
     std::vector<std::string> source_roots;
     std::vector<std::string> default_include_roots;
@@ -1063,6 +1114,8 @@ inline void to_json(nlohmann::json& j, const LibraryDto& lib) {
          lib.target_environment ? nlohmann::json(*lib.target_environment) : nullptr},
         {"languageStandard",
          lib.language_standard ? nlohmann::json(*lib.language_standard) : nullptr},
+        {"targetFramework",
+         lib.target_framework ? nlohmann::json(*lib.target_framework) : nullptr},
         {"sysroot", lib.sysroot ? nlohmann::json(*lib.sysroot) : nullptr},
         {"sourceRoots", lib.source_roots},
         {"defaultIncludeRoots", lib.default_include_roots},

@@ -17,6 +17,7 @@
 #include "codelenses/treesitter/grammars.hpp"
 #include "codelenses/treesitter/parser.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <nlohmann/json.hpp>
 
 using namespace codelenses;
 using namespace codelenses::adapters;
@@ -44,6 +45,9 @@ TEST_CASE("H3-01: C# adapter grammar registration and file extensions", "[adapte
     auto parsed_csharp = language_from_string("csharp");
     REQUIRE(parsed_csharp.has_value());
     REQUIRE(*parsed_csharp == Language::csharp);
+    parsed_cs = language_from_string("cs");
+    REQUIRE(parsed_cs.has_value());
+    REQUIRE(*parsed_cs == Language::csharp);
 
     REQUIRE(to_string(Language::csharp) == "C#");
 
@@ -90,6 +94,7 @@ TEST_CASE("H3-01: C# adapter extraction of namespaces, types, methods, propertie
     CSharpAdapter adapter;
 
     std::string_view source = R"(
+global using System.Text;
 using System;
 using System.Collections.Generic;
 using static System.Math;
@@ -172,9 +177,12 @@ public class Calculator : IProcessor {
     bool found_sys_col = false;
     bool found_static_math = false;
     bool found_alias_list = false;
+    bool found_global_import = false;
 
     for (const auto& occ : result.occurrences) {
         if (occ.kind == worker::FactKind::import) {
+            REQUIRE(occ.metadata_json.has_value());
+            auto metadata = nlohmann::json::parse(*occ.metadata_json)["csharpImport"];
             if (occ.written_name == "System")
                 found_sys = true;
             if (occ.written_name == "System.Collections.Generic")
@@ -186,12 +194,30 @@ public class Calculator : IProcessor {
             }
             if (occ.written_name == "System.Collections.Generic.List<string>")
                 found_alias_list = true;
+            if (occ.written_name == "System") {
+                CHECK(metadata["kind"] == "namespace_or_type");
+                CHECK(metadata["targetKind"] == "unknown");
+                CHECK_FALSE(metadata["global"].get<bool>());
+            }
+            if (occ.written_name == "System.Collections.Generic.List<string>") {
+                CHECK(metadata["kind"] == "alias");
+                CHECK(metadata["alias"] == "StringList");
+            }
+            if (occ.written_name == "System.Text") {
+                found_global_import = true;
+                CHECK(metadata["global"] == true);
+            }
+            if (occ.written_name == "System.Math") {
+                CHECK(metadata["kind"] == "static");
+                CHECK(metadata["targetKind"] == "type");
+            }
         }
     }
     REQUIRE(found_sys);
     REQUIRE(found_sys_col);
     REQUIRE(found_static_math);
     REQUIRE(found_alias_list);
+    REQUIRE(found_global_import);
 
     // Using alias symbol
     bool found_alias_sym = false;

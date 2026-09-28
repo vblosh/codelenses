@@ -13,6 +13,7 @@ struct SymbolSearchResult {
     std::optional<std::string> qualified_name;
     std::string kind;
     double rank = 0.0;
+    std::optional<int64_t> line = std::nullopt;
 
     bool operator==(const SymbolSearchResult& other) const = default;
 };

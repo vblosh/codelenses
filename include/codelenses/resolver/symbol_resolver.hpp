@@ -16,6 +16,16 @@
 
 namespace codelenses::resolver {
 
+struct CSharpImportDirective {
+    int64_t file_id{0};
+    std::string kind;
+    std::string target;
+    std::optional<std::string> target_kind;
+    std::optional<std::string> alias;
+    std::optional<std::string> scope;
+    bool is_global{false};
+};
+
 class SymbolResolver {
 public:
     SymbolResolver() = default;
@@ -34,7 +44,8 @@ public:
     [[nodiscard]] std::size_t symbol_count() const noexcept { return symbols_.size(); }
 
     [[nodiscard]] const SymbolCandidate* find_symbol_by_id(int64_t id) const;
-    [[nodiscard]] const SymbolCandidate* find_symbol_by_key(std::string_view key) const;
+    [[nodiscard]] const SymbolCandidate* find_symbol_by_key(std::string_view key,
+                                                            int64_t owner_workspace_id = 0) const;
     [[nodiscard]] std::vector<const SymbolCandidate*>
     find_symbols_by_name(std::string_view name) const;
     [[nodiscard]] std::vector<const SymbolCandidate*>
@@ -54,13 +65,23 @@ public:
     resolve_reference(const ReferenceOccurrence& ref, const std::string& file_path, Language lang,
                       const std::vector<int64_t>& imported_file_ids = {}) const;
 
+    [[nodiscard]] ResolvedOccurrence
+    resolve_csharp_occurrence(const Occurrence& occ, const std::string& file_path,
+                              const std::vector<CSharpImportDirective>& imports,
+                              const std::vector<int64_t>& visible_library_owners) const;
+
+    [[nodiscard]] ResolvedOccurrence
+    resolve_csharp_reference(const ReferenceOccurrence& ref, const std::string& file_path,
+                             const std::vector<CSharpImportDirective>& imports,
+                             const std::vector<int64_t>& visible_library_owners) const;
+
 private:
     std::vector<SymbolCandidate> symbols_;
     std::unordered_map<int64_t, std::size_t> symbol_id_to_index_;
     std::unordered_map<std::string, std::vector<std::size_t>> symbols_by_name_;
     std::unordered_map<std::string, std::vector<std::size_t>> symbols_by_qname_;
     std::unordered_map<int64_t, std::vector<std::size_t>> symbols_by_file_id_;
-    std::unordered_map<std::string, std::size_t> symbol_by_key_;
+    std::unordered_map<std::string, std::size_t> symbol_by_owner_key_;
 };
 
 } // namespace codelenses::resolver

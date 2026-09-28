@@ -115,6 +115,7 @@ private:
     Workspace require_workspace(int64_t id);
     FileRecord require_file(int64_t workspace_id, int64_t file_id);
     Symbol require_symbol(int64_t workspace_id, int64_t symbol_id);
+    OriginMetadataDto origin_for_workspace(int64_t owner_workspace_id);
 
     Database& db_;
     index::IndexingPipeline& pipeline_;

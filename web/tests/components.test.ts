@@ -162,6 +162,65 @@ describe("Frontend components", () => {
       expect(lines[2].dataset.line).toBe("3");
     });
 
+    it("labels navigated library source with its target framework", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValueOnce({
+        id: 23,
+        workspaceId: 2,
+        path: "/sdk/root-4/Widget.cs",
+        relativePath: "root-4/Widget.cs",
+        name: "Widget.cs",
+        language: "csharp",
+        encoding: "utf-8",
+        sizeBytes: 18,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+        origin: "library",
+        ownerWorkspaceId: 2,
+        libraryProfileId: 9,
+        targetFramework: "net8.0",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValueOnce({
+        fileId: 23,
+        path: "root-4/Widget.cs",
+        content: "class Widget {}",
+        totalSizeBytes: 15,
+        totalLines: 1,
+        startLine: 0,
+        endLine: 0,
+        startByte: 0,
+        endByte: 15,
+        isBinary: false,
+        contentHash: "widget-hash",
+      });
+      vi.spyOn(api, "getFileHighlights").mockResolvedValueOnce({
+        fileId: 23,
+        legend: { tokenTypes: ["class"] },
+        tokens: [],
+      });
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValueOnce({
+        fileId: 23,
+        occurrences: [],
+        total: 0,
+      });
+      vi.spyOn(api, "getFileOutline").mockResolvedValueOnce({ fileId: 23, outline: [] });
+      vi.spyOn(api, "getFileCompileCommand").mockResolvedValueOnce({
+        fileId: 23,
+        hasCompileCommand: false,
+        isAutoDetected: false,
+      });
+
+      const codeWindow = new CodeWindowComponent(store);
+      await codeWindow.loadFile(23);
+
+      const badge = codeWindow.getElement().querySelector(".library-origin-badge");
+      expect(badge?.textContent).toBe("Library · net8.0");
+      expect(badge?.getAttribute("title")).toContain("profile #9");
+    });
+
     it("displays notice for binary files", async () => {
       vi.spyOn(api, "getFileMetadata").mockResolvedValueOnce({
         id: 20,
@@ -1273,7 +1332,16 @@ describe("Frontend components", () => {
       });
       vi.spyOn(api, "searchSource").mockResolvedValue({
         items: [
-          { fileId: 1, relativePath: "malicious.cpp", snippet: maliciousSnippet, rank: 1.0 },
+          {
+            fileId: 1,
+            relativePath: "malicious.cpp",
+            snippet: maliciousSnippet,
+            rank: 1.0,
+            origin: "library",
+            ownerWorkspaceId: 20,
+            libraryProfileId: 7,
+            targetFramework: "net8.0",
+          },
         ],
         total: 1,
         limit: 50,
@@ -1292,11 +1360,23 @@ describe("Frontend components", () => {
       // Ensure no <img> tag was parsed/inserted
       expect(modal.querySelector("img")).toBeNull();
       expect(modal.textContent).toContain(maliciousSnippet);
+      expect(modal.textContent).toContain("Library · net8.0");
 
       // Now test symbol search escaping
       vi.spyOn(api, "searchSymbols").mockResolvedValue({
         items: [
-          { id: 1, fileId: 1, relativePath: "malicious.cpp", name: maliciousName, kind: "function", rank: 1.0 },
+          {
+            id: 1,
+            fileId: 1,
+            relativePath: "malicious.cpp",
+            name: maliciousName,
+            kind: "function",
+            rank: 1.0,
+            origin: "library",
+            ownerWorkspaceId: 20,
+            libraryProfileId: 7,
+            targetFramework: "net8.0",
+          },
         ],
         total: 1,
         limit: 50,
@@ -1312,6 +1392,7 @@ describe("Frontend components", () => {
       expect(modal.querySelector("svg.hack-tag")).toBeNull();
       expect(modal.querySelectorAll("svg").length).toBe(0);
       expect(modal.textContent).toContain(maliciousName);
+      expect(modal.textContent).toContain("Library · net8.0");
 
       app.closeSearch();
     });
@@ -2098,12 +2179,65 @@ describe("Frontend components", () => {
         sourceRoots: ["/usr/include/c++/12"],
         rootPath: "/usr/include/c++/12",
         languageStandard: "c++20",
+        targetFramework: undefined,
         provider: "custom",
         sdkVersion: undefined,
         defines: undefined,
       });
 
       expect(onLibrariesChanged).toHaveBeenCalledTimes(1);
+      modal.close();
+    });
+
+    it("creates a C# source profile with multiple roots and a TFM", async () => {
+      const modal = new LibraryManagerModal(store);
+      vi.spyOn(api, "getLibraries").mockResolvedValue({ libraries: [], total: 0 });
+      vi.spyOn(api, "getWorkspaceLibraries").mockResolvedValue({
+        workspaceId: 1,
+        libraries: [],
+        total: 0,
+      });
+      await modal.open(1);
+      const elem = modal.getElement();
+      (elem.querySelector(".toggle-create-lib-btn") as HTMLButtonElement).click();
+      (elem.querySelector(".new-lib-name") as HTMLInputElement).value = "Example .NET sources";
+      const language = elem.querySelector(".new-lib-lang") as HTMLSelectElement;
+      language.value = "csharp";
+      language.dispatchEvent(new Event("change"));
+      (elem.querySelector(".new-lib-roots") as HTMLTextAreaElement).value =
+        "/sdk/reference, /sdk/shared";
+      (elem.querySelector(".new-lib-target-framework") as HTMLInputElement).value = "net8.0";
+      const createSpy = vi.spyOn(api, "createLibrary").mockResolvedValueOnce({
+        id: 7,
+        workspaceId: 107,
+        name: "Example .NET sources",
+        language: "csharp",
+        provider: "custom",
+        targetFramework: "net8.0",
+        sourceRoots: ["/sdk/reference", "/sdk/shared"],
+        defaultIncludeRoots: [],
+        defines: [],
+        includePatterns: [],
+        excludePatterns: [],
+        fingerprint: "csharp-7",
+        status: "idle",
+        createdAt: "",
+        updatedAt: "",
+      });
+      (elem.querySelector(".submit-create-lib-btn") as HTMLButtonElement).click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(createSpy).toHaveBeenCalledWith({
+        name: "Example .NET sources",
+        language: "csharp",
+        sourceRoots: ["/sdk/reference", "/sdk/shared"],
+        rootPath: "/sdk/reference",
+        languageStandard: undefined,
+        targetFramework: "net8.0",
+        provider: "custom",
+        sdkVersion: undefined,
+        defines: undefined,
+      });
       modal.close();
     });
 
@@ -2220,4 +2354,3 @@ describe("Frontend components", () => {
     });
   });
 });
-

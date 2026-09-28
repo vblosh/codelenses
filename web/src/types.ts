@@ -38,6 +38,7 @@ export interface LibraryDto {
   sdkVersion?: string | null;
   targetEnvironment?: string | null;
   languageStandard?: string | null;
+  targetFramework?: string | null;
   sysroot?: string | null;
   sourceRoots: string[];
   defaultIncludeRoots: string[];
@@ -71,11 +72,19 @@ export interface CreateLibraryRequest {
   sdkVersion?: string | null;
   targetEnvironment?: string | null;
   languageStandard?: string | null;
+  targetFramework?: string | null;
   sysroot?: string | null;
   defaultIncludeRoots?: string[];
   defines?: string[];
   includePatterns?: string[];
   excludePatterns?: string[];
+}
+
+export interface OriginMetadataDto {
+  origin?: "project" | "library" | string;
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface AttachLibraryRequest {
@@ -150,6 +159,10 @@ export interface FileMetadataDto {
   indexedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface FileContentDto {
@@ -164,6 +177,10 @@ export interface FileContentDto {
   endByte: number;
   isBinary: boolean;
   contentHash: string;
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface PositionDto {
@@ -221,6 +238,10 @@ export interface SymbolDto {
   range: RangeDto;
   createdAt: string;
   relativePath?: string | null;
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface SymbolOutlineNodeDto {
@@ -232,6 +253,10 @@ export interface SymbolOutlineNodeDto {
   scopeSymbolId?: number | null;
   range: RangeDto;
   children: SymbolOutlineNodeDto[];
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface FileOutlineDto {
@@ -269,6 +294,10 @@ export interface ReferencerDto {
   containingSymbolId?: number | null;
   containingSymbolName?: string | null;
   containingQualifiedName?: string | null;
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface SymbolDetailDto {
@@ -293,6 +322,10 @@ export interface SourceSearchHitDto {
   relativePath: string;
   snippet: string;
   rank: number;
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface SymbolSearchHitDto {
@@ -303,6 +336,11 @@ export interface SymbolSearchHitDto {
   qualifiedName?: string | null;
   kind: string;
   rank: number;
+  line?: number | null;
+  origin?: OriginMetadataDto["origin"];
+  ownerWorkspaceId?: number;
+  libraryProfileId?: number | null;
+  targetFramework?: string | null;
 }
 
 export interface DiagnosticItem {

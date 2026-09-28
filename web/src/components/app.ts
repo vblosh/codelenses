@@ -1,5 +1,5 @@
 import type { StateStore } from "../state";
-import type { DiagnosticItem } from "../types";
+import type { DiagnosticItem, SourceSearchHitDto, SymbolSearchHitDto } from "../types";
 import { api } from "../api";
 import { ToolbarComponent } from "./toolbar";
 import { ExplorerComponent } from "./explorer";
@@ -516,7 +516,7 @@ export class AppComponent {
     }
   }
 
-  private renderSourceSearchResults(items: any[]): void {
+  private renderSourceSearchResults(items: SourceSearchHitDto[]): void {
     if (items.length === 0) {
       this.searchResultsList.innerHTML = `
         <div class="empty-state">
@@ -539,6 +539,7 @@ export class AppComponent {
       const pathSpan = document.createElement("span");
       pathSpan.textContent = item.relativePath || "File";
       titleDiv.appendChild(pathSpan);
+      this.appendLibraryOriginBadge(titleDiv, item);
 
       const snippetDiv = document.createElement("div");
       snippetDiv.className = "search-hit-snippet";
@@ -558,7 +559,7 @@ export class AppComponent {
     this.searchResultsList.appendChild(fragment);
   }
 
-  private renderSymbolSearchResults(items: any[]): void {
+  private renderSymbolSearchResults(items: SymbolSearchHitDto[]): void {
     if (items.length === 0) {
       this.searchResultsList.innerHTML = `
         <div class="empty-state">
@@ -585,8 +586,10 @@ export class AppComponent {
 
       const kindBadge = document.createElement("span");
       kindBadge.className = `kind-badge ${(item.kind || "symbol").toLowerCase()}`;
-      kindBadge.textContent = item.kind || "symbol";
+      kindBadge.textContent =
+        item.kind === "unresolved_call" ? "unresolved call" : item.kind || "symbol";
       titleDiv.appendChild(kindBadge);
+      this.appendLibraryOriginBadge(titleDiv, item);
 
       const snippetDiv = document.createElement("div");
       snippetDiv.className = "search-hit-snippet";
@@ -599,7 +602,7 @@ export class AppComponent {
 
       div.addEventListener("click", () => {
         this.store.selectFile(item.fileId);
-        this.store.selectSymbol(item.id);
+        this.store.selectSymbol(item.id, item.line);
         this.closeSearch();
       });
 
@@ -607,5 +610,29 @@ export class AppComponent {
     }
 
     this.searchResultsList.appendChild(fragment);
+  }
+
+  private appendLibraryOriginBadge(
+    container: HTMLElement,
+    item: {
+      origin?: string;
+      targetFramework?: string | null;
+      libraryProfileId?: number | null;
+      ownerWorkspaceId?: number;
+    },
+  ): void {
+    if (item.origin !== "library") return;
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = item.targetFramework
+      ? `Library · ${item.targetFramework}`
+      : "Library source";
+    badge.title = item.libraryProfileId
+      ? `Source from library profile #${item.libraryProfileId}`
+      : `Source from workspace #${item.ownerWorkspaceId ?? "?"}`;
+    badge.style.background = "rgba(16, 185, 129, 0.15)";
+    badge.style.color = "#34d399";
+    badge.style.fontSize = "10px";
+    container.appendChild(badge);
   }
 }

@@ -1,10 +1,13 @@
 #include "codelenses/index/indexer.hpp"
 
 #include <chrono>
+#include <algorithm>
+#include <cctype>
 #include <deque>
 #include <future>
 #include <iostream>
 #include <mutex>
+#include <unordered_set>
 
 #include "codelenses/db/statement.hpp"
 #include "codelenses/db/transaction.hpp"
@@ -16,6 +19,7 @@
 #include "codelenses/resolver/compile_commands.hpp"
 #include "codelenses/resolver/resolver.hpp"
 #include "codelenses/resolver/symbol_key.hpp"
+#include <nlohmann/json.hpp>
 
 namespace codelenses::index {
 namespace {
@@ -73,8 +77,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
         return result;
     }
 
-    auto capture_res =
-        filesystem::capture_file(planned.absolute_path, max_file_size, workspace_root);
+    const auto& capture_root = planned.source_root.empty() ? workspace_root : planned.source_root;
+    auto capture_res = filesystem::capture_file(planned.absolute_path, max_file_size, capture_root);
     if (!capture_res) {
         result.success = false;
         result.errors++;
@@ -226,6 +230,19 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
     for (const auto& occ : adapter_res.occurrences) {
         const auto occ_start = static_cast<int64_t>(occ.range.start + bom_offset);
         const auto occ_end = static_cast<int64_t>(occ.range.end + bom_offset);
+        auto occurrence_metadata = occ.metadata_json;
+        if (effective_language == Language::csharp && occ.enclosing_scope.has_value()) {
+            nlohmann::json metadata = nlohmann::json::object();
+            if (occurrence_metadata.has_value()) {
+                try {
+                    auto parsed = nlohmann::json::parse(*occurrence_metadata);
+                    if (parsed.is_object()) metadata = std::move(parsed);
+                } catch (...) {
+                }
+            }
+            metadata["enclosingScope"] = *occ.enclosing_scope;
+            occurrence_metadata = metadata.dump();
+        }
         Occurrence db_occ{
             .workspace_id = workspace_id,
             .occurrence_kind = fact_kind_to_occurrence_kind(occ.kind),
@@ -241,7 +258,7 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                 },
             .confidence = occ.confidence,
             .resolution = "unresolved",
-            .metadata_json = occ.metadata_json,
+            .metadata_json = occurrence_metadata,
         };
 
         // If occurrence matches a symbol declared in the same file, link it
@@ -263,7 +280,7 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
                 .range = db_occ.range,
                 .resolution = db_occ.resolution,
                 .confidence = occ.confidence,
-                .metadata_json = occ.metadata_json,
+                .metadata_json = occurrence_metadata,
             };
 
             // Link source_symbol_id if occurrence has enclosing_scope
@@ -634,15 +651,77 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     const auto* raw_default_cmd = default_cmd.get();
 
     filesystem::FileDiscovery discovery(disc_opts);
-    auto disc_res = discovery.discover(canonical_root);
-    if (!disc_res) {
-        db_.jobs().finish_job(job_id, "failed", std::nullopt, disc_res.error().message);
-        ws->status = WorkspaceStatus::error;
-        ws->last_error = disc_res.error().message;
-        db_.workspaces().update(*ws);
-        return std::unexpected(disc_res.error());
+    std::vector<filesystem::DiscoveredFile> discovered;
+    if (ws->kind == WorkspaceKind::library && lib_profile.has_value()) {
+        auto roots = db_.libraries().list_source_roots(lib_profile->id);
+        if (roots.empty()) {
+            roots.push_back(LibrarySourceRoot{
+                .id = 0,
+                .profile_id = lib_profile->id,
+                .ordinal = 0,
+                .path = canonical_root.string(),
+            });
+        }
+        std::unordered_set<std::string> seen_canonical_files;
+        const bool multiple_roots = roots.size() > 1;
+        for (const auto& source_root : roots) {
+            std::filesystem::path source_path(source_root.path);
+            if (source_path.is_relative()) source_path = canonical_root / source_path;
+            auto root_result = filesystem::canonicalize_workspace_root(source_path);
+            if (!root_result) {
+                auto error = root_result.error();
+                db_.jobs().finish_job(job_id, "failed", std::nullopt, error.message);
+                ws->status = WorkspaceStatus::error;
+                ws->last_error = error.message;
+                db_.workspaces().update(*ws);
+                return std::unexpected(error);
+            }
+            auto root_files = discovery.discover(*root_result);
+            if (!root_files) {
+                auto error = root_files.error();
+                db_.jobs().finish_job(job_id, "failed", std::nullopt, error.message);
+                ws->status = WorkspaceStatus::error;
+                ws->last_error = error.message;
+                db_.workspaces().update(*ws);
+                return std::unexpected(error);
+            }
+            for (auto file : *root_files) {
+                if (lib_profile->language == "csharp") {
+                    auto extension = file.absolute_path.extension().string();
+                    std::transform(extension.begin(), extension.end(), extension.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                    if (extension != ".cs") continue;
+                }
+                std::error_code canonical_ec;
+                auto canonical_file = std::filesystem::weakly_canonical(file.absolute_path,
+                                                                          canonical_ec);
+                const std::string canonical_key =
+                    canonical_ec ? file.absolute_path.lexically_normal().string()
+                                 : canonical_file.string();
+                if (!seen_canonical_files.insert(canonical_key).second) {
+                    continue;
+                }
+                if (multiple_roots || lib_profile->language == "csharp") {
+                    file.relative_path = "root-" + std::to_string(source_root.id) + "/" +
+                                         file.relative_path;
+                }
+                discovered.push_back(std::move(file));
+            }
+        }
+        std::sort(discovered.begin(), discovered.end(), [](const auto& a, const auto& b) {
+            return a.relative_path < b.relative_path;
+        });
+    } else {
+        auto disc_res = discovery.discover(canonical_root);
+        if (!disc_res) {
+            db_.jobs().finish_job(job_id, "failed", std::nullopt, disc_res.error().message);
+            ws->status = WorkspaceStatus::error;
+            ws->last_error = disc_res.error().message;
+            db_.workspaces().update(*ws);
+            return std::unexpected(disc_res.error());
+        }
+        discovered = std::move(*disc_res);
     }
-    const auto& discovered = *disc_res;
 
     // Incremental planning
     auto db_states = db_.files().get_file_states(workspace_id);

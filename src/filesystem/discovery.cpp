@@ -499,6 +499,7 @@ FileDiscovery::discover(const std::filesystem::path& workspace_root) {
                     discovered.push_back(DiscoveredFile{
                         .relative_path = rel_str,
                         .absolute_path = is_symlink ? target_path : entry.path(),
+                        .source_root = canonical_root,
                         .language = is_binary ? Language::unknown : lang,
                         .file_size = observed_size,
                         .is_binary = is_binary,

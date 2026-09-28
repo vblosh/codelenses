@@ -97,8 +97,9 @@ The CodeLenses database schema and HTTP REST API return the following resolution
 
 #### Known Limitations
 1. **Partial Classes:** Partial type definitions across multiple files are indexed as distinct symbol occurrences linked by identical qualified names, but member merging is syntactic rather than unified in a single AST.
-2. **External NuGet Packages / BCL:** Standard library types (`System.String`, `System.Collections.Generic.List`) and NuGet assemblies are identified as `external` without decompilation.
-3. **Dynamic / Reflection:** Invocations via `dynamic`, `System.Reflection`, or source generators are marked `unresolved`.
+2. **Unavailable BCL / NuGet APIs:** A name is not classified as `external` merely because it resembles a framework API. Without indexed local `.cs` source/declarations, it remains `unresolved`. DLL-only assemblies are not ingested or decompiled.
+3. **Dynamic / Reflection / Generators:** Dynamic dispatch, reflection-driven targets, and source-generator output cannot be resolved from source syntax and remain unresolved unless a visible indexed declaration matches.
+4. **Framework Identity:** Library profiles carry an explicit TFM (for example, `net8.0`) for display and identity. No TFM compatibility filtering is performed; conflicting matching declarations from attached profiles are ambiguous.
 
 ---
 

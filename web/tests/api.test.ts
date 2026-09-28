@@ -353,6 +353,51 @@ describe("ApiClient", () => {
     );
   });
 
+  it("sends C# target framework metadata when creating a library profile", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 4,
+        workspaceId: 14,
+        name: "Reference sources",
+        language: "csharp",
+        provider: "dotnet",
+        targetFramework: "net8.0",
+        sourceRoots: ["/sdk/ref"],
+        defaultIncludeRoots: [],
+        defines: [],
+        includePatterns: [],
+        excludePatterns: [],
+        fingerprint: "csharp-fp",
+        status: "idle",
+        createdAt: "",
+        updatedAt: "",
+      }),
+    } as any);
+
+    const created = await client.createLibrary({
+      name: "Reference sources",
+      language: "csharp",
+      sourceRoots: ["/sdk/ref"],
+      provider: "dotnet",
+      targetFramework: "net8.0",
+    });
+    expect(created.targetFramework).toBe("net8.0");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/libraries",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          name: "Reference sources",
+          language: "csharp",
+          sourceRoots: ["/sdk/ref"],
+          provider: "dotnet",
+          targetFramework: "net8.0",
+        }),
+      })
+    );
+  });
+
   it("deletes and indexes a library profile", async () => {
     vi.spyOn(global, "fetch").mockResolvedValueOnce({
       ok: true,

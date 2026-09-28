@@ -20,6 +20,7 @@ enum class PlannedAction {
 struct PlannedFile {
     std::string relative_path;
     std::filesystem::path absolute_path;
+    std::filesystem::path source_root;
     int64_t file_id{0};
     Language language{Language::unknown};
     PlannedAction action{PlannedAction::parse};

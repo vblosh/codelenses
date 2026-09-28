@@ -703,6 +703,7 @@ html, body {
 .kind-badge.class, .kind-badge.struct { color: #38bdf8; background-color: rgba(56, 189, 248, 0.15); }
 .kind-badge.variable, .kind-badge.field { color: #4ade80; background-color: rgba(74, 222, 128, 0.15); }
 .kind-badge.type, .kind-badge.typedef { color: #fbbf24; background-color: rgba(251, 191, 36, 0.15); }
+.kind-badge.unresolved_call { color: #f87171; background-color: rgba(239, 68, 68, 0.15); }
 
 /* References view */
 .symbol-detail-header {

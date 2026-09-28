@@ -729,6 +729,128 @@ TEST_CASE("Referencer, caller, and callee navigation queries", "[db][references]
     REQUIRE(callees[0].name == "calculate");
 }
 
+TEST_CASE("Ambiguous candidates and unresolved calls in references and search", "[db][references]") {
+    auto db = Database::open_memory();
+
+    Workspace ws{.root_path = "/ws/unres", .name = "Unresolved WS"};
+    int64_t ws_id = db->workspaces().create(ws);
+
+    int64_t f_iface = db->files().insert(FileRecord{
+        .workspace_id = ws_id,
+        .path = "/ws/unres/interfaces.h",
+        .relative_path = "interfaces.h",
+        .name = "interfaces.h",
+    });
+
+    int64_t f_impl = db->files().insert(FileRecord{
+        .workspace_id = ws_id,
+        .path = "/ws/unres/formatter.h",
+        .relative_path = "formatter.h",
+        .name = "formatter.h",
+    });
+
+    int64_t f_sink = db->files().insert(FileRecord{
+        .workspace_id = ws_id,
+        .path = "/ws/unres/sink.cpp",
+        .relative_path = "sink.cpp",
+        .name = "sink.cpp",
+    });
+
+    // Interface method IFormatter::Format
+    int64_t iface_format = db->symbols().insert(Symbol{
+        .workspace_id = ws_id,
+        .file_id = f_iface,
+        .symbol_key = "method:IFormatter::Format(ostream&,const LogRecord&)",
+        .name = "Format",
+        .qualified_name = "IFormatter::Format",
+        .kind = "method",
+        .language = "cpp",
+        .signature = "virtual void Format(std::ostream& os, const LogRecord& logdata) = 0",
+        .is_declaration = true,
+        .range = {.start_byte = 10, .end_byte = 80, .start_line = 5, .start_column = 4, .end_line = 5, .end_column = 70},
+    });
+
+    // Impl method DefaultFormatter::Format
+    int64_t impl_format = db->symbols().insert(Symbol{
+        .workspace_id = ws_id,
+        .file_id = f_impl,
+        .symbol_key = "method:DefaultFormatter::Format(ostream&,const LogRecord&)",
+        .name = "Format",
+        .qualified_name = "DefaultFormatter::Format",
+        .kind = "method",
+        .language = "cpp",
+        .signature = "void Format(std::ostream& os, const LogRecord& logdata) override",
+        .is_definition = true,
+        .range = {.start_byte = 10, .end_byte = 80, .start_line = 8, .start_column = 4, .end_line = 8, .end_column = 70},
+    });
+
+    // Caller method OstreamSink::Log in sink.cpp
+    int64_t caller_log = db->symbols().insert(Symbol{
+        .workspace_id = ws_id,
+        .file_id = f_sink,
+        .symbol_key = "method:OstreamSink::Log(const LogRecord&)",
+        .name = "Log",
+        .qualified_name = "OstreamSink::Log",
+        .kind = "method",
+        .language = "cpp",
+        .signature = "void Log(const LogRecord& record)",
+        .is_definition = true,
+        .range = {.start_byte = 10, .end_byte = 120, .start_line = 10, .start_column = 0, .end_line = 15, .end_column = 1},
+    });
+
+    // Reference 1: Ambiguous call (formatter->Format(*os, logdata)) where candidates include both
+    db->references().insert(ReferenceOccurrence{
+        .workspace_id = ws_id,
+        .source_file_id = f_sink,
+        .source_symbol_id = caller_log,
+        .target_symbol_id = iface_format,
+        .name = "Format",
+        .reference_kind = "call",
+        .range = {.start_byte = 40, .end_byte = 46, .start_line = 12, .start_column = 19, .end_line = 12, .end_column = 25},
+        .resolution = "ambiguous",
+        .confidence = 0.5,
+        .metadata_json = "{\"candidates\":[" + std::to_string(iface_format) + "," + std::to_string(impl_format) + "]}",
+    });
+
+    // Reference 2: Completely unresolved call to Format in another function
+    db->references().insert(ReferenceOccurrence{
+        .workspace_id = ws_id,
+        .source_file_id = f_sink,
+        .source_symbol_id = caller_log,
+        .target_symbol_id = std::nullopt,
+        .name = "Format",
+        .reference_kind = "call",
+        .range = {.start_byte = 80, .end_byte = 86, .start_line = 14, .start_column = 4, .end_line = 14, .end_column = 10},
+        .resolution = "unresolved",
+        .confidence = 0.0,
+    });
+
+    // 1. find_referencers for IFormatter::Format should return both ambiguous and unresolved calls
+    auto refs_iface = db->references().find_referencers(ws_id, iface_format);
+    REQUIRE(refs_iface.size() == 2);
+
+    // 2. find_referencers for DefaultFormatter::Format should also match the ambiguous call via candidate JSON and unresolved call
+    auto refs_impl = db->references().find_referencers(ws_id, impl_format);
+    REQUIRE(refs_impl.size() == 2);
+
+    // 3. find_callers should find OstreamSink::Log for both methods
+    auto callers_iface = db->references().find_callers(ws_id, iface_format);
+    REQUIRE(callers_iface.size() == 1);
+    REQUIRE(callers_iface[0].symbol_id == caller_log);
+    REQUIRE(callers_iface[0].name == "Log");
+
+    auto callers_impl = db->references().find_callers(ws_id, impl_format);
+    REQUIRE(callers_impl.size() == 1);
+    REQUIRE(callers_impl[0].symbol_id == caller_log);
+
+    // 4. find_unresolved_calls
+    auto unres = db->references().find_unresolved_calls(ws_id, "Format", 10);
+    REQUIRE(unres.size() == 2);
+    REQUIRE(unres[0].name == "Format");
+    REQUIRE(unres[0].kind == "unresolved_call");
+    REQUIRE(unres[0].relative_path == "sink.cpp");
+}
+
 TEST_CASE("FTS5 full-text symbol search triggers and queries", "[db][fts5]") {
     auto db = Database::open_memory();
 

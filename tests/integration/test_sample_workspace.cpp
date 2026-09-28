@@ -330,4 +330,33 @@ TEST_CASE("Sample workspace ApiService tree, content, and compile-commands (I-01
         CHECK(cc_summary.exists);
         CHECK(cc_summary.total_commands >= 3);
     }
+
+    SECTION("Symbol search returns unresolved calls") {
+        auto file_rec = env.db->files().get_by_path(ws_id, "c/include/common.h");
+        REQUIRE(file_rec.has_value());
+
+        env.db->references().insert(ReferenceOccurrence{
+            .workspace_id = ws_id,
+            .source_file_id = file_rec->id,
+            .name = "unresolved_metric_hook",
+            .reference_kind = "call",
+            .range = {.start_byte = 10, .end_byte = 32, .start_line = 15, .start_column = 4, .end_line = 15, .end_column = 26},
+            .resolution = "unresolved",
+            .confidence = 0.0,
+        });
+
+        auto search_res = service.search_symbols(ws_id, "unresolved_metric_hook", 10, 0);
+        REQUIRE(search_res.total >= 1);
+        bool found = false;
+        for (const auto& item : search_res.items) {
+            if (item.name == "unresolved_metric_hook") {
+                found = true;
+                CHECK(item.kind == "unresolved_call");
+                CHECK(item.file_id == file_rec->id);
+                CHECK(item.line.has_value());
+                CHECK(*item.line == 15);
+            }
+        }
+        CHECK(found);
+    }
 }

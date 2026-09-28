@@ -101,14 +101,14 @@ export class WorkspaceSettingsModal {
 
           <div class="form-group ws-libraries-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-              <label class="form-label" style="margin-bottom: 0;">Standard Libraries & Toolchain SDKs</label>
+              <label class="form-label" style="margin-bottom: 0;">Libraries & Toolchain SDKs</label>
               <div style="display: flex; gap: 6px;">
                 <button type="button" class="btn btn-sm manage-lib-profiles-btn" title="Open Library Profiles Manager">Manage Profiles</button>
                 <button type="button" class="btn btn-sm attach-lib-btn">+ Attach Library</button>
               </div>
             </div>
             <div class="form-hint" style="margin-bottom: 8px;">
-              Attached C/C++ standard libraries or platform SDKs. Direct file/symbol inspection requires active attachment; workspace re-indexing resolves or unlinks persisted references.
+              Attached C/C++ header trees or C# source/declaration trees. Direct file/symbol inspection requires active attachment; workspace re-indexing resolves or unlinks persisted references.
             </div>
             <div class="attached-libraries-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
             <div class="attach-lib-form" style="display: none; margin-top: 8px; padding: 10px; background: var(--bg-secondary); border-radius: 4px; border: 1px solid var(--border-color);">
@@ -265,7 +265,7 @@ export class WorkspaceSettingsModal {
     if (!this.attachedLibraries.length) {
       this.attachedLibsListElem.innerHTML = `
         <div style="font-size: 12px; color: var(--text-secondary); font-style: italic;">
-          No standard libraries attached to this workspace.
+          No libraries attached to this workspace.
         </div>
       `;
       return;
@@ -277,6 +277,9 @@ export class WorkspaceSettingsModal {
         const stdBadge = lib.languageStandard
           ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.languageStandard)}</span>`
           : "";
+        const frameworkBadge = lib.targetFramework
+          ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.targetFramework)}</span>`
+          : "";
         const rootsCount = lib.sourceRoots?.length ?? 0;
         const rootsInfo = `<span style="font-size: 11px; color: var(--text-secondary);">${rootsCount} root${rootsCount === 1 ? "" : "s"}</span>`;
 
@@ -286,6 +289,7 @@ export class WorkspaceSettingsModal {
               <strong style="font-size: 12px;">${escapeHtml(lib.name)}</strong>
               ${langBadge}
               ${stdBadge}
+              ${frameworkBadge}
               ${rootsInfo}
             </div>
             <button type="button" class="btn btn-sm detach-lib-btn" data-lib-id="${lib.id}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" title="Detach library from this workspace">Detach</button>
@@ -331,7 +335,7 @@ export class WorkspaceSettingsModal {
     this.availableLibsSelect.innerHTML = available
       .map(
         (l) =>
-          `<option value="${l.id}">${escapeHtml(l.name)} (${escapeHtml(l.language.toUpperCase())}${l.languageStandard ? ` / ${escapeHtml(l.languageStandard)}` : ""})</option>`
+          `<option value="${l.id}">${escapeHtml(l.name)} (${escapeHtml(l.language.toUpperCase())}${l.targetFramework ? ` / ${escapeHtml(l.targetFramework)}` : l.languageStandard ? ` / ${escapeHtml(l.languageStandard)}` : ""})</option>`
       )
       .join("");
 

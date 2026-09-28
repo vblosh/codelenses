@@ -55,6 +55,17 @@ struct TempTestDir {
 
 } // namespace
 
+TEST_CASE("C# target framework participates in library profile identity", "[library][fingerprint]") {
+    LibraryProfile profile{
+        .language = "csharp",
+        .target_framework = "net8.0",
+        .source_roots = {"/local/reference-source"},
+    };
+    const auto net8_fingerprint = compute_library_fingerprint(profile);
+    profile.target_framework = "net9.0";
+    CHECK(compute_library_fingerprint(profile) != net8_fingerprint);
+}
+
 TEST_CASE("Compiler include ordering and suppression flags", "[library][compile_commands]") {
     CompileCommandContext ctx;
     ctx.search_entries = {
@@ -247,6 +258,210 @@ class vector {
 public:
     int size() const;
 };
+}
+
+TEST_CASE("C# library profiles resolve imports across authorized source roots",
+          "[library][csharp][e2e]") {
+    TempTestDir base("csharp_lib_e2e");
+    auto db = Database::open((base.path / "test.db").string(), true);
+    REQUIRE(db != nullptr);
+
+    const auto root_one = base.path / "sources" / "models";
+    const auto root_two = base.path / "sources" / "contracts";
+    fs::create_directories(root_one);
+    fs::create_directories(root_two);
+    std::ofstream(root_one / "Widget.cs") << R"CS(
+namespace Example.Models;
+public class Widget { }
+)CS";
+    std::ofstream(root_two / "IService.cs") << R"CS(
+namespace Example.Contracts;
+public interface IService { }
+public class BaseService { }
+)CS";
+    std::ofstream(root_one / "MathOps.cs") << R"CS(
+namespace Example.Models;
+public static class MathOps { public static int Square(int value) => value * value; }
+public class Container<T> { }
+)CS";
+
+    const auto project_root = base.path / "project";
+    fs::create_directories(project_root);
+    std::ofstream(project_root / "Program.cs") << R"CS(
+using Example.Models;
+using Models = Example.Models;
+using static Example.Models.MathOps;
+namespace Client;
+public class App : Example.Contracts.BaseService, Example.Contracts.IService {
+    Widget _imported;
+    Models.Widget _aliased;
+    Example.Models.Widget _qualified;
+    Container<string> _generic;
+    System.String _framework_string;
+    int _area = Square(4);
+}
+)CS";
+    std::ofstream(project_root / "NoImport.cs") << R"CS(
+namespace Other;
+public class NoImport { Widget _unimported; }
+public class GlobalUse { IService _service; }
+)CS";
+    std::ofstream(project_root / "GlobalUsings.cs") << R"CS(
+global using Example.Contracts;
+)CS";
+
+    IndexingPipeline pipeline(*db);
+    ApiService service(*db, pipeline);
+    auto wait_for_job = [&](int64_t job_id) {
+        const auto start = std::chrono::steady_clock::now();
+        while (std::chrono::steady_clock::now() - start < std::chrono::seconds(10)) {
+            auto job = service.get_job(job_id);
+            if (job.status == "completed" || job.status == "failed" || job.status == "cancelled") {
+                REQUIRE(job.status == "completed");
+                return;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+        FAIL("Timed out waiting for C# indexing job " << job_id);
+    };
+
+    CreateLibraryRequest library_request{
+        .name = "Example source",
+        .language = "cs",
+        .provider = "custom",
+        .language_standard = std::nullopt,
+        .target_framework = "net8.0",
+        .source_roots = {root_one.string(), root_two.string()},
+    };
+    auto missing_framework_request = library_request;
+    missing_framework_request.target_framework.reset();
+    CHECK_THROWS_AS(service.create_library(missing_framework_request), ApiError);
+    auto library = service.create_library(library_request);
+    REQUIRE(library.language == "csharp");
+    REQUIRE(library.target_framework == "net8.0");
+    REQUIRE(library.source_roots.size() == 2);
+    auto source_roots = db->libraries().list_source_roots(library.id);
+    REQUIRE(source_roots.size() == 2);
+    const std::vector<int64_t> root_ids{source_roots[0].id, source_roots[1].id};
+    auto library_job = service.trigger_library_index(library.id, IndexJobRequest{});
+    wait_for_job(library_job.id);
+
+    auto project = service.create_workspace(CreateWorkspaceRequest{
+        .root_path = project_root.string(),
+        .name = "C# consumer",
+    });
+    service.attach_library(project.id, AttachLibraryRequest{.profile_id = library.id});
+    auto project_job = service.trigger_indexing(
+        project.id, IndexJobRequest{.job_type = "full", .force_full = true});
+    wait_for_job(project_job.id);
+
+    auto library_files = db->files().list_by_workspace(library.workspace_id, false);
+    REQUIRE(library_files.size() == 3);
+    CHECK(std::all_of(library_files.begin(), library_files.end(), [](const auto& file) {
+        return file.relative_path.starts_with("root-");
+    }));
+
+    auto library_file = std::find_if(library_files.begin(), library_files.end(), [](const auto& file) {
+        return file.name == "IService.cs";
+    });
+    REQUIRE(library_file != library_files.end());
+    auto file_dto = service.get_file(project.id, library_file->id);
+    CHECK(file_dto.origin_metadata.origin == "library");
+    CHECK(file_dto.origin_metadata.library_profile_id == library.id);
+    CHECK(file_dto.origin_metadata.target_framework == "net8.0");
+    CHECK(service.get_file_content(project.id, library_file->id).content.find("interface IService") !=
+          std::string::npos);
+
+    auto occurrences = db->occurrences().list_by_workspace(project.id);
+    auto find_occurrence = [&](const std::string& file_name, const std::string& name) {
+        return std::find_if(occurrences.begin(), occurrences.end(), [&](const Occurrence& occ) {
+            auto file = db->files().get_by_id(occ.file_id);
+            return file && fs::path(file->relative_path).filename() == file_name &&
+                   occ.name == name && occ.occurrence_kind == "reference";
+        });
+    };
+    auto imported = find_occurrence("Program.cs", "Widget");
+    REQUIRE(imported != occurrences.end());
+    CHECK(imported->resolution == "resolved");
+    auto aliased = find_occurrence("Program.cs", "Models.Widget");
+    REQUIRE(aliased != occurrences.end());
+    CHECK(aliased->resolution == "resolved");
+    auto qualified = find_occurrence("Program.cs", "Example.Models.Widget");
+    REQUIRE(qualified != occurrences.end());
+    CHECK(qualified->resolution == "resolved");
+    auto unimported = find_occurrence("NoImport.cs", "Widget");
+    REQUIRE(unimported != occurrences.end());
+    CHECK(unimported->resolution == "unresolved");
+    auto global_imported = find_occurrence("NoImport.cs", "IService");
+    REQUIRE(global_imported != occurrences.end());
+    CHECK(global_imported->resolution == "resolved");
+
+    auto generic = find_occurrence("Program.cs", "Container<string>");
+    REQUIRE(generic != occurrences.end());
+    CHECK(generic->resolution == "resolved");
+    auto missing_framework_symbol = find_occurrence("Program.cs", "System.String");
+    REQUIRE(missing_framework_symbol != occurrences.end());
+    CHECK(missing_framework_symbol->resolution == "unresolved");
+
+    auto base_type = std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
+        return occ.name == "Example.Contracts.BaseService" &&
+               occ.occurrence_kind == "inheritance";
+    });
+    REQUIRE(base_type != occurrences.end());
+    CHECK(base_type->resolution == "resolved");
+    auto interface_type = std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
+        return occ.name == "Example.Contracts.IService" &&
+               occ.occurrence_kind == "implementation";
+    });
+    REQUIRE(interface_type != occurrences.end());
+    CHECK(interface_type->resolution == "resolved");
+    auto static_call = std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
+        return occ.name == "Square" && occ.occurrence_kind == "call";
+    });
+    REQUIRE(static_call != occurrences.end());
+    CHECK(static_call->resolution == "resolved");
+    auto library_symbols = db->symbols().list_by_workspace(library.workspace_id);
+    auto square = std::find_if(library_symbols.begin(), library_symbols.end(), [](const Symbol& symbol) {
+        return symbol.name == "Square";
+    });
+    REQUIRE(square != library_symbols.end());
+    auto callers = service.get_symbol_callers(project.id, square->id);
+    REQUIRE(callers.size() == 1);
+    CHECK(callers[0].name == "App");
+
+    auto same_roots_reindex = service.trigger_library_index(library.id, IndexJobRequest{});
+    wait_for_job(same_roots_reindex.id);
+    const auto roots_after_reindex = db->libraries().list_source_roots(library.id);
+    REQUIRE(roots_after_reindex.size() == root_ids.size());
+    CHECK(roots_after_reindex[0].id == root_ids[0]);
+    CHECK(roots_after_reindex[1].id == root_ids[1]);
+
+    auto conflicting_request = library_request;
+    conflicting_request.name = "Example source net9";
+    conflicting_request.target_framework = "net9.0";
+    auto conflicting_library = service.create_library(conflicting_request);
+    auto conflicting_job = service.trigger_library_index(conflicting_library.id, IndexJobRequest{});
+    wait_for_job(conflicting_job.id);
+    service.attach_library(project.id, AttachLibraryRequest{.profile_id = conflicting_library.id});
+    auto resolve_job = service.trigger_indexing(
+        project.id, IndexJobRequest{.job_type = "incremental", .force_full = false});
+    wait_for_job(resolve_job.id);
+
+    occurrences = db->occurrences().list_by_workspace(project.id);
+    imported = find_occurrence("Program.cs", "Widget");
+    REQUIRE(imported != occurrences.end());
+    CHECK(imported->resolution == "ambiguous");
+
+    auto search = service.search_symbols(project.id, "IService", 20, 0);
+    auto service_hit = std::find_if(search.items.begin(), search.items.end(), [](const auto& hit) {
+        return hit.origin_metadata.origin == "library" && hit.name == "IService";
+    });
+    REQUIRE(service_hit != search.items.end());
+    CHECK(service_hit->origin_metadata.target_framework == "net8.0" ||
+          service_hit->origin_metadata.target_framework == "net9.0");
+
+    service.detach_library(project.id, library.id);
+    CHECK_THROWS_AS(service.get_file(project.id, library_file->id), ApiError);
 }
 )";
     std::ofstream(sdk_root / "log.h") << R"(#pragma once

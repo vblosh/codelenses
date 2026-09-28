@@ -85,6 +85,61 @@ bool matches_any_ignore(const std::string& name, const std::vector<std::string>&
     return false;
 }
 
+std::filesystem::path authorized_file_root(Database& db, const FileRecord& file,
+                                           const Workspace& requested_workspace) {
+    auto owner_workspace = file.workspace_id == requested_workspace.id
+                               ? std::make_optional(requested_workspace)
+                               : db.workspaces().get_by_id(file.workspace_id);
+    if (!owner_workspace || owner_workspace->kind != WorkspaceKind::library) {
+        return owner_workspace ? std::filesystem::path(owner_workspace->root_path)
+                              : std::filesystem::path(requested_workspace.root_path);
+    }
+
+    auto profile = db.libraries().get_profile_by_workspace(owner_workspace->id);
+    if (profile) {
+        std::error_code file_ec;
+        auto canonical_file = std::filesystem::canonical(file.path, file_ec);
+        if (!file_ec) {
+            for (const auto& source_root : db.libraries().list_source_roots(profile->id)) {
+                std::filesystem::path root_path(source_root.path);
+                if (root_path.is_relative()) root_path = owner_workspace->root_path / root_path;
+                auto canonical_root = filesystem::canonicalize_workspace_root(root_path);
+                if (canonical_root && filesystem::is_contained_in(*canonical_root, canonical_file)) {
+                    return *canonical_root;
+                }
+            }
+        }
+    }
+    return owner_workspace->root_path;
+}
+
+void authorize_library_source_roots(Database& db, const WorkspacePolicy& policy,
+                                    const LibraryProfile& profile) {
+    auto roots = db.libraries().list_source_roots(profile.id);
+    auto owner_workspace = db.workspaces().get_by_id(profile.workspace_id);
+    for (const auto& source_root : roots) {
+        std::filesystem::path root_path(source_root.path);
+        if (root_path.is_relative() && owner_workspace.has_value())
+            root_path = owner_workspace->root_path / root_path;
+        std::error_code ec;
+        auto status = fs::symlink_status(root_path, ec);
+        if (!ec && fs::is_symlink(status) && !policy.allow_external_symlinks) {
+            throw ApiError::forbidden("forbidden_workspace_root",
+                                      "Library source root is now a disallowed symlink");
+        }
+        auto canonical_root = filesystem::canonicalize_workspace_root(root_path);
+        if (!canonical_root.has_value()) {
+            throw ApiError::bad_request("invalid_workspace_root",
+                                        "Library source root is no longer accessible: " +
+                                            root_path.string());
+        }
+        std::string reason;
+        if (!policy.is_allowed_root(*canonical_root, &reason)) {
+            throw ApiError::forbidden("forbidden_workspace_root", reason);
+        }
+    }
+}
+
 } // namespace
 
 ApiService::ApiService(Database& db, index::IndexingPipeline& pipeline, WorkspacePolicy policy)
@@ -139,7 +194,7 @@ Workspace ApiService::require_workspace(int64_t id) {
 }
 
 FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
-    require_workspace(workspace_id);
+    auto requested_workspace = require_workspace(workspace_id);
     if (file_id <= 0) {
         throw ApiError::bad_request("invalid_id", "File ID must be positive");
     }
@@ -148,11 +203,12 @@ FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
         throw ApiError::not_found("file_not_found", "File " + std::to_string(file_id) +
                                                         " not found");
     }
-    if (f->workspace_id == workspace_id) {
+    if (f->workspace_id == workspace_id && requested_workspace.kind == WorkspaceKind::project) {
         return *f;
     }
     auto profile = db_.libraries().get_profile_by_workspace(f->workspace_id);
-    if (profile.has_value() && db_.libraries().is_attached(workspace_id, profile->id)) {
+    if (requested_workspace.kind == WorkspaceKind::project && profile.has_value() &&
+        db_.libraries().is_attached(workspace_id, profile->id)) {
         return *f;
     }
     throw ApiError::not_found("file_not_found", "File " + std::to_string(file_id) +
@@ -161,7 +217,7 @@ FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
 }
 
 Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
-    require_workspace(workspace_id);
+    auto requested_workspace = require_workspace(workspace_id);
     if (symbol_id <= 0) {
         throw ApiError::bad_request("invalid_id", "Symbol ID must be positive");
     }
@@ -170,16 +226,28 @@ Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
         throw ApiError::not_found("symbol_not_found", "Symbol " + std::to_string(symbol_id) +
                                                           " not found");
     }
-    if (s->workspace_id == workspace_id) {
+    if (s->workspace_id == workspace_id && requested_workspace.kind == WorkspaceKind::project) {
         return *s;
     }
     auto profile = db_.libraries().get_profile_by_workspace(s->workspace_id);
-    if (profile.has_value() && db_.libraries().is_attached(workspace_id, profile->id)) {
+    if (requested_workspace.kind == WorkspaceKind::project && profile.has_value() &&
+        db_.libraries().is_attached(workspace_id, profile->id)) {
         return *s;
     }
     throw ApiError::not_found("symbol_not_found", "Symbol " + std::to_string(symbol_id) +
                                                       " not found in workspace " +
                                                       std::to_string(workspace_id));
+}
+
+OriginMetadataDto ApiService::origin_for_workspace(int64_t owner_workspace_id) {
+    OriginMetadataDto origin{.owner_workspace_id = owner_workspace_id};
+    auto profile = db_.libraries().get_profile_by_workspace(owner_workspace_id);
+    if (profile.has_value()) {
+        origin.origin = "library";
+        origin.library_profile_id = profile->id;
+        origin.target_framework = profile->target_framework;
+    }
+    return origin;
 }
 
 // ==========================================
@@ -275,6 +343,7 @@ LibraryDto library_to_dto(const LibraryProfile& profile, const Workspace& ws) {
         .sdk_version = profile.sdk_version,
         .target_environment = profile.target_environment,
         .language_standard = profile.language_standard,
+        .target_framework = profile.target_framework,
         .sysroot = profile.sysroot,
         .source_roots = profile.source_roots,
         .default_include_roots = profile.default_include_roots,
@@ -299,45 +368,65 @@ LibraryDto ApiService::create_library(const CreateLibraryRequest& req) {
     if (req.name.empty()) {
         throw ApiError::bad_request("missing_field", "Field 'name' is required");
     }
-    if (req.language != "c" && req.language != "cpp") {
-        throw ApiError::bad_request("invalid_language", "Library language must be 'c' or 'cpp'");
+    std::string language = req.language;
+    std::transform(language.begin(), language.end(), language.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    if (language == "c#" || language == "cs") language = "csharp";
+    if (language != "c" && language != "cpp" && language != "csharp") {
+        throw ApiError::bad_request("invalid_language",
+                                    "Library language must be 'c', 'cpp', or 'csharp'");
+    }
+    if (language == "csharp" && (!req.target_framework || req.target_framework->empty())) {
+        throw ApiError::bad_request("missing_field",
+                                    "Field 'targetFramework' is required for C# libraries");
+    }
+
+    std::vector<std::string> canonical_roots;
+    std::unordered_set<std::string> seen_roots;
+    for (const auto& source_root : req.source_roots) {
+        if (source_root.empty()) {
+            throw ApiError::bad_request("invalid_workspace_root", "Library source roots cannot be empty");
+        }
+        std::error_code root_ec;
+        auto root_status = fs::symlink_status(source_root, root_ec);
+        if (!root_ec && fs::is_symlink(root_status) && !policy_.allow_external_symlinks) {
+            throw ApiError::forbidden(
+                "forbidden_workspace_root",
+                "Library roots cannot be symlinks when allow_external_symlinks is disabled");
+        }
+        auto canonical = filesystem::canonicalize_workspace_root(source_root);
+        if (!canonical.has_value()) {
+            throw ApiError::bad_request("invalid_workspace_root",
+                                        "Library root path does not exist or is not a directory: " +
+                                            source_root);
+        }
+        std::string root_reason;
+        if (!policy_.is_allowed_root(*canonical, &root_reason)) {
+            throw ApiError::forbidden("forbidden_workspace_root", root_reason);
+        }
+        if (seen_roots.insert(canonical->string()).second) {
+            canonical_roots.push_back(canonical->string());
+        }
     }
 
     // The first source root is the backing workspace root.
-    const std::string& root_path = req.source_roots.front();
-
-    std::error_code ec;
-    auto sym_status = fs::symlink_status(root_path, ec);
-    if (!ec && fs::is_symlink(sym_status) && !policy_.allow_external_symlinks) {
-        throw ApiError::forbidden(
-            "forbidden_workspace_root",
-            "Library root cannot be a symlink when allow_external_symlinks is disabled");
+    if (canonical_roots.empty()) {
+        throw ApiError::bad_request("missing_field", "Field 'sourceRoots' must contain a root");
     }
-
-    auto canonical_root = filesystem::canonicalize_workspace_root(root_path);
-    if (!canonical_root.has_value()) {
-        throw ApiError::bad_request("invalid_workspace_root",
-                                    "Library root path does not exist or is not a directory: " +
-                                        root_path);
-    }
-
-    std::string reason;
-    if (!policy_.is_allowed_root(*canonical_root, &reason)) {
-        throw ApiError::forbidden("forbidden_workspace_root", reason);
-    }
-
-    std::string root_str = canonical_root->string();
+    const std::string& root_str = canonical_roots.front();
 
     LibraryProfile profile{
         .workspace_id = 0,
         .name = req.name,
-        .language = req.language,
+        .language = language,
         .provider = req.provider,
         .sdk_version = req.sdk_version,
         .target_environment = req.target_environment,
         .language_standard = req.language_standard,
+        .target_framework = req.target_framework,
         .sysroot = req.sysroot,
-        .source_roots = req.source_roots,
+        .source_roots = canonical_roots,
         .default_include_roots = req.default_include_roots,
         .defines = req.defines,
         .include_patterns = req.include_patterns,
@@ -365,21 +454,6 @@ LibraryDto ApiService::create_library(const CreateLibraryRequest& req) {
         .default_ignores = policy_.default_ignores,
         .status = WorkspaceStatus::idle,
     };
-
-    // Store roots relative to the canonical root where possible.
-    profile.source_roots.clear();
-    for (const auto& sr : req.source_roots) {
-        std::error_code ec2;
-        std::filesystem::path abs = std::filesystem::weakly_canonical(sr, ec2);
-        if (!ec2) {
-            auto rel = std::filesystem::relative(abs, root_str, ec2);
-            if (!ec2 && !rel.empty() && rel.generic_string().find("..") != 0) {
-                profile.source_roots.push_back(rel.generic_string());
-                continue;
-            }
-        }
-        profile.source_roots.push_back(sr);
-    }
 
     int64_t ws_id = 0;
     int64_t profile_id = 0;
@@ -436,8 +510,12 @@ void ApiService::delete_library(int64_t profile_id) {
 }
 
 JobDto ApiService::trigger_library_index(int64_t profile_id, const IndexJobRequest& req) {
-    auto dto = get_library(profile_id);
-    return trigger_indexing(dto.workspace_id, req);
+    auto profile = db_.libraries().get_profile(profile_id);
+    if (!profile.has_value()) {
+        throw ApiError::not_found("library_not_found",
+                                  "Library profile " + std::to_string(profile_id) + " not found");
+    }
+    return trigger_indexing(profile->workspace_id, req);
 }
 
 std::vector<LibraryDto> ApiService::list_workspace_libraries(int64_t workspace_id) {
@@ -526,7 +604,14 @@ void ApiService::delete_workspace(int64_t id) {
 // Indexing, Status & Jobs (F-05)
 // ==========================================
 JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest& req) {
-    require_workspace(workspace_id);
+    auto workspace = require_workspace(workspace_id);
+    if (workspace.kind == WorkspaceKind::library) {
+        auto profile = db_.libraries().get_profile_by_workspace(workspace_id);
+        if (!profile.has_value()) {
+            throw ApiError::not_found("library_not_found", "Library profile not found");
+        }
+        authorize_library_source_roots(db_, policy_, *profile);
+    }
 
     std::unique_lock<std::mutex> lock(threads_mutex_);
     if (shutting_down_.load()) {
@@ -671,6 +756,9 @@ JobDto ApiService::cancel_job(int64_t job_id) {
 // ==========================================
 WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& path) {
     auto ws = require_workspace(workspace_id);
+    if (ws.kind == WorkspaceKind::library) {
+        throw ApiError::not_found("workspace_not_found", "Library backing workspaces are not directly browsable");
+    }
 
     auto canonical_root = filesystem::canonicalize_workspace_root(ws.root_path);
     if (!canonical_root.has_value()) {
@@ -758,7 +846,9 @@ WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& p
 
 FileMetadataDto ApiService::get_file(int64_t workspace_id, int64_t file_id) {
     auto f = require_file(workspace_id, file_id);
-    return file_to_dto(f);
+    auto dto = file_to_dto(f);
+    dto.origin_metadata = origin_for_workspace(f.workspace_id);
+    return dto;
 }
 
 FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_id,
@@ -769,9 +859,8 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
     auto ws = require_workspace(workspace_id);
     auto f = require_file(workspace_id, file_id);
 
-    auto owner_ws = (f.workspace_id == workspace_id) ? std::make_optional(ws) : db_.workspaces().get_by_id(f.workspace_id);
-    std::string root = owner_ws ? owner_ws->root_path : ws.root_path;
-    auto captured = filesystem::capture_file(f.path, policy_.max_file_size_bytes, root);
+    auto capture_root = authorized_file_root(db_, f, ws);
+    auto captured = filesystem::capture_file(f.path, policy_.max_file_size_bytes, capture_root);
     if (!captured.has_value()) {
         throw ApiError::not_found("file_read_error",
                                   "Failed to read file from disk: " + f.relative_path);
@@ -790,6 +879,7 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
             .end_byte = 0,
             .is_binary = true,
             .content_hash = captured->content_hash,
+            .origin_metadata = origin_for_workspace(f.workspace_id),
         };
     }
 
@@ -816,6 +906,7 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
             .end_byte = eb,
             .is_binary = false,
             .content_hash = captured->content_hash,
+            .origin_metadata = origin_for_workspace(f.workspace_id),
         };
     }
 
@@ -832,6 +923,7 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
             .end_byte = total_size,
             .is_binary = false,
             .content_hash = captured->content_hash,
+            .origin_metadata = origin_for_workspace(f.workspace_id),
         };
     }
 
@@ -864,6 +956,7 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
         .end_byte = actual_end_byte,
         .is_binary = false,
         .content_hash = captured->content_hash,
+        .origin_metadata = origin_for_workspace(f.workspace_id),
     };
 }
 
@@ -1030,9 +1123,8 @@ HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64
     const auto& legend = HighlightLegend::default_legend();
     std::vector<adapters::HighlightToken> tokens;
 
-    auto owner_ws = (f.workspace_id == workspace_id) ? std::make_optional(ws) : db_.workspaces().get_by_id(f.workspace_id);
-    std::string root = owner_ws ? owner_ws->root_path : ws.root_path;
-    auto captured = filesystem::capture_file(f.path, policy_.max_file_size_bytes, root);
+    auto capture_root = authorized_file_root(db_, f, ws);
+    auto captured = filesystem::capture_file(f.path, policy_.max_file_size_bytes, capture_root);
     if (captured.has_value() && !captured->is_binary) {
         auto lang_res = language_from_string(f.language);
         const auto* grammar =
@@ -1125,7 +1217,9 @@ std::vector<SymbolDto> ApiService::get_file_symbols(int64_t workspace_id, int64_
     std::vector<SymbolDto> dtos;
     dtos.reserve(syms.size());
     for (const auto& s : syms) {
-        dtos.push_back(symbol_to_dto(s));
+        auto dto = symbol_to_dto(s);
+        dto.origin_metadata = origin_for_workspace(s.workspace_id);
+        dtos.push_back(std::move(dto));
     }
     return dtos;
 }
@@ -1146,6 +1240,7 @@ FileOutlineDto ApiService::get_file_outline(int64_t workspace_id, int64_t file_i
             .scope_symbol_id = s.scope_symbol_id,
             .range = source_range_to_dto(s.range),
             .children = {},
+            .origin_metadata = origin_for_workspace(s.workspace_id),
         });
     }
 
@@ -1259,7 +1354,9 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
         if (file_id.has_value() && s.file_id != *file_id) {
             continue;
         }
-        filtered.push_back(symbol_to_dto(s));
+        auto dto = symbol_to_dto(s);
+        dto.origin_metadata = origin_for_workspace(s.workspace_id);
+        filtered.push_back(std::move(dto));
     }
 
     int64_t total = static_cast<int64_t>(filtered.size());
@@ -1289,16 +1386,22 @@ SymbolDetailDto ApiService::get_symbol_detail(int64_t workspace_id, int64_t symb
     std::vector<SymbolDto> declarations;
     declarations.reserve(same_key_symbols.size());
     for (const auto& s : same_key_symbols) {
-        declarations.push_back(symbol_to_dto(s));
+        auto dto = symbol_to_dto(s);
+        dto.origin_metadata = origin_for_workspace(s.workspace_id);
+        declarations.push_back(std::move(dto));
     }
 
     auto callers = db_.references().find_callers(workspace_id, symbol_id);
     auto callees = db_.references().find_callees(workspace_id, symbol_id);
     auto referencers = db_.references().find_referencers(workspace_id, symbol_id, 10000, 0);
 
+    auto symbol_dto = symbol_to_dto(sym);
+    symbol_dto.origin_metadata = origin_for_workspace(sym.workspace_id);
+    auto file_dto = file_to_dto(file);
+    file_dto.origin_metadata = origin_for_workspace(file.workspace_id);
     return SymbolDetailDto{
-        .symbol = symbol_to_dto(sym),
-        .file = file_to_dto(file),
+        .symbol = std::move(symbol_dto),
+        .file = std::move(file_dto),
         .declarations = std::move(declarations),
         .callers_count = static_cast<int64_t>(callers.size()),
         .callees_count = static_cast<int64_t>(callees.size()),
@@ -1320,7 +1423,11 @@ PaginatedResultDto<ReferencerDto> ApiService::get_symbol_references(int64_t work
     if (eff_offset < total) {
         int64_t end = std::min(total, eff_offset + eff_limit);
         for (int64_t i = eff_offset; i < end; ++i) {
-            items.push_back(referencer_to_dto(all_refs[static_cast<size_t>(i)]));
+            auto dto = referencer_to_dto(all_refs[static_cast<size_t>(i)]);
+            if (auto f = db_.files().get_by_id(dto.file_id)) {
+                dto.origin_metadata = origin_for_workspace(f->workspace_id);
+            }
+            items.push_back(std::move(dto));
         }
     }
 
@@ -1341,12 +1448,16 @@ std::vector<SymbolDto> ApiService::get_symbol_definitions(int64_t workspace_id, 
     std::vector<SymbolDto> dtos;
     for (const auto& s : defs) {
         if (s.is_definition) {
-            dtos.push_back(symbol_to_dto(s));
+            auto dto = symbol_to_dto(s);
+            dto.origin_metadata = origin_for_workspace(s.workspace_id);
+            dtos.push_back(std::move(dto));
         }
     }
     if (dtos.empty()) {
         for (const auto& s : defs) {
-            dtos.push_back(symbol_to_dto(s));
+            auto dto = symbol_to_dto(s);
+            dto.origin_metadata = origin_for_workspace(s.workspace_id);
+            dtos.push_back(std::move(dto));
         }
     }
     return dtos;
@@ -1360,8 +1471,10 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callers(int64_t workspace_id
     dtos.reserve(callers.size());
     for (const auto& c : callers) {
         std::string rel_path;
+        OriginMetadataDto origin;
         if (auto f = db_.files().get_by_id(c.file_id)) {
             rel_path = f->relative_path;
+            origin = origin_for_workspace(f->workspace_id);
         }
         dtos.push_back(CallerCalleeDto{
             .symbol_id = c.symbol_id,
@@ -1369,6 +1482,7 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callers(int64_t workspace_id
             .qualified_name = c.qualified_name,
             .file_id = c.file_id,
             .relative_path = std::move(rel_path),
+            .origin_metadata = std::move(origin),
         });
     }
     return dtos;
@@ -1382,8 +1496,10 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callees(int64_t workspace_id
     dtos.reserve(callees.size());
     for (const auto& c : callees) {
         std::string rel_path;
+        OriginMetadataDto origin;
         if (auto f = db_.files().get_by_id(c.file_id)) {
             rel_path = f->relative_path;
+            origin = origin_for_workspace(f->workspace_id);
         }
         dtos.push_back(CallerCalleeDto{
             .symbol_id = c.symbol_id,
@@ -1391,6 +1507,7 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callees(int64_t workspace_id
             .qualified_name = c.qualified_name,
             .file_id = c.file_id,
             .relative_path = std::move(rel_path),
+            .origin_metadata = std::move(origin),
         });
     }
     return dtos;
@@ -1422,6 +1539,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
         .kind = root_sym.kind,
         .file_id = root_sym.file_id,
         .relative_path = std::move(root_rel_path),
+        .origin_metadata = origin_for_workspace(root_sym.workspace_id),
     });
     visited_nodes.insert(root_sym.id);
 
@@ -1480,6 +1598,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                         .kind = target_sym->kind,
                         .file_id = target_sym->file_id,
                         .relative_path = std::move(target_rel),
+                        .origin_metadata = origin_for_workspace(target_sym->workspace_id),
                     });
                     visited_nodes.insert(tid);
                     queue.push_back({tid, curr_depth + 1});
@@ -1524,6 +1643,11 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                         .kind = "function",
                         .file_id = c.file_id,
                         .relative_path = std::move(caller_rel),
+                        .origin_metadata = [&]() {
+                            auto caller = db_.files().get_by_id(c.file_id);
+                            return caller ? origin_for_workspace(caller->workspace_id)
+                                          : OriginMetadataDto{};
+                        }(),
                     });
                     visited_nodes.insert(cid);
                     queue.push_back({cid, curr_depth + 1});
@@ -1546,25 +1670,49 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
 PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspace_id,
                                                                  const std::string& query,
                                                                  int64_t limit, int64_t offset) {
-    require_workspace(workspace_id);
+    auto workspace = require_workspace(workspace_id);
+    if (workspace.kind != WorkspaceKind::project) {
+        throw ApiError::not_found("workspace_not_found", "Library workspaces are not directly searchable");
+    }
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
 
-    int64_t total = db_.fts().count_search_files(workspace_id, query);
-    auto hits = db_.fts().search_files(workspace_id, query, eff_limit, eff_offset);
+    std::vector<int64_t> owner_workspaces{workspace_id};
+    for (const auto& profile : db_.libraries().list_attached(workspace_id))
+        owner_workspaces.push_back(profile.workspace_id);
+
+    struct RankedSourceHit {
+        FileSearchResult hit;
+        int64_t owner_workspace_id;
+    };
+    const int64_t wanted = eff_offset + eff_limit;
+    int64_t total = 0;
+    std::vector<RankedSourceHit> ranked;
+    for (int64_t owner : owner_workspaces) {
+        total += db_.fts().count_search_files(owner, query);
+        auto hits = db_.fts().search_files(owner, query, wanted, 0);
+        for (auto& hit : hits) ranked.push_back({std::move(hit), owner});
+    }
+    std::stable_sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+        if (a.hit.rank != b.hit.rank) return a.hit.rank < b.hit.rank;
+        if (a.owner_workspace_id != b.owner_workspace_id)
+            return a.owner_workspace_id < b.owner_workspace_id;
+        return a.hit.file_id < b.hit.file_id;
+    });
 
     std::vector<SourceSearchHitDto> items;
-    items.reserve(hits.size());
-    for (const auto& hit : hits) {
-        std::string rel_path;
-        if (auto f = db_.files().get_by_id(hit.file_id)) {
-            rel_path = f->relative_path;
-        }
+    const auto end = std::min<int64_t>(static_cast<int64_t>(ranked.size()), wanted);
+    for (int64_t i = eff_offset; i < end; ++i) {
+        const auto& entry = ranked[static_cast<std::size_t>(i)];
+        std::string relative_path;
+        if (auto file = db_.files().get_by_id(entry.hit.file_id))
+            relative_path = file->relative_path;
         items.push_back(SourceSearchHitDto{
-            .file_id = hit.file_id,
-            .relative_path = std::move(rel_path),
-            .snippet = hit.snippet,
-            .rank = hit.rank,
+            .file_id = entry.hit.file_id,
+            .relative_path = std::move(relative_path),
+            .snippet = entry.hit.snippet,
+            .rank = entry.hit.rank,
+            .origin_metadata = origin_for_workspace(entry.owner_workspace_id),
         });
     }
 
@@ -1582,53 +1730,87 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
 PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t workspace_id,
                                                                   const std::string& query,
                                                                   int64_t limit, int64_t offset) {
-    require_workspace(workspace_id);
+    auto workspace = require_workspace(workspace_id);
+    if (workspace.kind != WorkspaceKind::project) {
+        throw ApiError::not_found("workspace_not_found", "Library workspaces are not directly searchable");
+    }
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
+    std::vector<int64_t> owner_workspaces{workspace_id};
+    for (const auto& profile : db_.libraries().list_attached(workspace_id))
+        owner_workspaces.push_back(profile.workspace_id);
 
-    int64_t total = db_.fts().count_search_symbols(workspace_id, query);
+    struct RankedSymbolHit {
+        SymbolSearchResult hit;
+        int64_t owner_workspace_id;
+    };
+    int64_t total = 0;
+    const int64_t wanted = eff_offset + eff_limit;
+    std::vector<RankedSymbolHit> ranked;
+    for (int64_t owner : owner_workspaces) {
+        const auto fts_count = db_.fts().count_search_symbols(owner, query);
+        total += fts_count;
+        if (fts_count > 0) {
+            for (auto& hit : db_.fts().search_symbols(owner, query, wanted, 0))
+                ranked.push_back({std::move(hit), owner});
+            continue;
+        }
+        auto by_name = db_.symbols().find_by_name(owner, query);
+        total += static_cast<int64_t>(by_name.size());
+        for (const auto& symbol : by_name) {
+            ranked.push_back({SymbolSearchResult{
+                                  .id = symbol.id,
+                                  .file_id = symbol.file_id,
+                                  .name = symbol.name,
+                                  .qualified_name = symbol.qualified_name,
+                                  .kind = symbol.kind,
+                                  .rank = 1.0,
+                              },
+                              owner});
+        }
+    }
+
+    auto unresolved_calls = db_.references().find_unresolved_calls(workspace_id, query, wanted);
+    total += static_cast<int64_t>(unresolved_calls.size());
+    for (auto& unres : unresolved_calls) {
+        ranked.push_back({
+            SymbolSearchResult{
+                .id = unres.id,
+                .file_id = unres.file_id,
+                .name = unres.name,
+                .qualified_name = unres.qualified_name,
+                .kind = unres.kind,
+                .rank = (unres.name == query) ? 2.0 : 5.0,
+                .line = unres.line,
+            },
+            workspace_id,
+        });
+    }
+
+    std::stable_sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+        if (a.hit.rank != b.hit.rank) return a.hit.rank < b.hit.rank;
+        if (a.owner_workspace_id != b.owner_workspace_id)
+            return a.owner_workspace_id < b.owner_workspace_id;
+        return a.hit.id < b.hit.id;
+    });
+
     std::vector<SymbolSearchHitDto> items;
-
-    if (total > 0) {
-        auto hits = db_.fts().search_symbols(workspace_id, query, eff_limit, eff_offset);
-        items.reserve(hits.size());
-        for (const auto& hit : hits) {
-            std::string rel_path;
-            if (auto f = db_.files().get_by_id(hit.file_id)) {
-                rel_path = f->relative_path;
-            }
-            items.push_back(SymbolSearchHitDto{
-                .id = hit.id,
-                .file_id = hit.file_id,
-                .relative_path = std::move(rel_path),
-                .name = hit.name,
-                .qualified_name = hit.qualified_name,
-                .kind = hit.kind,
-                .rank = hit.rank,
-            });
-        }
-    } else {
-        auto by_name = db_.symbols().find_by_name(workspace_id, query);
-        total = static_cast<int64_t>(by_name.size());
-        if (eff_offset < total) {
-            int64_t end = std::min(total, eff_offset + eff_limit);
-            for (int64_t i = eff_offset; i < end; ++i) {
-                const auto& s = by_name[static_cast<size_t>(i)];
-                std::string rel_path;
-                if (auto f = db_.files().get_by_id(s.file_id)) {
-                    rel_path = f->relative_path;
-                }
-                items.push_back(SymbolSearchHitDto{
-                    .id = s.id,
-                    .file_id = s.file_id,
-                    .relative_path = std::move(rel_path),
-                    .name = s.name,
-                    .qualified_name = s.qualified_name,
-                    .kind = s.kind,
-                    .rank = 1.0,
-                });
-            }
-        }
+    const auto end = std::min<int64_t>(static_cast<int64_t>(ranked.size()), wanted);
+    for (int64_t i = eff_offset; i < end; ++i) {
+        const auto& entry = ranked[static_cast<std::size_t>(i)];
+        std::string rel_path;
+        if (auto file = db_.files().get_by_id(entry.hit.file_id)) rel_path = file->relative_path;
+        items.push_back(SymbolSearchHitDto{
+            .id = entry.hit.id,
+            .file_id = entry.hit.file_id,
+            .relative_path = std::move(rel_path),
+            .name = entry.hit.name,
+            .qualified_name = entry.hit.qualified_name,
+            .kind = entry.hit.kind,
+            .rank = entry.hit.rank,
+            .line = entry.hit.line,
+            .origin_metadata = origin_for_workspace(entry.owner_workspace_id),
+        });
     }
 
     bool has_more = (eff_offset + static_cast<int64_t>(items.size())) < total;

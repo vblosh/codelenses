@@ -122,6 +122,7 @@
       "enclosing_scope": "App",
       "end_byte": 97,
       "kind": "call",
+      "metadata_json": "{\"arity\":1}",
       "start_byte": 88,
       "written_name": "std::move"
     },
@@ -286,6 +287,7 @@
       "enclosing_scope": "run_application",
       "end_byte": 474,
       "kind": "call",
+      "metadata_json": "{\"arity\":0,\"receiver\":\"s\"}",
       "start_byte": 469,
       "written_name": "start"
     },
@@ -306,6 +308,7 @@
       "enclosing_scope": "run_application",
       "end_byte": 494,
       "kind": "call",
+      "metadata_json": "{\"arity\":0,\"receiver\":\"s\"}",
       "start_byte": 488,
       "written_name": "status"
     },
@@ -337,6 +340,7 @@
       "enclosing_scope": "run_application",
       "end_byte": 545,
       "kind": "call",
+      "metadata_json": "{\"arity\":0,\"receiver\":\"s\"}",
       "start_byte": 541,
       "written_name": "stop"
     }

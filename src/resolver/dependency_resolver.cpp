@@ -209,6 +209,10 @@ std::vector<CandidateTarget> DependencyResolver::resolve_dependency_candidates(
         return resolve_go(source_file, raw_name);
     case Language::java:
         return resolve_java(source_file, raw_name);
+    case Language::csharp:
+        // C# using directives expose namespace/type members across files and are resolved
+        // from structured adapter metadata by SymbolResolver, not as filesystem paths.
+        return {};
     case Language::shell:
     case Language::bash:
         return resolve_shell(source_file, raw_name);

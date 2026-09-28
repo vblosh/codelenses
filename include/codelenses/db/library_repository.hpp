@@ -16,6 +16,7 @@ public:
     explicit LibraryRepository(Connection& conn);
 
     int64_t create_profile(const LibraryProfile& profile);
+    [[nodiscard]] std::vector<LibrarySourceRoot> list_source_roots(int64_t profile_id);
     [[nodiscard]] std::optional<LibraryProfile> get_profile(int64_t id);
     [[nodiscard]] std::optional<LibraryProfile> get_profile_by_workspace(int64_t workspace_id);
     [[nodiscard]] std::vector<LibraryProfile> list_profiles();

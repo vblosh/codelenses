@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 #include "codelenses/parser/coordinate_converter.hpp"
 #include "codelenses/parser/highlight.hpp"
 #include "codelenses/treesitter/grammars.hpp"
@@ -116,6 +118,47 @@ std::string get_unqualified_name(std::string_view full_name) {
 
 void walk_node(treesitter::Node node, ASTContext& ctx);
 
+void mark_named_type_identifiers(treesitter::Node node, ASTContext& ctx) {
+    if (node.is_null() || node.type() == "type_argument_list") return;
+    const auto type = node.type();
+    if (type == "identifier" || type == "type_identifier") {
+        ctx.handled_identifier_byte_starts.insert(node.start_byte());
+    }
+    for (uint32_t i = 0; i < node.child_count(); ++i) {
+        mark_named_type_identifiers(node.child(i), ctx);
+    }
+}
+
+void walk_type_arguments(treesitter::Node node, ASTContext& ctx) {
+    if (node.is_null()) return;
+    for (uint32_t i = 0; i < node.child_count(); ++i) {
+        auto child = node.child(i);
+        if (child.type() == "type_argument_list") {
+            walk_node(child, ctx);
+        } else {
+            walk_type_arguments(child, ctx);
+        }
+    }
+}
+
+void process_named_type(treesitter::Node node, ASTContext& ctx) {
+    const std::string name = std::string(node.text(ctx.source));
+    if (name.empty()) return;
+    mark_named_type_identifiers(node, ctx);
+    std::vector<std::string> candidates{name};
+    const auto unqualified = get_unqualified_name(name);
+    if (unqualified != name && !unqualified.empty()) candidates.push_back(unqualified);
+    ctx.result.occurrences.push_back(OccurrenceFact{
+        .kind = worker::FactKind::reference,
+        .written_name = name,
+        .range = node.byte_range(),
+        .display_range = node.display_range(),
+        .enclosing_scope = ctx.current_scope(),
+        .candidate_targets = std::move(candidates),
+    });
+    walk_type_arguments(node, ctx);
+}
+
 void process_attribute(treesitter::Node node, ASTContext& ctx,
                        std::optional<std::string> scope_override = std::nullopt) {
     treesitter::Node name_node = node.child_by_field_name("name");
@@ -201,6 +244,27 @@ void walk_attributes(treesitter::Node node, ASTContext& ctx,
 
 void process_using_directive(treesitter::Node node, ASTContext& ctx) {
     walk_attributes(node, ctx);
+    bool is_global = node.type() == "global_using_directive";
+    bool is_static = false;
+    for (uint32_t i = 0; i < node.child_count(); ++i) {
+        const auto type = node.child(i).type();
+        is_global = is_global || type == "global";
+        is_static = is_static || type == "static";
+    }
+    const auto scope = ctx.current_scope();
+    auto import_metadata = [&](std::string kind, std::string target,
+                               std::optional<std::string> alias = std::nullopt,
+                               std::string target_kind = "unknown") {
+        nlohmann::json data{
+            {"kind", std::move(kind)},
+            {"target", std::move(target)},
+            {"targetKind", std::move(target_kind)},
+            {"global", is_global},
+            {"scope", scope ? nlohmann::json(*scope) : nlohmann::json(nullptr)},
+        };
+        if (alias) data["alias"] = *alias;
+        return nlohmann::json{{"csharpImport", std::move(data)}}.dump();
+    };
 
     treesitter::Node alias_node = node.child_by_field_name("name");
     if (!alias_node.is_null()) {
@@ -262,6 +326,7 @@ void process_using_directive(treesitter::Node node, ASTContext& ctx) {
                 .display_range = target_node.display_range(),
                 .enclosing_scope = scope,
                 .candidate_targets = std::move(candidates),
+                .metadata_json = import_metadata("alias", target_type_str, alias_name),
             });
         }
         return;
@@ -269,12 +334,10 @@ void process_using_directive(treesitter::Node node, ASTContext& ctx) {
 
     // Standard, static, or global using directive
     treesitter::Node import_name_node{};
-    bool is_static = false;
     for (uint32_t i = 0; i < node.child_count(); ++i) {
         auto ch = node.child(i);
-        if (ch.type() == "static") {
-            is_static = true;
-        } else if (ch.type() == "identifier" || ch.type() == "qualified_name") {
+        if (ch.type() == "identifier" || ch.type() == "qualified_name" ||
+            ch.type() == "generic_name" || ch.type() == "alias_qualified_name") {
             import_name_node = ch;
             break;
         }
@@ -297,8 +360,10 @@ void process_using_directive(treesitter::Node node, ASTContext& ctx) {
             .written_name = name,
             .range = import_name_node.byte_range(),
             .display_range = import_name_node.display_range(),
-            .enclosing_scope = ctx.current_scope(),
+            .enclosing_scope = scope,
             .candidate_targets = std::move(candidates),
+            .metadata_json = import_metadata(is_static ? "static" : "namespace_or_type", name,
+                                             std::nullopt, is_static ? "type" : "unknown"),
         });
     }
 }
@@ -544,7 +609,7 @@ void process_type_declaration(treesitter::Node node, ASTContext& ctx) {
                     }
 
                     const std::string base_name = std::string(target_type_node.text(ctx.source));
-                    mark_identifiers_handled(target_type_node, ctx);
+                    mark_named_type_identifiers(target_type_node, ctx);
 
                     std::string unqualified = get_unqualified_name(base_name);
                     const bool is_interface_name =
@@ -573,6 +638,7 @@ void process_type_declaration(treesitter::Node node, ASTContext& ctx) {
                         .enclosing_scope = qname,
                         .candidate_targets = std::move(candidates),
                     });
+                    walk_type_arguments(target_type_node, ctx);
                     ++base_index;
                 }
             }
@@ -1100,7 +1166,7 @@ void process_object_creation(treesitter::Node node, ASTContext& ctx) {
     treesitter::Node type_node = node.child_by_field_name("type");
     if (!type_node.is_null()) {
         const std::string type_name = std::string(type_node.text(ctx.source));
-        mark_identifiers_handled(type_node, ctx);
+        mark_named_type_identifiers(type_node, ctx);
 
         std::vector<std::string> candidates = {type_name};
         std::string unqual = get_unqualified_name(type_name);
@@ -1116,6 +1182,7 @@ void process_object_creation(treesitter::Node node, ASTContext& ctx) {
             .enclosing_scope = ctx.current_scope(),
             .candidate_targets = std::move(candidates),
         });
+        walk_type_arguments(type_node, ctx);
     }
 
     treesitter::Node args_node = node.child_by_field_name("arguments");
@@ -1139,7 +1206,7 @@ void walk_node(treesitter::Node node, ASTContext& ctx) {
 
     const auto type = node.type();
 
-    if (type == "using_directive") {
+    if (type == "using_directive" || type == "global_using_directive") {
         process_using_directive(node, ctx);
         return;
     }
@@ -1198,12 +1265,17 @@ void walk_node(treesitter::Node node, ASTContext& ctx) {
         return;
     }
 
+    if (type == "qualified_name" || type == "alias_qualified_name" || type == "generic_name") {
+        process_named_type(node, ctx);
+        return;
+    }
+
     if (type == "attribute") {
         process_attribute(node, ctx);
         return;
     }
 
-    if (type == "identifier") {
+    if (type == "identifier" || type == "type_identifier") {
         if (!ctx.handled_identifier_byte_starts.contains(node.start_byte())) {
             const std::string name = std::string(node.text(ctx.source));
             ctx.result.occurrences.push_back(OccurrenceFact{

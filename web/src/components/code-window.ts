@@ -33,6 +33,7 @@ export class CodeWindowComponent {
 
   private pathElem!: HTMLElement;
   private langBadge!: HTMLElement;
+  private originBadge!: HTMLElement;
   private compileBadge!: HTMLElement;
   private navControls!: HTMLElement;
   private viewerContainer!: HTMLElement;
@@ -89,6 +90,7 @@ export class CodeWindowComponent {
         <div class="code-path">
           <span class="file-path-text">No file open</span>
           <span class="badge lang-badge" style="display: none;"></span>
+          <span class="badge library-origin-badge" style="display: none;"></span>
           <button class="badge compile-badge" style="display: none;" title="Active compile command context (click to inspect)"></button>
         </div>
         <div class="code-nav">
@@ -108,6 +110,7 @@ export class CodeWindowComponent {
     this.tabsBar = this.element.querySelector(".code-tabs-bar")!;
     this.pathElem = this.element.querySelector(".file-path-text")!;
     this.langBadge = this.element.querySelector(".lang-badge")!;
+    this.originBadge = this.element.querySelector(".library-origin-badge")!;
     this.compileBadge = this.element.querySelector(".compile-badge")!;
     this.navControls = this.element.querySelector(".code-nav")!;
     this.bannerContainer = this.element.querySelector(".range-banner-area")!;
@@ -187,6 +190,7 @@ export class CodeWindowComponent {
       this.pathElem.textContent = cached.file.relativePath || cached.file.path;
       this.langBadge.textContent = cached.file.language || "text";
       this.langBadge.style.display = "inline-block";
+      this.updateOriginBadge(cached.file);
 
       if (cached.compileCommand?.hasCompileCommand && cached.compileCommand.compileCommand) {
         const std = cached.compileCommand.compileCommand.languageStandard?.toUpperCase() || "BUILD";
@@ -239,6 +243,7 @@ export class CodeWindowComponent {
       this.pathElem.textContent = meta.relativePath || meta.path;
       this.langBadge.textContent = meta.language || "text";
       this.langBadge.style.display = "inline-block";
+      this.updateOriginBadge(meta);
 
       // Ensure tab is open with metadata
       this.store.ensureTabOpen({
@@ -921,6 +926,7 @@ export class CodeWindowComponent {
     this.currentCompileCommand = null;
     this.pathElem.textContent = "No file open";
     this.langBadge.style.display = "none";
+    this.originBadge.style.display = "none";
     this.compileBadge.style.display = "none";
     this.navControls.innerHTML = "";
     this.bannerContainer.innerHTML = "";
@@ -931,6 +937,20 @@ export class CodeWindowComponent {
         <div class="empty-state-desc">Select a file from the explorer to view its contents.</div>
       </div>
     `;
+  }
+
+  private updateOriginBadge(file: FileMetadataDto): void {
+    if (file.origin !== "library") {
+      this.originBadge.style.display = "none";
+      return;
+    }
+    this.originBadge.textContent = file.targetFramework
+      ? `Library · ${file.targetFramework}`
+      : "Library source";
+    this.originBadge.title = file.libraryProfileId
+      ? `Source from library profile #${file.libraryProfileId}`
+      : `Source from workspace #${file.ownerWorkspaceId ?? "?"}`;
+    this.originBadge.style.display = "inline-flex";
   }
 
   private renderTabs(): void {

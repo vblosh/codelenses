@@ -35,6 +35,19 @@ public:
                            const std::optional<std::string>& metadata_json = std::nullopt);
     bool delete_by_file(int64_t file_id);
 
+    struct UnresolvedCallHit {
+        int64_t id{0};
+        int64_t file_id{0};
+        std::string relative_path;
+        std::string name;
+        std::optional<std::string> qualified_name;
+        std::string kind{"unresolved_call"};
+        int64_t line{0};
+    };
+
+    [[nodiscard]] std::vector<UnresolvedCallHit>
+    find_unresolved_calls(int64_t workspace_id, const std::string& query, int64_t limit = 50);
+
 private:
     Connection& conn_;
 };

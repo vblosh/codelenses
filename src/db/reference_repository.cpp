@@ -169,10 +169,16 @@ std::vector<ReferencerResult> ReferenceRepository::find_referencers(int64_t work
         FROM reference_occurrence AS r
         JOIN file AS f ON f.id = r.source_file_id
         LEFT JOIN symbol AS ss ON ss.id = r.source_symbol_id
-        WHERE r.workspace_id = ?
-          AND r.target_symbol_id = ?
+        WHERE r.workspace_id = ?1
+          AND (
+            r.target_symbol_id = ?2
+            OR (r.target_symbol_id IS NULL AND r.name = (SELECT name FROM symbol WHERE id = ?2))
+            OR (r.metadata_json LIKE '%"candidates"%' AND EXISTS (
+                SELECT 1 FROM json_each(r.metadata_json, '$.candidates') WHERE value = ?2
+            ))
+          )
         ORDER BY f.relative_path, r.start_line, r.start_column
-        LIMIT ? OFFSET ?;
+        LIMIT ?3 OFFSET ?4;
     )SQL");
 
     stmt.bind_int64(1, workspace_id);
@@ -212,7 +218,13 @@ std::vector<CallerCalleeResult> ReferenceRepository::find_callers(int64_t symbol
             s.file_id
         FROM reference_occurrence AS r
         JOIN symbol AS s ON s.id = r.source_symbol_id
-        WHERE r.target_symbol_id = ?
+        WHERE (
+            r.target_symbol_id = ?1
+            OR (r.target_symbol_id IS NULL AND r.name = (SELECT name FROM symbol WHERE id = ?1))
+            OR (r.metadata_json LIKE '%"candidates"%' AND EXISTS (
+                SELECT 1 FROM json_each(r.metadata_json, '$.candidates') WHERE value = ?1
+            ))
+          )
           AND r.reference_kind IN ('call', 'invocation')
         ORDER BY s.name;
     )SQL");
@@ -242,8 +254,14 @@ std::vector<CallerCalleeResult> ReferenceRepository::find_callers(int64_t worksp
             s.file_id
         FROM reference_occurrence AS r
         JOIN symbol AS s ON s.id = r.source_symbol_id
-        WHERE r.workspace_id = ?
-          AND r.target_symbol_id = ?
+        WHERE r.workspace_id = ?1
+          AND (
+            r.target_symbol_id = ?2
+            OR (r.target_symbol_id IS NULL AND r.name = (SELECT name FROM symbol WHERE id = ?2))
+            OR (r.metadata_json LIKE '%"candidates"%' AND EXISTS (
+                SELECT 1 FROM json_each(r.metadata_json, '$.candidates') WHERE value = ?2
+            ))
+          )
           AND r.reference_kind IN ('call', 'invocation')
         ORDER BY s.name;
     )SQL");
@@ -328,6 +346,73 @@ bool ReferenceRepository::delete_by_file(int64_t file_id) {
     stmt.bind_int64(1, file_id);
     stmt.execute();
     return conn_.changes() > 0;
+}
+
+std::vector<ReferenceRepository::UnresolvedCallHit>
+ReferenceRepository::find_unresolved_calls(int64_t workspace_id, const std::string& query,
+                                            int64_t limit) {
+    if (query.empty() || limit <= 0) {
+        return {};
+    }
+
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT
+            r.id,
+            r.source_file_id,
+            f.relative_path,
+            r.name,
+            ss.qualified_name AS containing_qualified_name,
+            r.start_line,
+            r.target_symbol_id,
+            r.source_symbol_id
+        FROM reference_occurrence AS r
+        JOIN file AS f ON f.id = r.source_file_id
+        LEFT JOIN symbol AS ss ON ss.id = r.source_symbol_id
+        WHERE r.workspace_id = ?1
+          AND r.reference_kind IN ('call', 'invocation')
+          AND (r.resolution IN ('unresolved', 'ambiguous') OR r.target_symbol_id IS NULL)
+          AND (r.name LIKE '%' || ?2 || '%' OR (ss.name IS NOT NULL AND ss.name LIKE '%' || ?2 || '%'))
+        ORDER BY
+            CASE WHEN r.name = ?2 THEN 0
+                 WHEN r.name LIKE ?2 || '%' THEN 1
+                 ELSE 2 END,
+            r.name,
+            f.relative_path,
+            r.start_line
+        LIMIT ?3;
+    )SQL");
+
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_text(2, query);
+    stmt.bind_int64(3, limit);
+
+    std::vector<UnresolvedCallHit> results;
+    while (stmt.step()) {
+        UnresolvedCallHit hit;
+        hit.id = stmt.column_int64(0);
+        hit.file_id = stmt.column_int64(1);
+        hit.relative_path = stmt.column_text(2);
+        hit.name = stmt.column_text(3);
+        auto containing_qual = stmt.column_optional_text(4);
+        hit.line = stmt.column_int64(5);
+        auto target_symbol_id = stmt.column_optional_int64(6);
+        auto source_symbol_id = stmt.column_optional_int64(7);
+
+        if (target_symbol_id.has_value()) {
+            hit.id = *target_symbol_id;
+        } else if (source_symbol_id.has_value()) {
+            hit.id = *source_symbol_id;
+        }
+
+        if (containing_qual.has_value() && !containing_qual->empty()) {
+            hit.qualified_name = *containing_qual + ":" + std::to_string(hit.line);
+        } else {
+            hit.qualified_name = "line " + std::to_string(hit.line);
+        }
+        hit.kind = "unresolved_call";
+        results.push_back(std::move(hit));
+    }
+    return results;
 }
 
 } // namespace codelenses

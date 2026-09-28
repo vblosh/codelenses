@@ -103,7 +103,7 @@ Result<Language> language_from_string(std::string_view name) {
         return Language::c;
     if (normalized == "c++" || normalized == "cpp" || normalized == "cxx")
         return Language::cpp;
-    if (normalized == "c#" || normalized == "csharp")
+    if (normalized == "c#" || normalized == "csharp" || normalized == "cs")
         return Language::csharp;
     if (normalized == "python" || normalized == "py")
         return Language::python;

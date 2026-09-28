@@ -20,6 +20,7 @@ struct LibraryProfile {
     std::optional<std::string> sdk_version = std::nullopt;
     std::optional<std::string> target_environment = std::nullopt;
     std::optional<std::string> language_standard = std::nullopt; // e.g. "c17", "c++20"
+    std::optional<std::string> target_framework = std::nullopt; // e.g. "net8.0" (C# identity)
     std::optional<std::string> sysroot = std::nullopt;
     std::vector<std::string> source_roots = {}; // authorized source directories
     std::vector<std::string> default_include_roots = {}; // ordered default search roots
@@ -31,6 +32,15 @@ struct LibraryProfile {
     std::string updated_at = "";
 
     bool operator==(const LibraryProfile& other) const = default;
+};
+
+struct LibrarySourceRoot {
+    int64_t id = 0;
+    int64_t profile_id = 0;
+    int64_t ordinal = 0;
+    std::string path;
+
+    bool operator==(const LibrarySourceRoot& other) const = default;
 };
 
 struct WorkspaceLibrary {

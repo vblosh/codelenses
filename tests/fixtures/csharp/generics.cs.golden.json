@@ -162,6 +162,7 @@
       ],
       "end_byte": 12,
       "kind": "import",
+      "metadata_json": "{\"csharpImport\":{\"global\":false,\"kind\":\"namespace_or_type\",\"scope\":null,\"target\":\"System\",\"targetKind\":\"unknown\"}}",
       "start_byte": 6,
       "written_name": "System"
     },
@@ -171,6 +172,7 @@
       ],
       "end_byte": 46,
       "kind": "import",
+      "metadata_json": "{\"csharpImport\":{\"global\":false,\"kind\":\"namespace_or_type\",\"scope\":null,\"target\":\"System.Collections.Generic\",\"targetKind\":\"unknown\"}}",
       "start_byte": 20,
       "written_name": "System.Collections.Generic"
     },
@@ -249,6 +251,26 @@
     },
     {
       "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 454,
+      "kind": "reference",
+      "start_byte": 447,
+      "written_name": "TEntity"
+    },
+    {
+      "candidate_targets": [
+        "TKey"
+      ],
+      "enclosing_scope": "Storage.Generic",
+      "end_byte": 460,
+      "kind": "reference",
+      "start_byte": 456,
+      "written_name": "TKey"
+    },
+    {
+      "candidate_targets": [
         "IEntity<TKey>",
         "IEntity"
       ],
@@ -260,13 +282,14 @@
     },
     {
       "candidate_targets": [
+        "List<TEntity>",
         "List"
       ],
       "enclosing_scope": "Storage.Generic.Repository",
-      "end_byte": 526,
+      "end_byte": 535,
       "kind": "reference",
       "start_byte": 522,
-      "written_name": "List"
+      "written_name": "List<TEntity>"
     },
     {
       "candidate_targets": [
@@ -298,6 +321,16 @@
       "kind": "call",
       "start_byte": 592,
       "written_name": "List<TEntity>"
+    },
+    {
+      "candidate_targets": [
+        "TEntity"
+      ],
+      "enclosing_scope": "Storage.Generic.Repository.Repository",
+      "end_byte": 604,
+      "kind": "reference",
+      "start_byte": 597,
+      "written_name": "TEntity"
     },
     {
       "candidate_targets": [
@@ -382,13 +415,14 @@
     },
     {
       "candidate_targets": [
+        "Func<TEntity, TResult>",
         "Func"
       ],
       "enclosing_scope": "Storage.Generic.Repository",
-      "end_byte": 817,
+      "end_byte": 835,
       "kind": "reference",
       "start_byte": 813,
-      "written_name": "Func"
+      "written_name": "Func<TEntity, TResult>"
     },
     {
       "candidate_targets": [
@@ -450,6 +484,16 @@
       "kind": "call",
       "start_byte": 960,
       "written_name": "Repository<User, int>"
+    },
+    {
+      "candidate_targets": [
+        "User"
+      ],
+      "enclosing_scope": "Storage.Generic.Service.Process",
+      "end_byte": 975,
+      "kind": "reference",
+      "start_byte": 971,
+      "written_name": "User"
     },
     {
       "candidate_targets": [

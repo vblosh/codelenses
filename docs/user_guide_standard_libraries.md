@@ -1,8 +1,8 @@
-# User Guide: C/C++ Standard Library Indexing
+# User Guide: Local Library Indexing
 
-CodeLenses supports indexing C and C++ standard libraries and platform toolchain headers (such as GCC libstdc++, Clang libc++, and glibc) in a local-first, privacy-respecting manner.
+CodeLenses supports explicitly configured local C/C++ toolchain headers and C# source or declaration trees. C# profiles can represent BCL/reference-source trees when those `.cs` files are available locally.
 
-This guide explains how standard library indexing works, how to configure and index library profiles, how to attach them to your projects, and how reference resolution and caller isolation behave.
+This guide explains how local library indexing works, how to configure and index profiles, how to attach them to projects, and how reference resolution and caller isolation behave.
 
 ---
 
@@ -21,15 +21,18 @@ This guide explains how standard library indexing works, how to configure and in
 ## 2. Concepts & Data Model
 
 ### Library Profile
-A **Library Profile** represents a configured installation of standard library headers and toolchain includes. It contains:
-- `name`: Human-readable identifier (e.g. `GCC 13 Libstdc++ C++20`).
-- `language`: `cpp` or `c`.
+A **Library Profile** represents configured local headers, sources, or declarations. It contains:
+- `name`: Human-readable identifier (e.g. `GCC 13 Libstdc++ C++20` or `.NET 8 reference sources`).
+- `language`: `cpp`, `c`, or `csharp`.
+- For C#, `language` is `csharp` and `target_framework` identifies the profile (for example, `net8.0`). The TFM is metadata; CodeLenses does not apply a framework compatibility matrix.
 - `language_standard`: Standard specification, such as `c++20`, `c++17`, `c17`, `c11`.
 - `source_roots`: Array of directory paths whose headers will be discovered and indexed.
 - `default_include_roots`: Array of directory paths searched in deterministic priority order when resolving `#include` directives.
 - `defines`: Optional command-line macro definitions (e.g. `-D__linux__=1`).
 - `sysroot`: Optional target filesystem prefix (e.g. `--sysroot=/opt/sysroot`).
 - `include_patterns` / `exclude_patterns`: Optional glob filters.
+
+For C# profiles, every configured source root is scanned for `.cs` files using the same include and exclude filters. `.csproj` files are not evaluated; CodeLenses does not discover SDKs, restore NuGet packages, index DLLs, or decompile assemblies. Add the local source/declaration directories explicitly.
 
 ### Attachment & Detachment
 A project workspace can attach to one or more library profiles. Attaching grants the project authorization to:
@@ -95,6 +98,23 @@ curl -X POST http://localhost:8080/api/v1/libraries \
     "defines": [
       "-D__linux__=1",
       "-D__x86_64__=1"
+    ]
+  }'
+```
+
+For a local C# source library, provide its framework identity and each source root explicitly:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/libraries \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Example BCL reference sources",
+    "language": "csharp",
+    "provider": "dotnet-reference-source",
+    "targetFramework": "net8.0",
+    "sourceRoots": [
+      "/opt/dotnet/reference-source/System.Private.CoreLib",
+      "/opt/dotnet/reference-source/System.Runtime"
     ]
   }'
 ```
@@ -213,6 +233,13 @@ CodeLenses constructs a bounded, cycle-safe transitive include closure per sourc
 ### Strict Visibility Rules
 - **Explicit Include Required**: If `worker.cpp` does **not** include `<vector>`, attempting to use `std::vector` will be marked as `unresolved`. CodeLenses will **never** fall back to matching library symbols across the workspace without include evidence.
 - **Project Precedence**: If both your project and an attached library define a matching symbol (e.g. custom `vector`), the project-owned symbol takes precedence.
+
+### C# Source Libraries
+
+- Only indexed local `.cs` files can provide navigable C# definitions. `using` namespace directives, aliases, `using static`, `global using`, and fully qualified names control visibility. A short name without a visible declaration remains `unresolved`.
+- Set `targetFramework` to identify the source profile. The value is carried in library metadata and origin badges; it does not filter compatible frameworks. If attached profiles contain conflicting matching declarations, the result is `ambiguous`.
+- Missing BCL or NuGet declarations remain `unresolved`; the indexer does not infer `external` merely because a name resembles a framework API. DLL-only APIs, reflection, dynamic dispatch, and source-generator output have no source navigation support.
+- Partial type declarations remain separate indexed symbols. Overload selection and other compiler-level semantics are outside the resolver's scope.
 
 ### Cross-Project Caller Isolation
 When multiple projects attach to the same library index (for instance, Project A and Project B both use GCC 13 Libstdc++):

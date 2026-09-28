@@ -122,6 +122,155 @@ TEST_CASE("Scope hierarchy and candidate lookup interfaces (E-01)", "[resolver][
     }
 }
 
+TEST_CASE("C# imports resolve only visible attached library symbols", "[resolver][csharp]") {
+    SymbolResolver resolver;
+    resolver.add_symbol(SymbolCandidate{
+        .symbol_id = 101,
+        .file_id = 20,
+        .file_path = "root-1/Widget.cs",
+        .symbol_key = "csharp:Example.Widget",
+        .name = "Widget",
+        .qualified_name = "Example.Widget",
+        .kind = "class",
+        .language = "csharp",
+        .enclosing_scope = "Example",
+        .owner_workspace_id = 200,
+    });
+    resolver.add_symbol(SymbolCandidate{
+        .symbol_id = 102,
+        .file_id = 20,
+        .file_path = "root-1/MathOps.cs",
+        .symbol_key = "csharp:Example.MathOps.Square",
+        .name = "Square",
+        .qualified_name = "Example.MathOps.Square",
+        .kind = "method",
+        .language = "csharp",
+        .enclosing_scope = "Example.MathOps",
+        .owner_workspace_id = 200,
+    });
+
+    const std::vector<int64_t> owners{200};
+    const CSharpImportDirective namespace_import{
+        .file_id = 10,
+        .kind = "namespace_or_type",
+        .target = "Example",
+    };
+    Occurrence widget_use{
+        .file_id = 10,
+        .occurrence_kind = "reference",
+        .name = "Widget",
+    };
+
+    SECTION("Short names require an import") {
+        CHECK(resolver.resolve_csharp_occurrence(widget_use, "Program.cs", {}, owners).resolution ==
+              Resolution::unresolved);
+        auto resolved = resolver.resolve_csharp_occurrence(
+            widget_use, "Program.cs", {namespace_import}, owners);
+        CHECK(resolved.resolution == Resolution::resolved);
+        REQUIRE(resolved.candidates.size() == 1);
+        CHECK(resolved.candidates[0].target_symbol_id == 101);
+    }
+
+    SECTION("Fully qualified names and aliases resolve without namespace imports") {
+        widget_use.name = "Example.Widget";
+        auto qualified = resolver.resolve_csharp_occurrence(widget_use, "Program.cs", {}, owners);
+        CHECK(qualified.resolution == Resolution::resolved);
+
+        widget_use.name = "Models.Widget";
+        CSharpImportDirective alias{
+            .file_id = 10,
+            .kind = "alias",
+            .target = "Example",
+            .alias = "Models",
+        };
+        auto aliased = resolver.resolve_csharp_occurrence(widget_use, "Program.cs", {alias}, owners);
+        CHECK(aliased.resolution == Resolution::resolved);
+        REQUIRE(aliased.candidates.size() == 1);
+        CHECK(aliased.candidates[0].target_symbol_id == 101);
+    }
+
+    SECTION("Static and global imports apply in their documented scopes") {
+        Occurrence static_use{
+            .file_id = 10,
+            .occurrence_kind = "reference",
+            .name = "Square",
+        };
+        CSharpImportDirective static_import{
+            .file_id = 10,
+            .kind = "static",
+            .target = "Example.MathOps",
+        };
+        auto static_result =
+            resolver.resolve_csharp_occurrence(static_use, "Program.cs", {static_import}, owners);
+        CHECK(static_result.resolution == Resolution::resolved);
+        REQUIRE(static_result.candidates.size() == 1);
+        CHECK(static_result.candidates[0].target_symbol_id == 102);
+
+        Occurrence global_use{
+            .file_id = 11,
+            .occurrence_kind = "reference",
+            .name = "Widget",
+        };
+        auto global_import = namespace_import;
+        global_import.file_id = 10;
+        global_import.is_global = true;
+        CHECK(resolver.resolve_csharp_occurrence(global_use, "Other.cs", {global_import}, owners)
+                  .resolution == Resolution::resolved);
+    }
+
+    SECTION("Detached owners are invisible and duplicate library profiles are ambiguous") {
+        CHECK(resolver.resolve_csharp_occurrence(widget_use, "Program.cs", {namespace_import}, {})
+                  .resolution == Resolution::unresolved);
+        resolver.add_symbol(SymbolCandidate{
+            .symbol_id = 201,
+            .file_id = 30,
+            .file_path = "Widget.cs",
+            .symbol_key = "csharp:Example.Widget:other",
+            .name = "Widget",
+            .qualified_name = "Example.Widget",
+            .kind = "class",
+            .language = "csharp",
+            .enclosing_scope = "Example",
+            .owner_workspace_id = 201,
+        });
+        auto ambiguous = resolver.resolve_csharp_occurrence(
+            widget_use, "Program.cs", {namespace_import}, {200, 201});
+        CHECK(ambiguous.resolution == Resolution::ambiguous);
+        CHECK(ambiguous.candidates.size() == 2);
+    }
+
+    SECTION("Symbol-key lookup stays scoped to its owner workspace") {
+        resolver.add_symbol(SymbolCandidate{
+            .symbol_id = 301,
+            .file_id = 31,
+            .file_path = "Widget.cs",
+            .symbol_key = "shared-key",
+            .name = "Widget",
+            .qualified_name = "Example.Widget",
+            .kind = "class",
+            .language = "csharp",
+            .owner_workspace_id = 200,
+        });
+        resolver.add_symbol(SymbolCandidate{
+            .symbol_id = 302,
+            .file_id = 32,
+            .file_path = "Widget.cs",
+            .symbol_key = "shared-key",
+            .name = "Widget",
+            .qualified_name = "Example.Widget",
+            .kind = "class",
+            .language = "csharp",
+            .owner_workspace_id = 201,
+        });
+
+        REQUIRE(resolver.find_symbol_by_key("shared-key", 200) != nullptr);
+        CHECK(resolver.find_symbol_by_key("shared-key", 200)->symbol_id == 301);
+        REQUIRE(resolver.find_symbol_by_key("shared-key", 201) != nullptr);
+        CHECK(resolver.find_symbol_by_key("shared-key", 201)->symbol_id == 302);
+        CHECK(resolver.find_symbol_by_key("shared-key") == nullptr);
+    }
+}
+
 // =============================================================================
 // Task E-02: Deterministic Symbol-Key Generation
 // =============================================================================

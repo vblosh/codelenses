@@ -202,6 +202,7 @@
       "enclosing_scope": "Renderer::render",
       "end_byte": 210,
       "kind": "call",
+      "metadata_json": "{\"arity\":1}",
       "start_byte": 200,
       "written_name": "draw_frame"
     },
@@ -212,6 +213,7 @@
       "enclosing_scope": "Renderer::render",
       "end_byte": 262,
       "kind": "call",
+      "metadata_json": "{\"arity\":1}",
       "start_byte": 252,
       "written_name": "draw_frame"
     },
@@ -242,6 +244,7 @@
       "enclosing_scope": "Renderer::render",
       "end_byte": 378,
       "kind": "call",
+      "metadata_json": "{\"arity\":1}",
       "start_byte": 364,
       "written_name": "draw_wireframe"
     },
@@ -262,6 +265,7 @@
       "enclosing_scope": "Renderer::render",
       "end_byte": 426,
       "kind": "call",
+      "metadata_json": "{\"arity\":1}",
       "start_byte": 416,
       "written_name": "draw_frame"
     },
@@ -282,6 +286,7 @@
       "enclosing_scope": "run_overloads",
       "end_byte": 590,
       "kind": "call",
+      "metadata_json": "{\"arity\":2}",
       "start_byte": 587,
       "written_name": "add"
     },
@@ -292,6 +297,7 @@
       "enclosing_scope": "run_overloads",
       "end_byte": 619,
       "kind": "call",
+      "metadata_json": "{\"arity\":2}",
       "start_byte": 616,
       "written_name": "add"
     },
@@ -302,6 +308,7 @@
       "enclosing_scope": "run_overloads",
       "end_byte": 649,
       "kind": "call",
+      "metadata_json": "{\"arity\":3}",
       "start_byte": 646,
       "written_name": "add"
     },
@@ -332,6 +339,7 @@
       "enclosing_scope": "run_overloads",
       "end_byte": 689,
       "kind": "call",
+      "metadata_json": "{\"arity\":0,\"receiver\":\"r\"}",
       "start_byte": 683,
       "written_name": "render"
     },
@@ -352,6 +360,7 @@
       "enclosing_scope": "run_overloads",
       "end_byte": 705,
       "kind": "call",
+      "metadata_json": "{\"arity\":1,\"receiver\":\"r\"}",
       "start_byte": 699,
       "written_name": "render"
     },
@@ -372,6 +381,7 @@
       "enclosing_scope": "run_overloads",
       "end_byte": 725,
       "kind": "call",
+      "metadata_json": "{\"arity\":2,\"receiver\":\"r\"}",
       "start_byte": 719,
       "written_name": "render"
     }

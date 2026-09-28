@@ -14,6 +14,8 @@
 #include "codelenses/treesitter/grammars.hpp"
 #include "codelenses/treesitter/parser.hpp"
 
+#include <nlohmann/json.hpp>
+
 namespace codelenses::adapters {
 
 namespace {
@@ -2139,6 +2141,7 @@ void process_call_expression(treesitter::Node node, ASTContext& ctx) {
     treesitter::Node func_node = node.child_by_field_name("function");
     if (!func_node.is_null()) {
         std::string callee;
+        std::string receiver_text;
         std::vector<std::string> candidates;
         treesitter::Node target_node = func_node;
 
@@ -2205,6 +2208,7 @@ void process_call_expression(treesitter::Node node, ASTContext& ctx) {
             }
             treesitter::Node arg = func_node.child_by_field_name("argument");
             if (!arg.is_null()) {
+                receiver_text = std::string(arg.text(ctx.source));
                 walk_node(arg, ctx);
             }
         } else if (func_node.type() == "qualified_identifier") {
@@ -2245,10 +2249,12 @@ void process_call_expression(treesitter::Node node, ASTContext& ctx) {
             }
             treesitter::Node recv = func_node.child_by_field_name("argument");
             if (!recv.is_null()) {
+                receiver_text = std::string(recv.text(ctx.source));
                 walk_node(recv, ctx);
             } else if (func_node.parent().type() == "field_expression") {
                 treesitter::Node parent_recv = func_node.parent().child_by_field_name("argument");
                 if (!parent_recv.is_null()) {
+                    receiver_text = std::string(parent_recv.text(ctx.source));
                     walk_node(parent_recv, ctx);
                 }
             } else if (func_node.parent().type() == "dependent_name" &&
@@ -2256,11 +2262,21 @@ void process_call_expression(treesitter::Node node, ASTContext& ctx) {
                 treesitter::Node parent_recv =
                     func_node.parent().parent().child_by_field_name("argument");
                 if (!parent_recv.is_null()) {
+                    receiver_text = std::string(parent_recv.text(ctx.source));
                     walk_node(parent_recv, ctx);
                 }
             }
         } else {
             walk_node(func_node, ctx);
+        }
+
+        treesitter::Node args_node = node.child_by_field_name("arguments");
+        nlohmann::json meta;
+        if (!args_node.is_null()) {
+            meta["arity"] = args_node.named_child_count();
+        }
+        if (!receiver_text.empty()) {
+            meta["receiver"] = receiver_text;
         }
 
         if (!callee.empty()) {
@@ -2271,6 +2287,7 @@ void process_call_expression(treesitter::Node node, ASTContext& ctx) {
                 .display_range = target_node.display_range(),
                 .enclosing_scope = ctx.current_scope(),
                 .candidate_targets = std::move(candidates),
+                .metadata_json = meta.empty() ? std::nullopt : std::make_optional(meta.dump()),
             });
         }
     }

@@ -247,6 +247,7 @@
       "enclosing_scope": "test_namespaces",
       "end_byte": 550,
       "kind": "call",
+      "metadata_json": "{\"arity\":1,\"receiver\":\"log\"}",
       "start_byte": 546,
       "written_name": "info"
     },
@@ -257,6 +258,7 @@
       "enclosing_scope": "test_namespaces",
       "end_byte": 579,
       "kind": "call",
+      "metadata_json": "{\"arity\":0}",
       "start_byte": 568,
       "written_name": "legacy_init"
     },
@@ -288,6 +290,7 @@
       "enclosing_scope": "test_namespaces",
       "end_byte": 628,
       "kind": "call",
+      "metadata_json": "{\"arity\":1,\"receiver\":\"diag_log\"}",
       "start_byte": 624,
       "written_name": "warn"
     }

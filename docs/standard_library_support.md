@@ -48,10 +48,12 @@ Add **explicitly configured library indexes** that projects can attach to, searc
 | Python | Standard-library `.py` sources and optional `.pyi` stubs; package resolution and explicit stub precedence. |
 | JavaScript/TypeScript | Selected `lib*.d.ts` files and optional local Node declarations; separate runtime environments and ambient/module declarations. |
 | Java | Extracted JDK sources; package/module layouts and implicit `java.lang` imports. |
-| C# | Compatible BCL/reference sources or C# declarations; namespace/type lookup and framework identity. |
+| C# | Explicit local `.cs` source/declaration roots; namespace, alias, static/global using lookup. A TFM labels the profile but does not enable compatibility filtering. |
 | Shell/Bash | Explicit source-script libraries; built-ins and executables remain classified without fabricated source definitions. |
 
 Unavailable native or compiled-only APIs remain clearly labeled. Java archives must be extracted manually for this first version.
+
+For C#, `.csproj`/MSBuild evaluation, SDK discovery, NuGet restore, DLL ingestion, and decompilation are out of scope. A missing API stays unresolved unless indexed source provides a match; TFM identity is descriptive and conflicting attached source profiles remain ambiguous.
 
 **4. Extend resolution and API visibility**
 

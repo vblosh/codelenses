@@ -195,6 +195,7 @@
       "enclosing_scope": "Stack::empty",
       "end_byte": 184,
       "kind": "call",
+      "metadata_json": "{\"arity\":0,\"receiver\":\"elements\"}",
       "start_byte": 179,
       "written_name": "empty"
     },
@@ -226,6 +227,7 @@
       "enclosing_scope": "Stack::size",
       "end_byte": 241,
       "kind": "call",
+      "metadata_json": "{\"arity\":0,\"receiver\":\"elements\"}",
       "start_byte": 237,
       "written_name": "size"
     },
@@ -267,6 +269,7 @@
       "enclosing_scope": "Stack::push",
       "end_byte": 370,
       "kind": "call",
+      "metadata_json": "{\"arity\":1,\"receiver\":\"elements\"}",
       "start_byte": 361,
       "written_name": "push_back"
     },
@@ -365,6 +368,7 @@
       "enclosing_scope": "test_templates",
       "end_byte": 786,
       "kind": "call",
+      "metadata_json": "{\"arity\":1,\"receiver\":\"s\"}",
       "start_byte": 782,
       "written_name": "push"
     },
@@ -375,6 +379,7 @@
       "enclosing_scope": "test_templates",
       "end_byte": 817,
       "kind": "call",
+      "metadata_json": "{\"arity\":2}",
       "start_byte": 809,
       "written_name": "pair_sum"
     },

@@ -99,6 +99,7 @@
       ],
       "end_byte": 12,
       "kind": "import",
+      "metadata_json": "{\"csharpImport\":{\"global\":false,\"kind\":\"namespace_or_type\",\"scope\":null,\"target\":\"System\",\"targetKind\":\"unknown\"}}",
       "start_byte": 6,
       "written_name": "System"
     },

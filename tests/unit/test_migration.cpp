@@ -231,3 +231,39 @@ TEST_CASE("MigrationRunner preserves populated workspace and child rows when upg
     }
 }
 
+TEST_CASE("C# library migration preserves every configured source root", "[migration][library]") {
+    auto conn = Connection::open_memory();
+    MigrationRunner runner;
+    const auto& migrations = runner.registered_migrations();
+    REQUIRE(migrations.size() >= 3);
+
+    runner.ensure_migration_table(*conn);
+    conn->execute(migrations[0].up_sql);
+    conn->execute("INSERT INTO schema_migration (version, name) VALUES (1, '001_initial_schema');");
+    conn->execute(migrations[1].up_sql);
+    conn->execute("INSERT INTO schema_migration (version, name) VALUES (2, '002_library_indexes');");
+    conn->execute(R"SQL(
+        INSERT INTO workspace (id, root_path, name, kind)
+        VALUES (1, '/legacy/library', 'Legacy library', 'library');
+        INSERT INTO library_profile (workspace_id, name, language, source_roots_json)
+        VALUES (1, 'Legacy C# sources', 'csharp', '[".","contracts"]');
+    )SQL");
+
+    runner.apply_pending(*conn);
+
+    Statement roots(conn->handle(),
+                    "SELECT ordinal, root_path FROM library_source_root WHERE profile_id = 1 "
+                    "ORDER BY ordinal;");
+    REQUIRE(roots.step());
+    CHECK(roots.column_int64(0) == 0);
+    CHECK(roots.column_text(1) == ".");
+    REQUIRE(roots.step());
+    CHECK(roots.column_int64(0) == 1);
+    CHECK(roots.column_text(1) == "contracts");
+    CHECK_FALSE(roots.step());
+
+    Statement framework(conn->handle(),
+                        "SELECT target_framework FROM library_profile WHERE id = 1;");
+    REQUIRE(framework.step());
+    CHECK(framework.column_optional_text(0) == std::nullopt);
+}

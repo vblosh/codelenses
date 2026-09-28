@@ -23,11 +23,12 @@ export class LibraryManagerModal {
   // Form inputs
   private libNameInput!: HTMLInputElement;
   private libLangSelect!: HTMLSelectElement;
-  private libRootsInput!: HTMLInputElement;
+  private libRootsInput!: HTMLTextAreaElement;
   private libStdInput!: HTMLInputElement;
   private libProviderInput!: HTMLInputElement;
   private libVersionInput!: HTMLInputElement;
   private libDefinesInput!: HTMLInputElement;
+  private libTargetFrameworkInput!: HTMLInputElement;
   private submitCreateBtn!: HTMLButtonElement;
   private submitCreateIndexBtn!: HTMLButtonElement;
   private cancelCreateBtn!: HTMLButtonElement;
@@ -57,7 +58,7 @@ export class LibraryManagerModal {
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
             </svg>
-            <span>Standard Libraries & Toolchain SDKs</span>
+            <span>Libraries & Toolchain SDKs</span>
           </div>
           <button class="btn-icon close-lib-manager-btn" title="Close (Esc)">✕</button>
         </div>
@@ -67,7 +68,7 @@ export class LibraryManagerModal {
 
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <div class="form-hint" style="margin: 0; font-size: 12px;">
-              Configure C/C++ standard library headers (e.g. GCC libstdc++, Clang libc++, glibc) and toolchain SDKs.
+              Configure local C/C++ headers or C#/.NET source and declaration trees. C# profiles do not restore NuGet packages or evaluate MSBuild projects.
             </div>
             <button type="button" class="btn btn-sm btn-primary toggle-create-lib-btn">+ Add Library Profile</button>
           </div>
@@ -76,7 +77,7 @@ export class LibraryManagerModal {
           <div class="create-lib-form" style="display: none; margin-bottom: 16px; padding: 14px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border-color);">
             <div style="font-weight: 600; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
               <span>Register New Standard Library Profile</span>
-              <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">C / C++ SDK</span>
+              <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">C / C++ / C#</span>
             </div>
 
             <div class="form-row" style="margin-bottom: 8px;">
@@ -89,20 +90,27 @@ export class LibraryManagerModal {
                 <select id="new-lib-lang" class="form-select new-lib-lang">
                   <option value="cpp">C++ (cpp)</option>
                   <option value="c">C (c)</option>
+                  <option value="csharp">C# (csharp)</option>
                 </select>
               </div>
             </div>
 
             <div class="form-row" style="margin-bottom: 8px;">
               <div class="form-group" style="flex: 2;">
-                <label class="form-label" for="new-lib-roots">Source / Header Root Directory <span style="color: var(--error);">*</span></label>
-                <input type="text" id="new-lib-roots" class="form-input new-lib-roots" placeholder="e.g. /usr/include/c++/12 or /usr/include" required />
-                <div class="form-hint">Directory containing standard library headers.</div>
+                <label class="form-label" for="new-lib-roots">Local Source Root Directories <span style="color: var(--error);">*</span></label>
+                <textarea id="new-lib-roots" class="form-input new-lib-roots" rows="2" placeholder="One or more paths separated by commas or newlines" required></textarea>
+                <div class="form-hint">C# profiles index local .cs source and declaration files from every root.</div>
               </div>
-              <div class="form-group" style="flex: 1;">
+              <div class="form-group language-standard-group" style="flex: 1;">
                 <label class="form-label" for="new-lib-std">Language Standard</label>
                 <input type="text" id="new-lib-std" class="form-input new-lib-std" placeholder="e.g. c++20, c17" />
               </div>
+            </div>
+
+            <div class="form-group target-framework-group" style="display: none; margin-bottom: 8px;">
+              <label class="form-label" for="new-lib-target-framework">Target Framework Moniker (TFM) <span style="color: var(--error);">*</span></label>
+              <input type="text" id="new-lib-target-framework" class="form-input new-lib-target-framework" placeholder="e.g. net8.0" />
+              <div class="form-hint">Identifies the profile; CodeLenses does not apply a .NET compatibility matrix.</div>
             </div>
 
             <div class="form-row" style="margin-bottom: 8px;">
@@ -156,6 +164,7 @@ export class LibraryManagerModal {
     this.libProviderInput = this.element.querySelector(".new-lib-provider")!;
     this.libVersionInput = this.element.querySelector(".new-lib-version")!;
     this.libDefinesInput = this.element.querySelector(".new-lib-defines")!;
+    this.libTargetFrameworkInput = this.element.querySelector(".new-lib-target-framework")!;
     this.submitCreateBtn = this.element.querySelector(".submit-create-lib-btn")!;
     this.submitCreateIndexBtn = this.element.querySelector(".submit-create-index-lib-btn")!;
     this.cancelCreateBtn = this.element.querySelector(".cancel-create-lib-btn")!;
@@ -194,6 +203,7 @@ export class LibraryManagerModal {
 
     this.submitCreateBtn.addEventListener("click", () => this.handleCreate(false));
     this.submitCreateIndexBtn.addEventListener("click", () => this.handleCreate(true));
+    this.libLangSelect.addEventListener("change", () => this.updateLanguageFields());
   }
 
   async open(workspaceId?: number): Promise<void> {
@@ -218,6 +228,8 @@ export class LibraryManagerModal {
     this.libProviderInput.value = "";
     this.libVersionInput.value = "";
     this.libDefinesInput.value = "";
+    this.libTargetFrameworkInput.value = "";
+    this.updateLanguageFields();
     this.hideBanner();
   }
 
@@ -259,7 +271,7 @@ export class LibraryManagerModal {
     if (!this.allLibraries.length) {
       this.listContainerElem.innerHTML = `
         <div style="font-size: 12px; color: var(--text-secondary); font-style: italic; padding: 12px 0;">
-          No standard library profiles registered yet. Click "+ Add Library Profile" above to create one.
+          No library profiles registered yet. Click "+ Add Library Profile" above to create one.
         </div>
       `;
       return;
@@ -270,6 +282,9 @@ export class LibraryManagerModal {
         const langBadge = `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 10px;">${escapeHtml(lib.language.toUpperCase())}</span>`;
         const stdBadge = lib.languageStandard
           ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.languageStandard)}</span>`
+          : "";
+        const frameworkBadge = lib.targetFramework
+          ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.targetFramework)}</span>`
           : "";
         const providerBadge = lib.provider
           ? `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); font-size: 10px;">${escapeHtml(lib.provider)}</span>`
@@ -294,12 +309,13 @@ export class LibraryManagerModal {
                 <strong style="font-size: 13px;">${escapeHtml(lib.name)}</strong>
                 ${langBadge}
                 ${stdBadge}
+                ${frameworkBadge}
                 ${providerBadge}
                 ${isAttached ? `<span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 10px;">Attached to Workspace</span>` : ""}
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
                 ${wsActionBtn}
-                <button type="button" class="btn btn-sm index-lib-btn" data-lib-id="${lib.id}" title="Index this standard library">Index</button>
+                <button type="button" class="btn btn-sm index-lib-btn" data-lib-id="${lib.id}" title="Index this library">Index</button>
                 <button type="button" class="btn btn-sm btn-danger delete-lib-profile-btn" data-lib-id="${lib.id}" title="Delete library profile permanently">Delete</button>
               </div>
             </div>
@@ -402,6 +418,14 @@ export class LibraryManagerModal {
       .filter((s) => s.length > 0);
   }
 
+  private updateLanguageFields(): void {
+    const isCsharp = this.libLangSelect.value === "csharp";
+    (this.element.querySelector(".language-standard-group") as HTMLElement).style.display =
+      isCsharp ? "none" : "block";
+    (this.element.querySelector(".target-framework-group") as HTMLElement).style.display =
+      isCsharp ? "block" : "none";
+  }
+
   private async handleCreate(andIndex: boolean): Promise<void> {
     const name = this.libNameInput.value.trim();
     if (!name) {
@@ -411,14 +435,20 @@ export class LibraryManagerModal {
     }
 
     const language = this.libLangSelect.value;
-    const rootPath = this.libRootsInput.value.trim();
-    if (!rootPath) {
-      this.showBanner("Please provide a source/header root directory.", "error");
+    const sourceRoots = this.parseList(this.libRootsInput.value);
+    if (sourceRoots.length === 0) {
+      this.showBanner("Please provide at least one local source root.", "error");
       this.libRootsInput.focus();
       return;
     }
 
     const standard = this.libStdInput.value.trim() || undefined;
+    const targetFramework = this.libTargetFrameworkInput.value.trim() || undefined;
+    if (language === "csharp" && !targetFramework) {
+      this.showBanner("Please provide a target framework moniker, such as net8.0.", "error");
+      this.libTargetFrameworkInput.focus();
+      return;
+    }
     const provider = this.libProviderInput.value.trim() || "custom";
     const sdkVersion = this.libVersionInput.value.trim() || undefined;
     const defines = this.parseList(this.libDefinesInput.value);
@@ -426,9 +456,10 @@ export class LibraryManagerModal {
     const req: CreateLibraryRequest = {
       name,
       language,
-      sourceRoots: [rootPath],
-      rootPath,
-      languageStandard: standard,
+      sourceRoots,
+      rootPath: sourceRoots[0],
+      languageStandard: language === "csharp" ? undefined : standard,
+      targetFramework: language === "csharp" ? targetFramework : undefined,
       provider,
       sdkVersion,
       defines: defines.length > 0 ? defines : undefined,
