@@ -161,7 +161,7 @@ export class OutlineComponent {
         nameSpan.style.whiteSpace = "nowrap";
         nameSpan.textContent = node.name;
         if (node.signature) {
-          nameSpan.title = `${node.name}${node.signature}`;
+          nameSpan.title = node.signature;
         }
 
         const isCliMacro =

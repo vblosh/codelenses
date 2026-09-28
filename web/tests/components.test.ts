@@ -793,6 +793,30 @@ describe("Frontend components", () => {
       expect(store.getState().selectedSymbolId).toBe(2);
       expect(store.getState().selectedLine).toBe(5); // 5 (1-based from outline range)
     });
+
+    it("sets tooltip to signature without prepending symbol name", async () => {
+      vi.spyOn(api, "getFileOutline").mockResolvedValueOnce({
+        fileId: 10,
+        outline: [
+          {
+            id: 1,
+            name: "asynclog",
+            kind: "namespace",
+            signature: "namespace asynclog",
+            range: { start: { line: 1, column: 0, byte: 0 }, end: { line: 20, column: 1, byte: 100 } },
+            children: [],
+          },
+        ],
+      });
+
+      const outline = new OutlineComponent(store);
+      await outline.loadOutline(10);
+
+      const elem = outline.getElement();
+      const nameSpan = elem.querySelector(".outline-name") as HTMLElement;
+      expect(nameSpan.textContent).toBe("asynclog");
+      expect(nameSpan.title).toBe("namespace asynclog");
+    });
   });
 
   describe("ReferencesComponent", () => {
