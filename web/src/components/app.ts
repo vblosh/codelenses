@@ -9,6 +9,8 @@ import { ReferencesComponent } from "./references";
 import { DiagnosticsComponent } from "./diagnostics";
 import { CompileCommandComponent } from "./compile-command";
 import { WorkspaceSettingsModal } from "./workspace-settings";
+import { AddWorkspaceModal } from "./add-workspace";
+import { LibraryManagerModal } from "./library-manager";
 
 export class AppComponent {
   private container: HTMLElement;
@@ -22,6 +24,8 @@ export class AppComponent {
   private diagnostics!: DiagnosticsComponent;
   private compileCommand!: CompileCommandComponent;
   private settingsModal!: WorkspaceSettingsModal;
+  private addWorkspaceModal!: AddWorkspaceModal;
+  private libraryManagerModal!: LibraryManagerModal;
 
   private mainGrid!: HTMLElement;
   private mobileTabsBar!: HTMLElement;
@@ -44,10 +48,34 @@ export class AppComponent {
   private initLayout(): void {
     this.container.innerHTML = "";
 
-    // 1. Settings modal
+    // 1. Modals
+    this.libraryManagerModal = new LibraryManagerModal(this.store, {
+      onLibrariesChanged: () => {
+        this.settingsModal.refreshLibraries();
+      },
+    });
+
     this.settingsModal = new WorkspaceSettingsModal(this.store, {
       onSaved: () => {
         this.toolbar.loadWorkspaces();
+        this.reconcile();
+      },
+      onDeleted: () => {
+        this.toolbar.loadWorkspaces();
+        this.reconcile();
+      },
+      onManageLibraries: () => {
+        this.libraryManagerModal.open();
+      },
+      onLibrariesChanged: () => {
+        this.libraryManagerModal.loadLibraries();
+      },
+    });
+
+    this.addWorkspaceModal = new AddWorkspaceModal({
+      onCreated: (ws) => {
+        this.toolbar.loadWorkspaces(ws.id);
+        this.store.setWorkspace(ws.id);
         this.reconcile();
       },
     });
@@ -56,6 +84,8 @@ export class AppComponent {
     this.toolbar = new ToolbarComponent(this.store, {
       onSearch: (q, type) => this.openSearch(q, type),
       onOpenSettings: () => this.settingsModal.open(),
+      onAddWorkspace: () => this.addWorkspaceModal.open(),
+      onManageLibraries: () => this.libraryManagerModal.open(),
     });
     this.container.appendChild(this.toolbar.getElement());
 

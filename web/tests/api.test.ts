@@ -226,4 +226,209 @@ describe("ApiClient", () => {
       })
     );
   });
+
+  it("creates workspace via POST", async () => {
+    const mockCreated = {
+      id: 2,
+      name: "Project Two",
+      rootPath: "/path/to/project2",
+      status: "idle",
+      revision: 1,
+      createdAt: "",
+      updatedAt: "",
+    };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockCreated,
+    } as any);
+
+    const result = await client.createWorkspace({
+      rootPath: "/path/to/project2",
+      name: "Project Two",
+      compileCommandsPath: "build/compile_commands.json",
+    });
+    expect(result.id).toBe(2);
+    expect(result.name).toBe("Project Two");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/workspaces",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          rootPath: "/path/to/project2",
+          name: "Project Two",
+          compileCommandsPath: "build/compile_commands.json",
+        }),
+      })
+    );
+  });
+
+  it("deletes workspace via DELETE", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: "deleted", id: 2 }),
+    } as any);
+
+    const result = await client.deleteWorkspace(2);
+    expect(result.status).toBe("deleted");
+    expect(result.id).toBe(2);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/workspaces/2",
+      expect.objectContaining({
+        method: "DELETE",
+      })
+    );
+  });
+
+  it("fetches libraries and creates a library profile", async () => {
+    const mockLibs = {
+      libraries: [
+        {
+          id: 1,
+          workspaceId: 10,
+          name: "glibc",
+          language: "c",
+          provider: "system",
+          sourceRoots: ["/usr/include"],
+          defaultIncludeRoots: [],
+          defines: [],
+          includePatterns: [],
+          excludePatterns: [],
+          fingerprint: "abc",
+          status: "idle",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      total: 1,
+    };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockLibs,
+    } as any);
+
+    const libs = await client.getLibraries();
+    expect(libs.libraries).toHaveLength(1);
+    expect(libs.libraries[0].name).toBe("glibc");
+
+    const newLib = {
+      id: 2,
+      workspaceId: 11,
+      name: "libstdc++",
+      language: "cpp",
+      provider: "gcc",
+      sourceRoots: ["/usr/include/c++/12"],
+      defaultIncludeRoots: [],
+      defines: [],
+      includePatterns: [],
+      excludePatterns: [],
+      fingerprint: "def",
+      status: "idle",
+      createdAt: "",
+      updatedAt: "",
+    };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => newLib,
+    } as any);
+
+    const created = await client.createLibrary({
+      name: "libstdc++",
+      language: "cpp",
+      sourceRoots: ["/usr/include/c++/12"],
+      provider: "gcc",
+    });
+    expect(created.id).toBe(2);
+    expect(created.name).toBe("libstdc++");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/libraries",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          name: "libstdc++",
+          language: "cpp",
+          sourceRoots: ["/usr/include/c++/12"],
+          provider: "gcc",
+        }),
+      })
+    );
+  });
+
+  it("deletes and indexes a library profile", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: "deleted", id: 3 }),
+    } as any);
+
+    const delRes = await client.deleteLibrary(3);
+    expect(delRes.status).toBe("deleted");
+    expect(delRes.id).toBe(3);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/libraries/3",
+      expect.objectContaining({
+        method: "DELETE",
+      })
+    );
+
+    const mockJob = { id: 55, workspaceId: 11, jobType: "full", status: "queued" };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockJob,
+    } as any);
+
+    const job = await client.indexLibrary(3);
+    expect(job.id).toBe(55);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/libraries/3/index",
+      expect.objectContaining({
+        method: "POST",
+      })
+    );
+  });
+
+  it("attaches and detaches library from workspace", async () => {
+    const mockAttached = {
+      id: 1,
+      workspaceId: 10,
+      name: "glibc",
+      language: "c",
+      provider: "system",
+      sourceRoots: ["/usr/include"],
+      defaultIncludeRoots: [],
+      defines: [],
+      includePatterns: [],
+      excludePatterns: [],
+      fingerprint: "abc",
+      status: "idle",
+      createdAt: "",
+      updatedAt: "",
+    };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockAttached,
+    } as any);
+
+    const attachRes = await client.attachLibrary(1, 1);
+    expect(attachRes.id).toBe(1);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/workspaces/1/libraries",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ profileId: 1 }),
+      })
+    );
+
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: "detached" }),
+    } as any);
+
+    const detachRes = await client.detachLibrary(1, 1);
+    expect(detachRes.status).toBe("detached");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/workspaces/1/libraries/1",
+      expect.objectContaining({
+        method: "DELETE",
+      })
+    );
+  });
 });

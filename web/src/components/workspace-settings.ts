@@ -4,6 +4,9 @@ import { api } from "../api";
 
 export interface WorkspaceSettingsCallbacks {
   onSaved?: () => void;
+  onDeleted?: (workspaceId: number) => void;
+  onManageLibraries?: () => void;
+  onLibrariesChanged?: () => void;
 }
 
 export class WorkspaceSettingsModal {
@@ -20,6 +23,8 @@ export class WorkspaceSettingsModal {
   private defaultCmdPreviewElem!: HTMLElement;
   private attachedLibsListElem!: HTMLElement;
   private attachLibBtn!: HTMLButtonElement;
+  private manageLibsBtn!: HTMLButtonElement;
+  private deleteWsBtn!: HTMLButtonElement;
   private attachLibFormElem!: HTMLElement;
   private availableLibsSelect!: HTMLSelectElement;
   private confirmAttachBtn!: HTMLButtonElement;
@@ -97,7 +102,10 @@ export class WorkspaceSettingsModal {
           <div class="form-group ws-libraries-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
               <label class="form-label" style="margin-bottom: 0;">Standard Libraries & Toolchain SDKs</label>
-              <button type="button" class="btn btn-sm attach-lib-btn">+ Attach Library</button>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-sm manage-lib-profiles-btn" title="Open Library Profiles Manager">Manage Profiles</button>
+                <button type="button" class="btn btn-sm attach-lib-btn">+ Attach Library</button>
+              </div>
             </div>
             <div class="form-hint" style="margin-bottom: 8px;">
               Attached C/C++ standard libraries or platform SDKs. Direct file/symbol inspection requires active attachment; workspace re-indexing resolves or unlinks persisted references.
@@ -110,6 +118,17 @@ export class WorkspaceSettingsModal {
                 <button type="button" class="btn btn-primary btn-sm confirm-attach-btn">Attach</button>
                 <button type="button" class="btn btn-sm cancel-attach-btn">Cancel</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone: Delete Workspace -->
+          <div class="danger-zone" style="margin-top: 20px; border-top: 1px solid rgba(239, 68, 68, 0.3); padding-top: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div class="danger-zone-title" style="color: #ef4444; font-weight: 600; font-size: 12px; margin-bottom: 2px;">Delete Workspace</div>
+                <div class="form-hint" style="color: var(--text-muted); font-size: 11px;">Permanently remove this workspace and its index from CodeLenses.</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-danger delete-ws-btn">Delete Workspace</button>
             </div>
           </div>
         </div>
@@ -130,6 +149,8 @@ export class WorkspaceSettingsModal {
     this.defaultCmdPreviewElem = this.element.querySelector(".ws-default-cmd-preview")!;
     this.attachedLibsListElem = this.element.querySelector(".attached-libraries-list")!;
     this.attachLibBtn = this.element.querySelector(".attach-lib-btn")!;
+    this.manageLibsBtn = this.element.querySelector(".manage-lib-profiles-btn")!;
+    this.deleteWsBtn = this.element.querySelector(".delete-ws-btn")!;
     this.attachLibFormElem = this.element.querySelector(".attach-lib-form")!;
     this.availableLibsSelect = this.element.querySelector(".available-libs-select")!;
     this.confirmAttachBtn = this.element.querySelector(".confirm-attach-btn")!;
@@ -162,6 +183,16 @@ export class WorkspaceSettingsModal {
 
     this.attachLibBtn.addEventListener("click", () => {
       this.showAttachForm();
+    });
+
+    this.manageLibsBtn.addEventListener("click", () => {
+      if (this.callbacks.onManageLibraries) {
+        this.callbacks.onManageLibraries();
+      }
+    });
+
+    this.deleteWsBtn.addEventListener("click", () => {
+      this.handleDeleteWorkspace();
     });
 
     this.cancelAttachBtn.addEventListener("click", () => {
@@ -272,6 +303,7 @@ export class WorkspaceSettingsModal {
           button.disabled = true;
           await api.detachLibrary(this.currentWsId, libId);
           await this.loadLibraries(this.currentWsId);
+          this.callbacks.onLibrariesChanged?.();
           // Trigger re-resolution so persisted symbol links and dependencies are updated
           api.triggerIndexing(this.currentWsId, "incremental", false).catch(() => {});
         } catch (err: any) {
@@ -288,7 +320,11 @@ export class WorkspaceSettingsModal {
     const available = this.allLibraries.filter((l) => !attachedIds.has(l.id));
 
     if (!available.length) {
-      alert("No additional library profiles available to attach. Create a library profile first via API.");
+      if (confirm("No additional library profiles available to attach. Would you like to open the Library Manager to create one?")) {
+        if (this.callbacks.onManageLibraries) {
+          this.callbacks.onManageLibraries();
+        }
+      }
       return;
     }
 
@@ -312,6 +348,7 @@ export class WorkspaceSettingsModal {
       await api.attachLibrary(this.currentWsId, profileId);
       this.attachLibFormElem.style.display = "none";
       await this.loadLibraries(this.currentWsId);
+      this.callbacks.onLibrariesChanged?.();
       // Trigger incremental indexing so references resolve against newly attached library headers
       api.triggerIndexing(this.currentWsId, "incremental", false).catch(() => {});
     } catch (err: any) {
@@ -417,6 +454,38 @@ export class WorkspaceSettingsModal {
     } finally {
       this.saveBtn.disabled = false;
       this.saveAndIndexBtn.disabled = false;
+    }
+  }
+
+  async refreshLibraries(): Promise<void> {
+    if (this.currentWsId) {
+      await this.loadLibraries(this.currentWsId);
+    }
+  }
+
+  private async handleDeleteWorkspace(): Promise<void> {
+    if (!this.currentWsId) return;
+    const wsName = this.nameInput.value || this.rootPathElem.textContent || `Workspace #${this.currentWsId}`;
+    if (
+      !confirm(
+        `Are you sure you want to delete workspace "${wsName}"? All indexed files, symbols, and references will be permanently removed.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      this.deleteWsBtn.disabled = true;
+      await api.deleteWorkspace(this.currentWsId);
+      const deletedId = this.currentWsId;
+      this.close();
+      if (this.callbacks.onDeleted) {
+        this.callbacks.onDeleted(deletedId);
+      }
+    } catch (err: any) {
+      alert(`Failed to delete workspace: ${err.message || String(err)}`);
+    } finally {
+      this.deleteWsBtn.disabled = false;
     }
   }
 }

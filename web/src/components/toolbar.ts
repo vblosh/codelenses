@@ -5,6 +5,8 @@ import { api } from "../api";
 export interface ToolbarCallbacks {
   onSearch: (query: string, type: "source" | "symbol") => void;
   onOpenSettings?: () => void;
+  onAddWorkspace?: () => void;
+  onManageLibraries?: () => void;
 }
 
 export class ToolbarComponent {
@@ -13,6 +15,8 @@ export class ToolbarComponent {
   private callbacks: ToolbarCallbacks;
   private workspaceSelect!: HTMLSelectElement;
   private settingsBtn!: HTMLButtonElement;
+  private addWsBtn!: HTMLButtonElement;
+  private manageLibsBtn!: HTMLButtonElement;
   private statusBadge!: HTMLElement;
   private statusText!: HTMLElement;
   private indexBtn!: HTMLButtonElement;
@@ -55,6 +59,20 @@ export class ToolbarComponent {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
           </button>
+          <button class="btn-icon add-workspace-btn" title="Add workspace">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add</span>
+          </button>
+          <button class="btn-icon manage-libs-btn" title="Manage standard libraries & SDK profiles">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span>Libraries</span>
+          </button>
         </div>
       </div>
 
@@ -90,6 +108,8 @@ export class ToolbarComponent {
 
     this.workspaceSelect = this.element.querySelector(".workspace-select")!;
     this.settingsBtn = this.element.querySelector(".ws-settings-btn")!;
+    this.addWsBtn = this.element.querySelector(".add-workspace-btn")!;
+    this.manageLibsBtn = this.element.querySelector(".manage-libs-btn")!;
     this.statusBadge = this.element.querySelector(".index-status-badge")!;
     this.statusText = this.element.querySelector(".status-text")!;
     this.indexBtn = this.element.querySelector(".index-btn")!;
@@ -101,6 +121,18 @@ export class ToolbarComponent {
     this.settingsBtn.addEventListener("click", () => {
       if (this.callbacks.onOpenSettings) {
         this.callbacks.onOpenSettings();
+      }
+    });
+
+    this.addWsBtn.addEventListener("click", () => {
+      if (this.callbacks.onAddWorkspace) {
+        this.callbacks.onAddWorkspace();
+      }
+    });
+
+    this.manageLibsBtn.addEventListener("click", () => {
+      if (this.callbacks.onManageLibraries) {
+        this.callbacks.onManageLibraries();
       }
     });
 
@@ -162,7 +194,7 @@ export class ToolbarComponent {
     });
   }
 
-  async loadWorkspaces(): Promise<void> {
+  async loadWorkspaces(preferredWorkspaceId?: number): Promise<void> {
     try {
       const response = await api.getWorkspaces();
       this.workspaceSelect.innerHTML = "";
@@ -182,15 +214,20 @@ export class ToolbarComponent {
         this.workspaceSelect.appendChild(opt);
       }
 
-      // If no workspace is selected in store, pick the first one or matching hash
-      const currentWsId = this.store.getState().workspaceId;
-      if (currentWsId) {
-        this.workspaceSelect.value = String(currentWsId);
+      const targetId = preferredWorkspaceId ?? this.store.getState().workspaceId;
+      const targetExists = targetId ? response.workspaces.some((w) => w.id === targetId) : false;
+
+      if (targetExists && targetId) {
+        this.workspaceSelect.value = String(targetId);
+        if (this.store.getState().workspaceId !== targetId) {
+          this.store.setWorkspace(targetId);
+        }
       } else {
         const firstId = response.workspaces[0].id;
         this.workspaceSelect.value = String(firstId);
         this.store.setWorkspace(firstId);
       }
+      this.fetchStatus();
     } catch (err: any) {
       this.workspaceSelect.innerHTML = `<option value="">Error: ${err.message}</option>`;
     }

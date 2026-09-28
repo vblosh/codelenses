@@ -23,6 +23,7 @@ import type {
   WorkspaceLibrariesResponse,
   CreateLibraryRequest,
   AttachLibraryRequest,
+  CreateWorkspaceRequest,
 } from "./types";
 
 export class ApiClient {
@@ -64,6 +65,20 @@ export class ApiClient {
 
   async getWorkspace(id: number): Promise<WorkspaceDto> {
     return this.request<WorkspaceDto>(`/api/v1/workspaces/${id}`);
+  }
+
+  async createWorkspace(req: CreateWorkspaceRequest): Promise<WorkspaceDto> {
+    return this.request<WorkspaceDto>("/api/v1/workspaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    });
+  }
+
+  async deleteWorkspace(id: number): Promise<{ status: string; id: number }> {
+    return this.request<{ status: string; id: number }>(`/api/v1/workspaces/${id}`, {
+      method: "DELETE",
+    });
   }
 
   async getTree(workspaceId: number, path: string = ""): Promise<WorkspaceTreeDto> {

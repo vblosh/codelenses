@@ -14,6 +14,16 @@ export interface WorkspaceDto {
   updatedAt: string;
 }
 
+export interface CreateWorkspaceRequest {
+  rootPath: string;
+  name?: string;
+  includePatterns?: string[];
+  excludePatterns?: string[];
+  defaultIgnores?: string[];
+  compileCommandsPath?: string | null;
+  defaultCompileCommand?: string | null;
+}
+
 export interface WorkspaceListResponse {
   workspaces: WorkspaceDto[];
   total: number;
