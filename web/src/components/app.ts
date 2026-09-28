@@ -601,8 +601,13 @@ export class AppComponent {
       div.appendChild(snippetDiv);
 
       div.addEventListener("click", () => {
-        this.store.selectFile(item.fileId);
-        this.store.selectSymbol(item.id, item.line);
+        this.store.selectFile(
+          item.fileId,
+          item.line ?? null,
+          { relativePath: item.relativePath },
+          item.id,
+          item.name
+        );
         this.closeSearch();
       });
 

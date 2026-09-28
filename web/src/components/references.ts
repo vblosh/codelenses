@@ -235,9 +235,13 @@ export class ReferencesComponent {
 
     declLink.addEventListener("click", (e) => {
       e.preventDefault();
-      this.store.selectFile(targetFileId, targetLine, {
-        relativePath: targetFilePath,
-      });
+      this.store.selectFile(
+        targetFileId,
+        targetLine,
+        { relativePath: targetFilePath },
+        explicitDecl?.id ?? this.currentSymbolId,
+        sym.name
+      );
     });
 
     declDiv.appendChild(declLink);
@@ -328,7 +332,13 @@ export class ReferencesComponent {
 
       item.addEventListener("click", () => {
         // Navigate to referencing file and line
-        this.store.selectFile(ref.fileId, lineNum);
+        this.store.selectFile(
+          ref.fileId,
+          lineNum,
+          { relativePath: ref.relativePath },
+          this.currentSymbolId,
+          ref.name
+        );
       });
 
       fragment.appendChild(item);

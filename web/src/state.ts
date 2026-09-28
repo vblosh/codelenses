@@ -15,6 +15,7 @@ export class StateStore {
       selectedFileId: null,
       selectedLine: null,
       selectedSymbolId: null,
+      selectedSymbolName: null,
       openTabs: [],
       expandedFolders: new Set<string>(),
       indexStatus: "idle",
@@ -74,6 +75,7 @@ export class StateStore {
         selectedFileId: null,
         selectedLine: null,
         selectedSymbolId: null,
+        selectedSymbolName: null,
         openTabs: [],
         expandedFolders: new Set<string>(),
       });
@@ -83,14 +85,31 @@ export class StateStore {
   selectFile(
     fileId: number | null,
     line: number | null = null,
-    meta?: { relativePath?: string; name?: string }
+    meta?: {
+      relativePath?: string;
+      name?: string;
+      symbolId?: number | null;
+      symbolName?: string | null;
+    },
+    symbolId?: number | null,
+    symbolName?: string | null
   ): void {
+    const effectiveSymbolId =
+      symbolId !== undefined ? symbolId : meta?.symbolId !== undefined ? meta.symbolId : null;
+    const effectiveSymbolName =
+      symbolName !== undefined ? symbolName : meta?.symbolName !== undefined ? meta.symbolName : null;
+
     const update: Partial<AppState> = {
       selectedFileId: fileId,
       selectedLine: line,
-      selectedSymbolId: null,
+      selectedSymbolId: effectiveSymbolId,
+      selectedSymbolName: effectiveSymbolName,
       activeMobileTab: "code",
     };
+
+    if (effectiveSymbolId !== null) {
+      update.activeInspectorTab = "references";
+    }
 
     if (fileId !== null) {
       const existingTab = this.state.openTabs.find((t) => t.fileId === fileId);
@@ -141,10 +160,12 @@ export class StateStore {
         update.selectedFileId = remainingTabs[nextIndex].fileId;
         update.selectedLine = null;
         update.selectedSymbolId = null;
+        update.selectedSymbolName = null;
       } else {
         update.selectedFileId = null;
         update.selectedLine = null;
         update.selectedSymbolId = null;
+        update.selectedSymbolName = null;
       }
     }
 
@@ -155,13 +176,20 @@ export class StateStore {
     this.setState({ selectedLine: line });
   }
 
-  selectSymbol(symbolId: number | null, line?: number | null): void {
+  selectSymbol(
+    symbolId: number | null,
+    line?: number | null,
+    symbolName?: string | null
+  ): void {
     const update: Partial<AppState> = {
       selectedSymbolId: symbolId,
       activeInspectorTab: "references",
     };
     if (line !== undefined && line !== null) {
       update.selectedLine = line;
+    }
+    if (symbolName !== undefined) {
+      update.selectedSymbolName = symbolName;
     }
     this.setState(update);
   }

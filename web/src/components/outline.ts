@@ -183,7 +183,7 @@ export class OutlineComponent {
         }
 
         item.addEventListener("click", () => {
-          this.store.selectSymbol(node.id, isCliMacro ? null : node.range.start.line);
+          this.store.selectSymbol(node.id, isCliMacro ? null : node.range.start.line, node.name);
           if (isCliMacro && this.callbacks.onCliMacroClick) {
             this.callbacks.onCliMacroClick(node.name);
           }

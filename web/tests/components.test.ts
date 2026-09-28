@@ -814,6 +814,147 @@ describe("Frontend components", () => {
       expect(fooSpans[0].classList.contains("symbol-occurrence-selected")).toBe(true);
       expect(barSpan!.classList.contains("symbol-selected")).toBe(false);
     });
+
+    it("highlights referenced symbol in code window when navigating from references panel", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValue({
+        id: 2,
+        workspaceId: 1,
+        path: "/main.cpp",
+        relativePath: "main.cpp",
+        name: "main.cpp",
+        language: "cpp",
+        encoding: "utf-8",
+        sizeBytes: 80,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValue({
+        fileId: 2,
+        path: "main.cpp",
+        content: "void run() {\n    calculateTotal();\n}",
+        totalSizeBytes: 33,
+        totalLines: 3,
+        startLine: 0,
+        endLine: 2,
+        startByte: 0,
+        endByte: 33,
+        isBinary: false,
+        contentHash: "hashrun",
+      });
+      vi.spyOn(api, "getFileHighlights").mockResolvedValue({
+        fileId: 2,
+        legend: { tokenTypes: ["keyword", "function"] },
+        tokens: [
+          { line: 0, startColumn: 0, length: 4, tokenType: 0 },
+          { line: 0, startColumn: 5, length: 3, tokenType: 1 },
+          { line: 1, startColumn: 4, length: 14, tokenType: 1 },
+        ],
+      });
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValue({
+        fileId: 2,
+        occurrences: [
+          {
+            id: 201,
+            workspaceId: 1,
+            fileId: 2,
+            symbolId: 5,
+            occurrenceKind: "reference",
+            name: "calculateTotal",
+            range: { start: { line: 2, column: 4, byte: 17 }, end: { line: 2, column: 18, byte: 31 } },
+            confidence: 1,
+            resolution: "resolved",
+          },
+        ],
+        total: 1,
+      });
+      vi.spyOn(api, "getFileOutline").mockResolvedValue({ fileId: 2, outline: [] });
+      vi.spyOn(api, "getFileCompileCommand").mockResolvedValue({
+        fileId: 2,
+        hasCompileCommand: false,
+        isAutoDetected: false,
+      });
+
+      const codeWindow = new CodeWindowComponent(store);
+      // Simulating what ReferencesComponent does when clicking a reference:
+      store.selectFile(2, 2, { relativePath: "main.cpp" }, 5, "calculateTotal");
+      await codeWindow.loadFile(2);
+
+      const elem = codeWindow.getElement();
+      const symbolElem = elem.querySelector('.code-line[data-line="2"] span[data-symbol-name="calculateTotal"]');
+      expect(symbolElem).not.toBeNull();
+      expect(symbolElem?.classList.contains("symbol-selected")).toBe(true);
+    });
+
+    it("wraps and highlights referenced symbol even when syntax highlighter does not generate token spans", async () => {
+      vi.spyOn(api, "getFileMetadata").mockResolvedValue({
+        id: 3,
+        workspaceId: 1,
+        path: "/util.cpp",
+        relativePath: "util.cpp",
+        name: "util.cpp",
+        language: "cpp",
+        encoding: "utf-8",
+        sizeBytes: 50,
+        modifiedNs: 0,
+        isBinary: false,
+        isGenerated: false,
+        isDeleted: false,
+        createdAt: "",
+        updatedAt: "",
+      });
+      vi.spyOn(api, "getFileContent").mockResolvedValue({
+        fileId: 3,
+        path: "util.cpp",
+        content: "auto res = compute(x);",
+        totalSizeBytes: 22,
+        totalLines: 1,
+        startLine: 0,
+        endLine: 0,
+        startByte: 0,
+        endByte: 22,
+        isBinary: false,
+        contentHash: "hashcompute",
+      });
+      // No tree-sitter tokens available
+      vi.spyOn(api, "getFileHighlights").mockResolvedValue({ fileId: 3, legend: {}, tokens: [] });
+      // Unresolved occurrence with symbolId null
+      vi.spyOn(api, "getFileOccurrences").mockResolvedValue({
+        fileId: 3,
+        occurrences: [
+          {
+            id: 301,
+            workspaceId: 1,
+            fileId: 3,
+            symbolId: null,
+            occurrenceKind: "reference",
+            name: "compute",
+            range: { start: { line: 1, column: 11, byte: 11 }, end: { line: 1, column: 18, byte: 18 } },
+            confidence: 0.8,
+            resolution: "unresolved",
+          },
+        ],
+        total: 1,
+      });
+      vi.spyOn(api, "getFileOutline").mockResolvedValue({ fileId: 3, outline: [] });
+      vi.spyOn(api, "getFileCompileCommand").mockResolvedValue({
+        fileId: 3,
+        hasCompileCommand: false,
+        isAutoDetected: false,
+      });
+
+      const codeWindow = new CodeWindowComponent(store);
+      store.selectFile(3, 1, { relativePath: "util.cpp" }, 99, "compute");
+      await codeWindow.loadFile(3);
+
+      const elem = codeWindow.getElement();
+      const symbolElem = elem.querySelector('.code-line[data-line="1"] span[data-symbol-name="compute"]');
+      expect(symbolElem).not.toBeNull();
+      expect(symbolElem?.classList.contains("symbol-selected")).toBe(true);
+    });
   });
 
   describe("OutlineComponent", () => {
@@ -942,11 +1083,13 @@ describe("Frontend components", () => {
       expect(elem.textContent).toContain("calculateTotal");
       expect(elem.textContent).toContain("3 references");
       expect(elem.textContent).toContain("main.cpp:42"); // 42 is 1-based line from range
-      // Click on reference navigates to target file and line
+      // Click on reference navigates to target file and line while preserving symbol
       const refItem = elem.querySelector(".reference-item") as HTMLElement;
       refItem.click();
       expect(store.getState().selectedFileId).toBe(2);
       expect(store.getState().selectedLine).toBe(42);
+      expect(store.getState().selectedSymbolId).toBe(5);
+      expect(store.getState().selectedSymbolName).toBe("calculateTotal");
     });
 
     it("loads additional reference pages when hasMore is true", async () => {
@@ -1135,6 +1278,8 @@ describe("Frontend components", () => {
       declLink.click();
       expect(store.getState().selectedFileId).toBe(3);
       expect(store.getState().selectedLine).toBe(5);
+      expect(store.getState().selectedSymbolId).toBe(20);
+      expect(store.getState().selectedSymbolName).toBe("calculateTotal");
     });
 
     it("falls back to symbol own file and line when no explicit declaration in declarations", async () => {
@@ -1193,6 +1338,8 @@ describe("Frontend components", () => {
       declLink.click();
       expect(store.getState().selectedFileId).toBe(4);
       expect(store.getState().selectedLine).toBe(25);
+      expect(store.getState().selectedSymbolId).toBe(8);
+      expect(store.getState().selectedSymbolName).toBe("helperFunc");
     });
   });
 

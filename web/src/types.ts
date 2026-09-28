@@ -413,6 +413,7 @@ export interface AppState {
   selectedFileId: number | null;
   selectedLine: number | null;
   selectedSymbolId: number | null;
+  selectedSymbolName?: string | null;
   openTabs: OpenTabDto[];
   expandedFolders: Set<string>;
   indexStatus: IndexStatus;

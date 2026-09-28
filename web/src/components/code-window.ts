@@ -25,6 +25,70 @@ function escapeCssAttr(value: string): string {
   return value.replace(/["\\]/g, "\\$&");
 }
 
+function wrapTextInLine(
+  lineContent: HTMLElement,
+  name: string,
+  symbolId: number | null
+): HTMLElement | null {
+  if (!name) return null;
+  const doc = lineContent.ownerDocument || document;
+  const isIdentifier = /^[$_a-zA-Z\xA0-\uFFFF][$_a-zA-Z0-9\xA0-\uFFFF]*$/.test(name);
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const wordRegex = isIdentifier
+    ? new RegExp(`(?<=^|[^a-zA-Z0-9_$])${escapedName}(?=$|[^a-zA-Z0-9_$])`)
+    : new RegExp(escapedName);
+
+  let firstWrapped: HTMLElement | null = null;
+  const showTextFilter = typeof NodeFilter !== "undefined" ? NodeFilter.SHOW_TEXT : 4;
+  const walker = doc.createTreeWalker(lineContent, showTextFilter);
+  let textNode: Text | null = null;
+  const textNodes: Text[] = [];
+  while ((textNode = walker.nextNode() as Text | null)) {
+    textNodes.push(textNode);
+  }
+
+  for (const node of textNodes) {
+    let current: Text | null = node;
+    while (current) {
+      const parent = current.parentElement;
+      if (
+        parent?.classList.contains("symbol-token") ||
+        parent?.dataset.symbolName ||
+        parent?.classList.contains("tok-comment") ||
+        parent?.classList.contains("hljs-comment") ||
+        parent?.classList.contains("tok-string") ||
+        parent?.classList.contains("hljs-string")
+      ) {
+        break;
+      }
+      const val = current.nodeValue || "";
+      const match = wordRegex.exec(val);
+      if (!match) break;
+
+      const startIdx = match.index;
+      const afterText = current.splitText(startIdx);
+      const remainder = afterText.splitText(name.length);
+      const span = doc.createElement("span");
+      span.className = "symbol-token";
+      span.dataset.symbolName = name;
+      if (symbolId != null) {
+        span.dataset.symbolId = String(symbolId);
+      }
+      span.textContent = name;
+      afterText.parentNode?.replaceChild(span, afterText);
+      if (!firstWrapped) {
+        firstWrapped = span;
+      }
+      current = remainder;
+    }
+  }
+
+  return (
+    firstWrapped ||
+    lineContent.querySelector<HTMLElement>(`[data-symbol-name="${escapeCssAttr(name)}"]`)
+  );
+}
+
 export class CodeWindowComponent {
   private element: HTMLElement;
   private store: StateStore;
@@ -145,7 +209,11 @@ export class CodeWindowComponent {
           this.scrollToLine(line);
         }
       }
-      if (changedKeys.includes("selectedSymbolId") || changedKeys.includes("selectedLine")) {
+      if (
+        changedKeys.includes("selectedSymbolId") ||
+        changedKeys.includes("selectedSymbolName") ||
+        changedKeys.includes("selectedLine")
+      ) {
         this.updateSelectedSymbol();
       }
       if (changedKeys.includes("workspaceId")) {
@@ -509,6 +577,29 @@ export class CodeWindowComponent {
         }
       });
 
+      const lineContent = lineElem.querySelector<HTMLElement>(".line-content");
+      if (lineContent) {
+        for (const occ of occs) {
+          if (!lineContent.querySelector(`[data-symbol-name="${escapeCssAttr(occ.name)}"]`)) {
+            wrapTextInLine(
+              lineContent,
+              occ.name,
+              occ.symbolId ?? this.findSymbolIdForName(occ.name)
+            );
+          }
+        }
+        const state = this.store.getState();
+        if (
+          lineNum === state.selectedLine &&
+          state.selectedSymbolName &&
+          !lineContent.querySelector(
+            `[data-symbol-name="${escapeCssAttr(state.selectedSymbolName)}"]`
+          )
+        ) {
+          wrapTextInLine(lineContent, state.selectedSymbolName, state.selectedSymbolId);
+        }
+      }
+
       // When user clicks anywhere inside the code line
       lineElem.addEventListener("click", (e) => {
         const target = (e.target as HTMLElement).closest<HTMLElement>(
@@ -541,7 +632,7 @@ export class CodeWindowComponent {
               if (symId != null && !isNaN(symId)) {
                 e.stopPropagation();
                 this.suppressScrollForLine = lineNum;
-                this.store.selectSymbol(symId, lineNum);
+                this.store.selectSymbol(symId, lineNum, clickedText);
                 this.updateSelectedSymbol();
                 if (this.callbacks.onSymbolClick) {
                   this.callbacks.onSymbolClick(symId, lineNum);
@@ -555,6 +646,7 @@ export class CodeWindowComponent {
                 e.stopPropagation();
                 this.suppressScrollForLine = lineNum;
                 this.store.selectLine(lineNum);
+                this.store.selectSymbol(null, lineNum, clickedText);
                 this.selectSymbolByName(clickedText, target);
                 return;
               }
@@ -715,33 +807,47 @@ export class CodeWindowComponent {
 
     const state = this.store.getState();
     const selSymbolId = state.selectedSymbolId;
-    if (selSymbolId === null) {
+    const selSymbolName = state.selectedSymbolName;
+    if (selSymbolId === null && !selSymbolName) {
       return;
     }
 
-    let symName: string | null = null;
-    const occ =
-      this.currentOccurrences.find(
-        (o) =>
-          o.symbolId === selSymbolId &&
-          (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
-      ) ||
-      this.currentOccurrences.find((o) => o.symbolId === selSymbolId);
+    let symName: string | null = selSymbolName || null;
+    if (!symName && selSymbolId !== null) {
+      const occ =
+        this.currentOccurrences.find(
+          (o) =>
+            o.symbolId === selSymbolId &&
+            (o.occurrenceKind === "definition" || o.occurrenceKind === "declaration")
+        ) ||
+        this.currentOccurrences.find((o) => o.symbolId === selSymbolId);
 
-    if (occ) {
-      symName = occ.name;
-    } else if (this.currentOutline.length > 0) {
-      const outlineNode = this.findOutlineNodeById(this.currentOutline, selSymbolId);
-      if (outlineNode) {
-        symName = outlineNode.name;
+      if (occ) {
+        symName = occ.name;
+      } else if (this.currentOutline.length > 0) {
+        const outlineNode = this.findOutlineNodeById(this.currentOutline, selSymbolId);
+        if (outlineNode) {
+          symName = outlineNode.name;
+        }
+      }
+    }
+
+    if (!symName && state.selectedLine !== null && this.currentOccurrences.length > 0) {
+      const lineOcc = this.currentOccurrences.find(
+        (o) => o.range.start.line === state.selectedLine
+      );
+      if (lineOcc) {
+        symName = lineOcc.name;
       }
     }
 
     const matches: HTMLElement[] = [];
-    const idMatches = this.viewerContainer.querySelectorAll<HTMLElement>(
-      `[data-symbol-id="${escapeCssAttr(String(selSymbolId))}"]`
-    );
-    idMatches.forEach((el) => matches.push(el));
+    if (selSymbolId !== null) {
+      const idMatches = this.viewerContainer.querySelectorAll<HTMLElement>(
+        `[data-symbol-id="${escapeCssAttr(String(selSymbolId))}"]`
+      );
+      idMatches.forEach((el) => matches.push(el));
+    }
 
     if (symName) {
       const nameMatches = this.viewerContainer.querySelectorAll<HTMLElement>(
@@ -754,11 +860,32 @@ export class CodeWindowComponent {
       });
     }
 
+    const selLine = state.selectedLine;
+
+    // If no match found on selLine, try wrapping any unmatched occurrences on selLine
+    if (symName && selLine !== null) {
+      const hasSelLineMatch = matches.some((el) => {
+        const lineParent = el.closest(".code-line") as HTMLElement | null;
+        return lineParent && lineParent.dataset.line === String(selLine);
+      });
+      if (!hasSelLineMatch) {
+        const lineElem = this.viewerContainer.querySelector<HTMLElement>(
+          `.code-line[data-line="${selLine}"]`
+        );
+        const lineContent = lineElem?.querySelector<HTMLElement>(".line-content");
+        if (lineContent) {
+          const wrapped = wrapTextInLine(lineContent, symName, selSymbolId);
+          if (wrapped && !matches.includes(wrapped)) {
+            matches.push(wrapped);
+          }
+        }
+      }
+    }
+
     if (matches.length === 0) {
       return;
     }
 
-    const selLine = state.selectedLine;
     let primaryElem: HTMLElement | null = null;
 
     if (selLine !== null) {
