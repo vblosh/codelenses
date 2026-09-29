@@ -14,7 +14,7 @@ struct Occurrence {
     int64_t file_id = 0;
     std::optional<int64_t> symbol_id = std::nullopt;
     std::string occurrence_kind =
-        ""; // definition, declaration, reference, implementation, override, import, include
+        ""; // definition, declaration, reference, inheritance, implementation, override, import, include
     std::string name = "";
     SourceRange range = {};
     double confidence = 1.0;

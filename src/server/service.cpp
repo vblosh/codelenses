@@ -1,11 +1,13 @@
 #include "codelenses/server/service.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <deque>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "codelenses/adapters/registry.hpp"
@@ -1343,7 +1345,7 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
         candidates = db_.symbols().list_by_workspace(workspace_id);
     }
 
-    std::vector<SymbolDto> filtered;
+    std::vector<const Symbol*> filtered;
     for (const auto& s : candidates) {
         if (kind.has_value() && !kind->empty() && s.kind != *kind) {
             continue;
@@ -1354,17 +1356,20 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
         if (file_id.has_value() && s.file_id != *file_id) {
             continue;
         }
-        auto dto = symbol_to_dto(s);
-        dto.origin_metadata = origin_for_workspace(s.workspace_id);
-        filtered.push_back(std::move(dto));
+        filtered.push_back(&s);
     }
 
     int64_t total = static_cast<int64_t>(filtered.size());
     std::vector<SymbolDto> paged;
     if (eff_offset < total) {
         int64_t end = std::min(total, eff_offset + eff_limit);
-        paged.assign(filtered.begin() + static_cast<std::ptrdiff_t>(eff_offset),
-                     filtered.begin() + static_cast<std::ptrdiff_t>(end));
+        const auto origin = origin_for_workspace(workspace_id);
+        paged.reserve(static_cast<size_t>(end - eff_offset));
+        for (int64_t i = eff_offset; i < end; ++i) {
+            auto dto = symbol_to_dto(*filtered[static_cast<size_t>(i)]);
+            dto.origin_metadata = origin;
+            paged.push_back(std::move(dto));
+        }
     }
 
     bool has_more = (eff_offset + eff_limit) < total;
@@ -1525,6 +1530,14 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
     std::vector<GraphNodeDto> nodes;
     std::vector<GraphEdgeDto> edges;
     std::unordered_set<int64_t> visited_nodes;
+    std::unordered_map<int64_t, OriginMetadataDto> origin_cache;
+    auto cached_origin = [&](int64_t owner_workspace_id) {
+        auto it = origin_cache.find(owner_workspace_id);
+        if (it != origin_cache.end()) return it->second;
+        auto origin = origin_for_workspace(owner_workspace_id);
+        origin_cache.emplace(owner_workspace_id, origin);
+        return origin;
+    };
     bool truncated = false;
 
     std::string root_rel_path;
@@ -1539,7 +1552,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
         .kind = root_sym.kind,
         .file_id = root_sym.file_id,
         .relative_path = std::move(root_rel_path),
-        .origin_metadata = origin_for_workspace(root_sym.workspace_id),
+        .origin_metadata = cached_origin(root_sym.workspace_id),
     });
     visited_nodes.insert(root_sym.id);
 
@@ -1598,7 +1611,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                         .kind = target_sym->kind,
                         .file_id = target_sym->file_id,
                         .relative_path = std::move(target_rel),
-                        .origin_metadata = origin_for_workspace(target_sym->workspace_id),
+                        .origin_metadata = cached_origin(target_sym->workspace_id),
                     });
                     visited_nodes.insert(tid);
                     queue.push_back({tid, curr_depth + 1});
@@ -1608,11 +1621,11 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
 
         // Callers / callees
         if (kinds.empty() || std::find(kinds.begin(), kinds.end(), "calls") != kinds.end()) {
-            auto callers = db_.references().find_callers(workspace_id, curr_id);
-            for (const auto& c : callers) {
-                if (!c.symbol_id.has_value())
-                    continue;
-                int64_t cid = *c.symbol_id;
+            auto callers = db_.relations().find_by_target_symbol(
+                curr_id, std::make_optional(std::string("calls")));
+            for (const auto& caller_relation : callers) {
+                if (caller_relation.workspace_id != workspace_id) continue;
+                const int64_t cid = caller_relation.source_symbol_id;
 
                 if (edges.size() >= eff_max_edges) {
                     truncated = true;
@@ -1623,8 +1636,8 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                     .source_symbol_id = cid,
                     .target_symbol_id = curr_id,
                     .relation_kind = "calls",
-                    .resolution = "resolved",
-                    .confidence = 1.0,
+                    .resolution = caller_relation.resolution,
+                    .confidence = caller_relation.confidence,
                 });
 
                 if (!visited_nodes.contains(cid)) {
@@ -1632,22 +1645,22 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                         truncated = true;
                         continue;
                     }
+                    auto caller_symbol = db_.symbols().get_by_id(cid);
+                    if (!caller_symbol) continue;
                     std::string caller_rel;
-                    if (auto cf = db_.files().get_by_id(c.file_id)) {
+                    OriginMetadataDto caller_origin;
+                    if (auto cf = db_.files().get_by_id(caller_symbol->file_id)) {
                         caller_rel = cf->relative_path;
+                        caller_origin = cached_origin(cf->workspace_id);
                     }
                     nodes.push_back(GraphNodeDto{
                         .id = cid,
-                        .name = c.name,
-                        .qualified_name = c.qualified_name,
+                        .name = caller_symbol->name,
+                        .qualified_name = caller_symbol->qualified_name,
                         .kind = "function",
-                        .file_id = c.file_id,
+                        .file_id = caller_symbol->file_id,
                         .relative_path = std::move(caller_rel),
-                        .origin_metadata = [&]() {
-                            auto caller = db_.files().get_by_id(c.file_id);
-                            return caller ? origin_for_workspace(caller->workspace_id)
-                                          : OriginMetadataDto{};
-                        }(),
+                        .origin_metadata = std::move(caller_origin),
                     });
                     visited_nodes.insert(cid);
                     queue.push_back({cid, curr_depth + 1});

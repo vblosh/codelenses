@@ -398,19 +398,20 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         if (import_occurrence.occurrence_kind != "import" ||
             !import_occurrence.metadata_json.has_value()) continue;
         auto file = files_by_id.find(import_occurrence.file_id);
-        if (file == files_by_id.end() || file->second.language != "csharp") continue;
+        if (file == files_by_id.end() ||
+            language_from_string(file->second.language).value_or(Language::unknown) !=
+                Language::csharp) continue;
         try {
             auto metadata = nlohmann::json::parse(*import_occurrence.metadata_json);
             if (!metadata.contains("csharpImport") || !metadata["csharpImport"].is_object()) continue;
             const auto& info = metadata["csharpImport"];
             if (!info.contains("kind") || !info["kind"].is_string() ||
                 !info.contains("target") || !info["target"].is_string()) continue;
-            CSharpImportDirective directive{
-                .file_id = import_occurrence.file_id,
-                .kind = info["kind"].get<std::string>(),
-                .target = info["target"].get<std::string>(),
-                .is_global = info.value("global", false),
-            };
+            CSharpImportDirective directive;
+            directive.file_id = import_occurrence.file_id;
+            directive.kind = info["kind"].get<std::string>();
+            directive.target = info["target"].get<std::string>();
+            directive.is_global = info.value("global", false);
             if (info.contains("targetKind") && info["targetKind"].is_string())
                 directive.target_kind = info["targetKind"].get<std::string>();
             if (info.contains("alias") && info["alias"].is_string())
@@ -492,7 +493,8 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
             stats.occurrences_unresolved++;
         }
 
-        db_.occurrences().update_resolution(occ.id, occ.symbol_id, occ.resolution, occ.confidence);
+        db_.occurrences().update_resolution(occ.id, occ.symbol_id, occ.resolution, occ.confidence,
+                                            occ.metadata_json);
     }
 
     // 5. Resolve References

@@ -845,6 +845,7 @@ inline ReferencerDto referencer_to_dto(const ReferencerResult& r) {
         .containing_symbol_id = r.containing_symbol_id,
         .containing_symbol_name = r.containing_symbol_name,
         .containing_qualified_name = r.containing_qualified_name,
+        .origin_metadata = {},
     };
 }
 

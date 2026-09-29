@@ -52,7 +52,7 @@ std::string fact_kind_to_occurrence_kind(worker::FactKind kind) {
     case worker::FactKind::call:
         return "reference";
     case worker::FactKind::inheritance:
-        return "reference";
+        return "inheritance";
     case worker::FactKind::implementation:
         return "implementation";
     case worker::FactKind::include:

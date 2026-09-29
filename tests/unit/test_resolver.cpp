@@ -154,6 +154,9 @@ TEST_CASE("C# imports resolve only visible attached library symbols", "[resolver
         .file_id = 10,
         .kind = "namespace_or_type",
         .target = "Example",
+        .target_kind = std::nullopt,
+        .alias = std::nullopt,
+        .scope = std::nullopt,
     };
     Occurrence widget_use{
         .file_id = 10,
@@ -181,7 +184,9 @@ TEST_CASE("C# imports resolve only visible attached library symbols", "[resolver
             .file_id = 10,
             .kind = "alias",
             .target = "Example",
+            .target_kind = std::nullopt,
             .alias = "Models",
+            .scope = std::nullopt,
         };
         auto aliased = resolver.resolve_csharp_occurrence(widget_use, "Program.cs", {alias}, owners);
         CHECK(aliased.resolution == Resolution::resolved);
@@ -199,6 +204,9 @@ TEST_CASE("C# imports resolve only visible attached library symbols", "[resolver
             .file_id = 10,
             .kind = "static",
             .target = "Example.MathOps",
+            .target_kind = std::nullopt,
+            .alias = std::nullopt,
+            .scope = std::nullopt,
         };
         auto static_result =
             resolver.resolve_csharp_occurrence(static_use, "Program.cs", {static_import}, owners);

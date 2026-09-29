@@ -1,8 +1,12 @@
 #include "codelenses/resolver/relationship_builder.hpp"
 
+#include <algorithm>
 #include <set>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
+
+#include <nlohmann/json.hpp>
 
 namespace codelenses::resolver {
 
@@ -119,23 +123,57 @@ RelationshipBuilder::build_call_relations(int64_t workspace_id,
             continue; // Need a containing caller symbol to form a call relation
         }
 
-        std::string target_name = ref.name;
-        if (ref.target_symbol_id.has_value()) {
-            if (const auto* target_sym = resolver.find_symbol_by_id(*ref.target_symbol_id)) {
-                target_name = target_sym->name;
+        std::vector<int64_t> targets;
+        std::unordered_set<int64_t> seen_targets;
+        auto add_target = [&](int64_t target_id) {
+            if (resolver.find_symbol_by_id(target_id) && seen_targets.insert(target_id).second) {
+                targets.push_back(target_id);
+            }
+        };
+        if (ref.target_symbol_id) add_target(*ref.target_symbol_id);
+
+        if (ref.metadata_json && !ref.metadata_json->empty()) {
+            try {
+                const auto metadata = nlohmann::json::parse(*ref.metadata_json);
+                if (metadata.contains("candidates") && metadata["candidates"].is_array()) {
+                    for (const auto& candidate : metadata["candidates"]) {
+                        if (candidate.is_number_integer()) add_target(candidate.get<int64_t>());
+                    }
+                }
+            } catch (...) {
+                // Ignore malformed candidate metadata and retain any resolved target above.
             }
         }
 
-        SymbolRelation rel{
-            .workspace_id = workspace_id,
-            .source_symbol_id = *caller_id,
-            .target_symbol_id = ref.target_symbol_id,
-            .relation_kind = "calls",
-            .target_name = target_name,
-            .resolution = ref.resolution,
-            .confidence = ref.confidence,
+        // Preserve the same-name fallback used by caller queries for unresolved calls.
+        if (!ref.target_symbol_id) {
+            for (const auto* candidate : resolver.find_symbols_by_name(ref.name)) {
+                add_target(candidate->symbol_id);
+            }
+        }
+
+        auto add_relation = [&](std::optional<int64_t> target_id) {
+            std::string target_name = ref.name;
+            if (target_id) {
+                if (const auto* target_sym = resolver.find_symbol_by_id(*target_id)) {
+                    target_name = target_sym->name;
+                }
+            }
+            relations.push_back(SymbolRelation{
+                .workspace_id = workspace_id,
+                .source_symbol_id = *caller_id,
+                .target_symbol_id = target_id,
+                .relation_kind = "calls",
+                .target_name = target_name,
+                .resolution = ref.resolution,
+                .confidence = ref.confidence,
+            });
         };
-        relations.push_back(std::move(rel));
+        if (targets.empty()) {
+            add_relation(std::nullopt);
+        } else {
+            for (int64_t target_id : targets) add_relation(target_id);
+        }
     }
 
     return relations;
@@ -152,6 +190,23 @@ std::vector<SymbolRelation> RelationshipBuilder::build_hierarchy_relations(
             occ.occurrence_kind == "implementation" || occ.occurrence_kind == "implements") {
 
             auto enclosing_id = resolver.find_enclosing_symbol_id(occ.file_id, occ.range);
+            if (!enclosing_id && occ.metadata_json) {
+                try {
+                    const auto metadata = nlohmann::json::parse(*occ.metadata_json);
+                    if (metadata.contains("enclosingScope") &&
+                        metadata["enclosingScope"].is_string()) {
+                        const auto candidates = resolver.find_symbols_by_qualified_name(
+                            metadata["enclosingScope"].get<std::string>());
+                        auto enclosing = std::find_if(
+                            candidates.begin(), candidates.end(), [&](const auto* candidate) {
+                                return candidate->file_id == occ.file_id;
+                            });
+                        if (enclosing != candidates.end()) enclosing_id = (*enclosing)->symbol_id;
+                    }
+                } catch (...) {
+                    // Malformed metadata should not prevent other relations from being built.
+                }
+            }
             if (!enclosing_id.has_value()) {
                 continue;
             }

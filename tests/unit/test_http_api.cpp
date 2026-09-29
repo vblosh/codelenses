@@ -288,6 +288,111 @@ TEST_CASE("Workspace CRUD and path validation (F-04, F-10)", "[server][workspace
     }
 }
 
+TEST_CASE("HTTP C# library profile creation, attachment, and access revocation",
+          "[server][library][csharp]") {
+    TestHttpServerEnv env;
+
+    const auto library_root = env.root / "csharp_library";
+    fs::create_directories(library_root);
+    std::ofstream(library_root / "Widget.cs")
+        << "namespace Example; public class Widget { }\n";
+
+    nlohmann::json library_body = {
+        {"name", "Example C# source"},
+        {"language", "csharp"},
+        {"provider", "custom"},
+        {"targetFramework", "net8.0"},
+        {"sourceRoots", nlohmann::json::array({library_root.string()})},
+    };
+    auto missing_framework_body = library_body;
+    missing_framework_body.erase("targetFramework");
+    auto missing_framework_res = env.client->Post(
+        "/api/v1/libraries", missing_framework_body.dump(), "application/json");
+    REQUIRE(missing_framework_res != nullptr);
+    CHECK(missing_framework_res->status == 400);
+    CHECK(nlohmann::json::parse(missing_framework_res->body)["code"] == "missing_field");
+
+    auto library_res =
+        env.client->Post("/api/v1/libraries", library_body.dump(), "application/json");
+    REQUIRE(library_res != nullptr);
+    REQUIRE(library_res->status == 201);
+    auto library_json = nlohmann::json::parse(library_res->body);
+    const auto library_id = library_json["id"].get<int64_t>();
+    const auto library_workspace_id = library_json["workspaceId"].get<int64_t>();
+    REQUIRE(library_id > 0);
+    CHECK(library_json["language"] == "csharp");
+    CHECK(library_json["targetFramework"] == "net8.0");
+
+    auto wait_for_job = [&](int64_t job_id) {
+        for (int attempt = 0; attempt < 100; ++attempt) {
+            auto job_res = env.client->Get("/api/v1/jobs/" + std::to_string(job_id));
+            if (job_res && job_res->status == 200) {
+                const auto job = nlohmann::json::parse(job_res->body);
+                if (job["status"] == "completed") return true;
+                if (job["status"] == "failed" || job["status"] == "canceled" ||
+                    job["status"] == "cancelled") return false;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        return false;
+    };
+
+    auto library_index_res = env.client->Post(
+        "/api/v1/libraries/" + std::to_string(library_id) + "/index", "{}", "application/json");
+    REQUIRE(library_index_res != nullptr);
+    REQUIRE(library_index_res->status == 202);
+    REQUIRE(wait_for_job(nlohmann::json::parse(library_index_res->body)["id"].get<int64_t>()));
+
+    const auto project_root = env.root / "csharp_project";
+    fs::create_directories(project_root);
+    std::ofstream(project_root / "Program.cs")
+        << "using Example; public class App { Widget value; }\n";
+    nlohmann::json workspace_body = {
+        {"rootPath", project_root.string()},
+        {"name", "C# consumer"},
+    };
+    auto workspace_res = env.client->Post("/api/v1/workspaces", workspace_body.dump(),
+                                          "application/json");
+    REQUIRE(workspace_res != nullptr);
+    REQUIRE(workspace_res->status == 201);
+    const auto workspace_id = nlohmann::json::parse(workspace_res->body)["id"].get<int64_t>();
+
+    auto attach_res = env.client->Post(
+        "/api/v1/workspaces/" + std::to_string(workspace_id) + "/libraries",
+        nlohmann::json{{"profileId", library_id}}.dump(), "application/json");
+    REQUIRE(attach_res != nullptr);
+    CHECK(attach_res->status == 201);
+
+    nlohmann::json index_body = {{"jobType", "full"}, {"forceFull", true}};
+    auto project_index_res = env.client->Post(
+        "/api/v1/workspaces/" + std::to_string(workspace_id) + "/index", index_body.dump(),
+        "application/json");
+    REQUIRE(project_index_res != nullptr);
+    REQUIRE(project_index_res->status == 202);
+    REQUIRE(wait_for_job(nlohmann::json::parse(project_index_res->body)["id"].get<int64_t>()));
+
+    const auto library_files = env.db->files().list_by_workspace(library_workspace_id, false);
+    REQUIRE(library_files.size() == 1);
+    const auto file_id = library_files.front().id;
+    const auto file_url = "/api/v1/workspaces/" + std::to_string(workspace_id) + "/files/" +
+                          std::to_string(file_id);
+    auto file_res = env.client->Get(file_url);
+    REQUIRE(file_res != nullptr);
+    REQUIRE(file_res->status == 200);
+    const auto file_json = nlohmann::json::parse(file_res->body);
+    CHECK(file_json["origin"] == "library");
+    CHECK(file_json["libraryProfileId"] == library_id);
+    CHECK(file_json["targetFramework"] == "net8.0");
+
+    auto detach_res = env.client->Delete("/api/v1/workspaces/" + std::to_string(workspace_id) +
+                                         "/libraries/" + std::to_string(library_id));
+    REQUIRE(detach_res != nullptr);
+    CHECK(detach_res->status == 200);
+    auto revoked_file_res = env.client->Get(file_url);
+    REQUIRE(revoked_file_res != nullptr);
+    CHECK(revoked_file_res->status == 404);
+}
+
 TEST_CASE("Tree navigation and lazy loading (F-06, F-10)", "[server][tree]") {
     TestHttpServerEnv env;
 

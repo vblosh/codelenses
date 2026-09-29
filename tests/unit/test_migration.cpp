@@ -38,6 +38,11 @@ TEST_CASE("MigrationRunner creates migration table and applies initial schema", 
         Statement stmt_fts(conn->handle(), "SELECT count(*) FROM symbol_search;");
         REQUIRE(stmt_fts.step());
         REQUIRE(stmt_fts.column_int64(0) == 0);
+
+        Statement occurrence_schema(
+            conn->handle(), "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'occurrence';");
+        REQUIRE(occurrence_schema.step());
+        CHECK(occurrence_schema.column_text(0).find("'inheritance'") != std::string::npos);
     }
 
     SECTION("Re-applying pending migrations is idempotent") {
@@ -235,7 +240,7 @@ TEST_CASE("C# library migration preserves every configured source root", "[migra
     auto conn = Connection::open_memory();
     MigrationRunner runner;
     const auto& migrations = runner.registered_migrations();
-    REQUIRE(migrations.size() >= 3);
+    REQUIRE(migrations.size() >= 4);
 
     runner.ensure_migration_table(*conn);
     conn->execute(migrations[0].up_sql);

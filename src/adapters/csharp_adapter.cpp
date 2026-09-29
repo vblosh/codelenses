@@ -288,7 +288,6 @@ void process_using_directive(treesitter::Node node, ASTContext& ctx) {
             }
         }
 
-        const auto scope = ctx.current_scope();
         const std::string qname = scope ? *scope + "." + alias_name : alias_name;
         const std::string sig = clean_signature(node.text(ctx.source));
 
