@@ -36,7 +36,15 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build
+          sudo apt-get install -y ccache ninja-build
+
+      - name: Cache compiler outputs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ runner.os }}-ccache-${{ matrix.c_compiler }}-${{ matrix.build_type }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ matrix.c_compiler }}-${{ matrix.build_type }}-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -50,6 +58,8 @@ jobs:
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCODELENSES_BUILD_TESTS=ON \
             -DCODELENSES_WARNINGS_AS_ERRORS=${{ matrix.warnings_as_errors }} \
             -DCODELENSES_ENABLE_ASAN=${{ matrix.enable_asan }} \
