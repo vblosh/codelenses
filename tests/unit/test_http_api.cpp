@@ -1,12 +1,17 @@
+#include <algorithm>
 #include <chrono>
+#include <condition_variable>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "codelenses/app/version.hpp"
 #include "codelenses/db/database.hpp"
+#include "codelenses/db/statement.hpp"
 #include "codelenses/index/indexer.hpp"
 #include "codelenses/server/dto.hpp"
 #include "codelenses/server/error.hpp"
@@ -15,12 +20,70 @@
 #include <catch2/catch_test_macros.hpp>
 #include <httplib.h>
 #include <nlohmann/json.hpp>
+#include <sqlite3.h>
 
 namespace fs = std::filesystem;
 using namespace codelenses;
 using namespace codelenses::server;
 
 namespace {
+
+class SqliteConnectionBlocker {
+public:
+    explicit SqliteConnectionBlocker(sqlite3* connection) : connection_(connection) {
+        rc_ = sqlite3_create_function_v2(connection_, "test_wait_for_release", 0, SQLITE_UTF8, this,
+                                         &SqliteConnectionBlocker::wait_for_release, nullptr,
+                                         nullptr, nullptr);
+    }
+
+    ~SqliteConnectionBlocker() {
+        release();
+        if (thread_.joinable()) {
+            thread_.join();
+        }
+        if (rc_ == SQLITE_OK) {
+            sqlite3_create_function_v2(connection_, "test_wait_for_release", 0, SQLITE_UTF8,
+                                       nullptr, nullptr, nullptr, nullptr, nullptr);
+        }
+    }
+
+    bool start() {
+        if (rc_ != SQLITE_OK) {
+            return false;
+        }
+        thread_ = std::thread([this] {
+            sqlite3_exec(connection_, "SELECT test_wait_for_release();", nullptr, nullptr, nullptr);
+        });
+        std::unique_lock lock(mutex_);
+        return condition_.wait_for(lock, std::chrono::seconds(2), [&] { return entered_; });
+    }
+
+    void release() {
+        {
+            std::lock_guard lock(mutex_);
+            released_ = true;
+        }
+        condition_.notify_all();
+    }
+
+private:
+    static void wait_for_release(sqlite3_context* context, int, sqlite3_value**) {
+        auto& self = *static_cast<SqliteConnectionBlocker*>(sqlite3_user_data(context));
+        std::unique_lock lock(self.mutex_);
+        self.entered_ = true;
+        self.condition_.notify_all();
+        self.condition_.wait(lock, [&] { return self.released_; });
+        sqlite3_result_int(context, 1);
+    }
+
+    sqlite3* connection_;
+    std::mutex mutex_;
+    std::condition_variable condition_;
+    std::thread thread_;
+    bool entered_{false};
+    bool released_{false};
+    int rc_{SQLITE_OK};
+};
 
 struct TestHttpServerEnv {
     fs::path root;
@@ -717,6 +780,100 @@ TEST_CASE("Indexing lifecycle, status, jobs, and file content (F-05, F-06)", "[s
         std::string st = cancel_json["status"];
         CHECK((st == "completed" || st == "canceled"));
     }
+}
+
+TEST_CASE("HTTP readers stay responsive while the indexing connection is busy",
+          "[server][pipeline][concurrency]") {
+    TestHttpServerEnv env;
+    auto workspace =
+        env.service->create_workspace(CreateWorkspaceRequest{.root_path = env.root.string(),
+                                                             .name = "Reader concurrency",
+                                                             .include_patterns = {},
+                                                             .exclude_patterns = {},
+                                                             .default_ignores = {}});
+    auto indexed = env.pipeline->run_indexing(workspace.id, "full", true);
+    REQUIRE(indexed.has_value());
+
+    const auto file = env.db->files().get_by_path(workspace.id, "src/main.c");
+    REQUIRE(file.has_value());
+
+    SqliteConnectionBlocker blocker(env.db->connection().handle());
+    REQUIRE(blocker.start());
+
+    const auto workspace_id = std::to_string(workspace.id);
+    const auto file_id = std::to_string(file->id);
+    const std::vector<std::string> paths = {
+        "/api/v1/workspaces/" + workspace_id + "/status",
+        "/api/v1/jobs/" + std::to_string(indexed->job_id),
+        "/api/v1/workspaces/" + workspace_id + "/tree?path=src",
+        "/api/v1/workspaces/" + workspace_id + "/files/" + file_id,
+        "/api/v1/workspaces/" + workspace_id + "/files/" + file_id + "/content",
+    };
+
+    std::vector<std::future<int>> requests;
+    requests.reserve(paths.size());
+    for (const auto& path : paths) {
+        requests.push_back(std::async(std::launch::async, [port = env.port, path] {
+            httplib::Client client("127.0.0.1", port);
+            client.set_connection_timeout(1, 0);
+            client.set_read_timeout(2, 0);
+            auto response = client.Get(path);
+            return response ? response->status : 0;
+        }));
+    }
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    bool responsive_while_blocked = false;
+    while (std::chrono::steady_clock::now() < deadline) {
+        responsive_while_blocked = std::all_of(requests.begin(), requests.end(), [](auto& request) {
+            return request.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+        });
+        if (responsive_while_blocked) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    blocker.release();
+    CHECK(responsive_while_blocked);
+    for (auto& request : requests) {
+        CHECK(request.get() == 200);
+    }
+}
+
+TEST_CASE("Workspace status counts more than 100000 diagnostics", "[server][status]") {
+    TestHttpServerEnv env;
+    auto workspace =
+        env.service->create_workspace(CreateWorkspaceRequest{.root_path = env.root.string(),
+                                                             .name = "Large diagnostics",
+                                                             .include_patterns = {},
+                                                             .exclude_patterns = {},
+                                                             .default_ignores = {}});
+
+    Statement insert_diagnostics(env.db->connection().handle(), R"SQL(
+        WITH RECURSIVE numbered(value) AS (
+            SELECT 1
+            UNION ALL
+            SELECT value + 1 FROM numbered WHERE value < 100001
+        )
+        INSERT INTO diagnostic (workspace_id, severity, source, code, message)
+        SELECT ?,
+               CASE value % 3 WHEN 0 THEN 'error' WHEN 1 THEN 'warning' ELSE 'info' END,
+               'indexer', 'test', 'test'
+        FROM numbered;
+    )SQL");
+    insert_diagnostics.bind_int64(1, workspace.id);
+    insert_diagnostics.execute();
+
+    auto response =
+        env.client->Get("/api/v1/workspaces/" + std::to_string(workspace.id) + "/status");
+    REQUIRE(response != nullptr);
+    REQUIRE(response->status == 200);
+    const auto status = nlohmann::json::parse(response->body);
+    CHECK(status["diagnosticCounts"]["total"] == 100001);
+    CHECK(status["diagnosticCounts"]["errors"] == 33333);
+    CHECK(status["diagnosticCounts"]["warnings"] == 33334);
+    CHECK(status["diagnosticCounts"]["info"] == 33334);
 }
 
 TEST_CASE("Compile command endpoints and workspace compilation database status (H1-06, UI)",

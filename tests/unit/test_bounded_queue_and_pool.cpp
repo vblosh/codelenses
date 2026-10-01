@@ -144,14 +144,17 @@ TEST_CASE("Incremental planner classifies files correctly (D-05, D-10)", "[index
     std::vector<filesystem::DiscoveredFile> discovered = {
         {.relative_path = "src/unchanged.cpp",
          .absolute_path = "/ws/src/unchanged.cpp",
+         .source_root = "/ws",
          .language = Language::cpp,
          .file_size = 100},
         {.relative_path = "src/modified.cpp",
          .absolute_path = "/ws/src/modified.cpp",
+         .source_root = "/ws",
          .language = Language::cpp,
          .file_size = 200},
         {.relative_path = "src/new.cpp",
          .absolute_path = "/ws/src/new.cpp",
+         .source_root = "/ws",
          .language = Language::cpp,
          .file_size = 50},
     };
@@ -257,6 +260,7 @@ TEST_CASE("Incremental planner detects same-size edit with restored mtime", "[in
     std::vector<filesystem::DiscoveredFile> discovered = {
         {.relative_path = "code.c",
          .absolute_path = file_path,
+         .source_root = temp_dir,
          .language = Language::c,
          .file_size = static_cast<uint64_t>(edited_content.size()),
          .is_binary = false},

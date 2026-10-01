@@ -54,6 +54,60 @@ describe("Frontend components", () => {
       toolbar.destroy();
     });
 
+    it("cancels status polls for old workspaces and on teardown", async () => {
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({
+        workspaces: [
+          { id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" },
+          { id: 2, name: "ws2", rootPath: "/ws2", revision: 1, status: "idle", createdAt: "", updatedAt: "" },
+        ],
+        total: 2,
+      });
+      const statusRequest = vi.spyOn(api, "getWorkspaceStatus").mockImplementation(
+        (workspaceId, signal) => {
+          if (workspaceId === 2) {
+            return Promise.resolve({
+              workspaceId,
+              status: "idle",
+              revision: 1,
+              latestJob: null,
+              fileCount: 2,
+              symbolCount: 0,
+              diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+            });
+          }
+          return new Promise((_, reject) => {
+            signal?.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              { once: true }
+            );
+          });
+        }
+      );
+
+      const toolbar = new ToolbarComponent(store, { onSearch: vi.fn() });
+      await vi.waitFor(() => expect(statusRequest).toHaveBeenCalledTimes(1));
+      const firstSignal = statusRequest.mock.calls[0][1]!;
+
+      await toolbar.fetchStatus();
+      expect(statusRequest).toHaveBeenCalledTimes(1);
+
+      store.setWorkspace(2);
+      await vi.waitFor(() => expect(statusRequest).toHaveBeenCalledTimes(2));
+      expect(firstSignal.aborted).toBe(true);
+      await vi.waitFor(() => {
+        expect(toolbar.getElement().querySelector(".status-text")?.textContent).toBe(
+          "Indexed (2 files)"
+        );
+      });
+
+      store.setWorkspace(1);
+      expect(statusRequest).toHaveBeenCalledTimes(3);
+      const lastSignal = statusRequest.mock.calls[2][1]!;
+      toolbar.destroy();
+      expect(lastSignal.aborted).toBe(true);
+    });
+
     it("triggers onAddWorkspace and onManageLinks callbacks when buttons are clicked", async () => {
       vi.spyOn(api, "getWorkspaces").mockResolvedValueOnce({
         workspaces: [{ id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" }],

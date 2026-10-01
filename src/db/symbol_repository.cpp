@@ -218,6 +218,12 @@ std::vector<Symbol> SymbolRepository::list_by_workspace(int64_t workspace_id) {
     return results;
 }
 
+int64_t SymbolRepository::count_by_workspace(int64_t workspace_id) {
+    Statement stmt(conn_.handle(), "SELECT COUNT(*) FROM symbol WHERE workspace_id = ?;");
+    stmt.bind_int64(1, workspace_id);
+    return stmt.step() ? stmt.column_int64(0) : 0;
+}
+
 bool SymbolRepository::delete_by_file(int64_t file_id) {
     Statement stmt(conn_.handle(), "DELETE FROM symbol WHERE file_id = ?;");
     stmt.bind_int64(1, file_id);

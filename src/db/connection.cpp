@@ -22,6 +22,26 @@ std::unique_ptr<Connection> Connection::open(const std::string& path) {
     return conn;
 }
 
+std::unique_ptr<Connection> Connection::open_readonly(const std::string& path) {
+    sqlite3* db = nullptr;
+    int rc =
+        sqlite3_open_v2(path.c_str(), &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nullptr);
+    if (rc != SQLITE_OK) {
+        std::string err = db ? sqlite3_errmsg(db) : "Unknown error";
+        if (db) {
+            sqlite3_close(db);
+        }
+        throw DbError(rc, "Failed to open database read-only at '" + path + "': " + err);
+    }
+
+    auto conn = std::make_unique<Connection>(db);
+    conn->execute("PRAGMA foreign_keys = ON;");
+    conn->execute("PRAGMA busy_timeout = 5000;");
+    conn->execute("PRAGMA temp_store = MEMORY;");
+    conn->execute("PRAGMA query_only = ON;");
+    return conn;
+}
+
 std::unique_ptr<Connection> Connection::open_memory() {
     sqlite3* db = nullptr;
     int rc = sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
@@ -38,7 +58,13 @@ std::unique_ptr<Connection> Connection::open_memory() {
     return conn;
 }
 
-Connection::Connection(sqlite3* db) : db_(db) {}
+Connection::Connection(sqlite3* db) : db_(db) {
+    if (db_) {
+        if (const char* filename = sqlite3_db_filename(db_, "main"); filename != nullptr) {
+            path_ = filename;
+        }
+    }
+}
 
 Connection::~Connection() {
     if (db_) {
@@ -47,7 +73,8 @@ Connection::~Connection() {
     }
 }
 
-Connection::Connection(Connection&& other) noexcept : db_(other.db_) {
+Connection::Connection(Connection&& other) noexcept
+    : db_(other.db_), path_(std::move(other.path_)) {
     other.db_ = nullptr;
 }
 
@@ -57,6 +84,7 @@ Connection& Connection::operator=(Connection&& other) noexcept {
             sqlite3_close(db_);
         }
         db_ = other.db_;
+        path_ = std::move(other.path_);
         other.db_ = nullptr;
     }
     return *this;

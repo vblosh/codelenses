@@ -358,9 +358,10 @@ struct CompileCommandContext {
                     return false;
                 }
             } else {
-                auto eq = it->find('=');
+                std::string_view def_sv(*it);
+                auto eq = def_sv.find('=');
                 std::string_view def_name =
-                    (eq != std::string::npos) ? it->substr(0, eq) : std::string_view(*it);
+                    (eq != std::string_view::npos) ? def_sv.substr(0, eq) : def_sv;
                 if (def_name == name) {
                     return true;
                 }
@@ -376,12 +377,13 @@ struct CompileCommandContext {
                     return std::nullopt;
                 }
             } else {
-                auto eq = it->find('=');
+                std::string_view def_sv(*it);
+                auto eq = def_sv.find('=');
                 std::string_view def_name =
-                    (eq != std::string::npos) ? it->substr(0, eq) : std::string_view(*it);
+                    (eq != std::string_view::npos) ? def_sv.substr(0, eq) : def_sv;
                 if (def_name == name) {
-                    if (eq != std::string::npos) {
-                        return it->substr(eq + 1);
+                    if (eq != std::string_view::npos) {
+                        return std::string(def_sv.substr(eq + 1));
                     }
                     return "1";
                 }

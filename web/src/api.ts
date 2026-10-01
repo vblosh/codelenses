@@ -138,8 +138,13 @@ export class ApiClient {
     );
   }
 
-  async getWorkspaceStatus(workspaceId: number): Promise<WorkspaceStatusDto> {
-    return this.request<WorkspaceStatusDto>(`/api/v1/workspaces/${workspaceId}/status`);
+  async getWorkspaceStatus(
+    workspaceId: number,
+    signal?: AbortSignal
+  ): Promise<WorkspaceStatusDto> {
+    return this.request<WorkspaceStatusDto>(`/api/v1/workspaces/${workspaceId}/status`, {
+      signal,
+    });
   }
 
   async triggerIndexing(

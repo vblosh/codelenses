@@ -20,9 +20,9 @@ enum class SymlinkPolicy {
 };
 
 struct DiscoveredFile {
-    std::string relative_path; // normalized with '/'
-    std::filesystem::path absolute_path;
-    std::filesystem::path source_root;
+    std::string relative_path{}; // normalized with '/'
+    std::filesystem::path absolute_path{};
+    std::filesystem::path source_root{};
     Language language{Language::unknown};
     uint64_t file_size{0};
     bool is_binary{false};

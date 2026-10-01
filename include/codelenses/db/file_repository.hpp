@@ -22,6 +22,7 @@ public:
                                                         const std::string& relative_path);
     [[nodiscard]] std::vector<FileRecord> list_by_workspace(int64_t workspace_id,
                                                             bool include_deleted = false);
+    [[nodiscard]] int64_t count_by_workspace(int64_t workspace_id);
     [[nodiscard]] std::vector<FileStateItem> get_file_states(int64_t workspace_id);
 
     bool mark_deleted(int64_t file_id);

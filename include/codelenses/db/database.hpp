@@ -50,6 +50,7 @@ struct IndexingCoordinator {
 class Database {
 public:
     static std::unique_ptr<Database> open(const std::string& path, bool apply_migrations = true);
+    static std::unique_ptr<Database> open_reader(const std::string& path);
     static std::unique_ptr<Database> open_memory(bool apply_migrations = true);
 
     explicit Database(std::unique_ptr<Connection> conn);
@@ -57,10 +58,11 @@ public:
 
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
-    Database(Database&&) = default;
-    Database& operator=(Database&&) = default;
+    Database(Database&&) = delete;
+    Database& operator=(Database&&) = delete;
 
     [[nodiscard]] Connection& connection() noexcept { return *conn_; }
+    [[nodiscard]] std::unique_ptr<Database> open_reader() const;
     [[nodiscard]] MigrationRunner& migration_runner() noexcept { return migrations_; }
 
     [[nodiscard]] WorkspaceRepository& workspaces() noexcept { return workspaces_; }

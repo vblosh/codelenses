@@ -6,6 +6,13 @@
 
 namespace codelenses {
 
+struct DiagnosticCounts {
+    int64_t total{0};
+    int64_t errors{0};
+    int64_t warnings{0};
+    int64_t info{0};
+};
+
 struct Diagnostic {
     int64_t id = 0;
     int64_t workspace_id = 0;

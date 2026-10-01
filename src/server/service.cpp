@@ -27,6 +27,8 @@ namespace codelenses::server {
 
 namespace {
 
+thread_local std::unordered_map<const ApiService*, Database*> active_read_databases;
+
 struct LineSpan {
     int64_t start_byte{0};
     int64_t content_end_byte{0};
@@ -147,6 +149,42 @@ void authorize_workspace_source_roots(Database& db, const WorkspacePolicy& polic
 
 } // namespace
 
+class ApiService::DatabaseReadScope {
+public:
+    explicit DatabaseReadScope(ApiService& service) : service_(service) {
+        auto it = active_read_databases.find(&service_);
+        if (it != active_read_databases.end()) {
+            return;
+        }
+
+        reader_ = service_.database().open_reader();
+        if (reader_) {
+            transaction_ =
+                std::make_unique<Transaction>(reader_->connection(), TransactionType::deferred);
+            active_read_databases.emplace(&service_, reader_.get());
+        }
+    }
+
+    ~DatabaseReadScope() {
+        if (reader_) {
+            active_read_databases.erase(&service_);
+        }
+    }
+
+    DatabaseReadScope(const DatabaseReadScope&) = delete;
+    DatabaseReadScope& operator=(const DatabaseReadScope&) = delete;
+
+private:
+    ApiService& service_;
+    std::unique_ptr<Database> reader_;
+    std::unique_ptr<Transaction> transaction_;
+};
+
+Database& ApiService::database() noexcept {
+    auto it = active_read_databases.find(this);
+    return it == active_read_databases.end() ? db_ : *it->second;
+}
+
 ApiService::ApiService(Database& db, index::IndexingPipeline& pipeline, WorkspacePolicy policy)
     : db_(db), pipeline_(pipeline), policy_(std::move(policy)) {}
 
@@ -160,7 +198,7 @@ void ApiService::shutdown() {
     }
 
     try {
-        auto workspaces = db_.workspaces().list_all();
+        auto workspaces = database().workspaces().list_all();
         for (const auto& ws : workspaces) {
             static_cast<void>(pipeline_.cancel_workspace(ws.id));
         }
@@ -190,7 +228,7 @@ Workspace ApiService::require_workspace(int64_t id) {
     if (id <= 0) {
         throw ApiError::bad_request("invalid_id", "Workspace ID must be positive");
     }
-    auto ws = db_.workspaces().get_by_id(id);
+    auto ws = database().workspaces().get_by_id(id);
     if (!ws.has_value()) {
         throw ApiError::not_found("workspace_not_found",
                                   "Workspace " + std::to_string(id) + " not found");
@@ -203,7 +241,7 @@ FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
     if (file_id <= 0) {
         throw ApiError::bad_request("invalid_id", "File ID must be positive");
     }
-    auto f = db_.files().get_by_id(file_id);
+    auto f = database().files().get_by_id(file_id);
     if (!f.has_value()) {
         throw ApiError::not_found("file_not_found",
                                   "File " + std::to_string(file_id) + " not found");
@@ -211,7 +249,7 @@ FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
     if (f->workspace_id == workspace_id) {
         return *f;
     }
-    if (db_.workspaces().is_linked(workspace_id, f->workspace_id)) {
+    if (database().workspaces().is_linked(workspace_id, f->workspace_id)) {
         return *f;
     }
     throw ApiError::not_found("file_not_found", "File " + std::to_string(file_id) +
@@ -224,7 +262,7 @@ Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
     if (symbol_id <= 0) {
         throw ApiError::bad_request("invalid_id", "Symbol ID must be positive");
     }
-    auto s = db_.symbols().get_by_id(symbol_id);
+    auto s = database().symbols().get_by_id(symbol_id);
     if (!s.has_value()) {
         throw ApiError::not_found("symbol_not_found",
                                   "Symbol " + std::to_string(symbol_id) + " not found");
@@ -232,7 +270,7 @@ Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
     if (s->workspace_id == workspace_id) {
         return *s;
     }
-    if (db_.workspaces().is_linked(workspace_id, s->workspace_id)) {
+    if (database().workspaces().is_linked(workspace_id, s->workspace_id)) {
         return *s;
     }
     throw ApiError::not_found("symbol_not_found", "Symbol " + std::to_string(symbol_id) +
@@ -242,9 +280,9 @@ Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
 
 OriginMetadataDto ApiService::origin_for_workspace(int64_t owner_workspace_id) {
     OriginMetadataDto origin{.owner_workspace_id = owner_workspace_id};
-    if (auto ws = db_.workspaces().get_by_id(owner_workspace_id))
+    if (auto ws = database().workspaces().get_by_id(owner_workspace_id))
         origin.owner_workspace_name = ws->name;
-    auto profile = db_.workspace_settings().get_profile_by_workspace(owner_workspace_id);
+    auto profile = database().workspace_settings().get_profile_by_workspace(owner_workspace_id);
     if (profile.has_value()) {
 
         origin.target_framework = profile->target_framework;
@@ -328,14 +366,14 @@ WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
     auto settings = req.indexing_settings
                         ? std::make_optional(validate_settings(*req.indexing_settings, ws))
                         : std::nullopt;
-    Transaction tx(db_.connection(), TransactionType::immediate);
-    int64_t id = db_.workspaces().create(ws);
+    Transaction tx(database().connection(), TransactionType::immediate);
+    int64_t id = database().workspaces().create(ws);
     if (settings) {
         settings->workspace_id = id;
-        db_.workspace_settings().create_profile(*settings);
+        database().workspace_settings().create_profile(*settings);
     }
     tx.commit();
-    auto created = db_.workspaces().get_by_id(id);
+    auto created = database().workspaces().get_by_id(id);
     if (!created.has_value()) {
         throw ApiError::internal_error("Failed to retrieve created workspace");
     }
@@ -343,12 +381,14 @@ WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
 }
 
 WorkspaceDto ApiService::get_workspace(int64_t id) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(id);
     return workspace_dto(ws);
 }
 
 std::vector<WorkspaceDto> ApiService::list_workspaces() {
-    auto all = db_.workspaces().list_all();
+    DatabaseReadScope read_scope(*this);
+    auto all = database().workspaces().list_all();
     std::vector<WorkspaceDto> dtos;
     dtos.reserve(all.size());
     for (const auto& w : all) {
@@ -423,7 +463,7 @@ WorkspaceIndexSettings ApiService::validate_settings(const WorkspaceIndexSetting
 
 WorkspaceDto ApiService::workspace_dto(const Workspace& ws) {
     auto dto = workspace_to_dto(ws);
-    if (auto settings = db_.workspace_settings().get_profile_by_workspace(ws.id)) {
+    if (auto settings = database().workspace_settings().get_profile_by_workspace(ws.id)) {
         WorkspaceIndexSettingsRequest req;
         req.language = settings->language;
         req.provider = settings->provider;
@@ -447,13 +487,14 @@ void ApiService::refresh_resolution(int64_t workspace_id) {
     auto result = resolver.resolve_workspace(workspace_id);
     if (!result)
         throw ApiError::internal_error(result.error().message);
-    db_.workspaces().increment_revision(workspace_id);
+    database().workspaces().increment_revision(workspace_id);
 }
 
 std::vector<WorkspaceDto> ApiService::list_workspace_links(int64_t workspace_id) {
+    DatabaseReadScope read_scope(*this);
     require_workspace(workspace_id);
     std::vector<WorkspaceDto> result;
-    for (auto id : db_.workspaces().linked_ids(workspace_id))
+    for (auto id : database().workspaces().linked_ids(workspace_id))
         result.push_back(get_workspace(id));
     return result;
 }
@@ -464,9 +505,9 @@ WorkspaceDto ApiService::link_workspace(int64_t workspace_id, int64_t target_id)
     auto target = require_workspace(target_id);
     if (workspace_id == target_id)
         throw ApiError::bad_request("self_link", "A workspace cannot link to itself");
-    if (db_.workspaces().is_linked(workspace_id, target_id))
+    if (database().workspaces().is_linked(workspace_id, target_id))
         return workspace_dto(target);
-    db_.workspaces().link(workspace_id, target_id);
+    database().workspaces().link(workspace_id, target_id);
     refresh_resolution(workspace_id);
     return workspace_dto(target);
 }
@@ -475,9 +516,9 @@ void ApiService::unlink_workspace(int64_t workspace_id, int64_t target_id) {
     WorkspaceMutation guard(db_);
     require_workspace(workspace_id);
     require_workspace(target_id);
-    if (!db_.workspaces().is_linked(workspace_id, target_id))
+    if (!database().workspaces().is_linked(workspace_id, target_id))
         return;
-    db_.workspaces().unlink(workspace_id, target_id);
+    database().workspaces().unlink(workspace_id, target_id);
     refresh_resolution(workspace_id);
 }
 
@@ -502,27 +543,27 @@ WorkspaceDto ApiService::update_workspace(int64_t id, const UpdateWorkspaceReque
         ws.default_compile_command = *req.default_compile_command;
     }
 
-    Transaction tx(db_.connection(), TransactionType::immediate);
+    Transaction tx(database().connection(), TransactionType::immediate);
     if (req.indexing_settings) {
         auto settings = validate_settings(*req.indexing_settings, ws);
-        auto old = db_.workspace_settings().get_profile_by_workspace(id);
+        auto old = database().workspace_settings().get_profile_by_workspace(id);
         if (old) {
             settings.id = old->id;
-            db_.workspace_settings().update_profile(settings);
+            database().workspace_settings().update_profile(settings);
         } else {
-            db_.workspace_settings().create_profile(settings);
+            database().workspace_settings().create_profile(settings);
         }
         if (!old || old->fingerprint != settings.fingerprint) {
-            Statement invalidate(db_.connection().handle(),
+            Statement invalidate(database().connection().handle(),
                                  "UPDATE file SET modified_ns = 0, content_hash = NULL, parse_hash "
                                  "= NULL WHERE workspace_id = ?;");
             invalidate.bind_int64(1, id);
             invalidate.execute();
         }
     }
-    db_.workspaces().update(ws);
+    database().workspaces().update(ws);
     tx.commit();
-    auto updated = db_.workspaces().get_by_id(id);
+    auto updated = database().workspaces().get_by_id(id);
     return workspace_dto(*updated);
 }
 
@@ -531,9 +572,9 @@ void ApiService::delete_workspace(int64_t id) {
         static_cast<void>(pipeline_.cancel_workspace(id));
     WorkspaceMutation guard(db_);
     require_workspace(id);
-    auto consumers = db_.workspaces().consumer_ids(id);
+    auto consumers = database().workspaces().consumer_ids(id);
     invalidate_cdb_cache(id);
-    db_.workspaces().delete_by_id(id);
+    database().workspaces().delete_by_id(id);
     for (auto consumer : consumers)
         refresh_resolution(consumer);
 }
@@ -543,7 +584,7 @@ void ApiService::delete_workspace(int64_t id) {
 // ==========================================
 JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest& req) {
     auto workspace = require_workspace(workspace_id);
-    if (auto settings = db_.workspace_settings().get_profile_by_workspace(workspace_id))
+    if (auto settings = database().workspace_settings().get_profile_by_workspace(workspace_id))
         authorize_workspace_source_roots(db_, policy_, *settings);
 
     std::unique_lock<std::mutex> lock(threads_mutex_);
@@ -565,7 +606,7 @@ JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest&
         .status = "queued",
         .requested_mode = req.force_full ? std::optional<std::string>("full") : std::nullopt,
     };
-    int64_t job_id = db_.jobs().create(job);
+    int64_t job_id = database().jobs().create(job);
 
     auto stop_source = std::make_shared<std::stop_source>();
     active_job_stops_[job_id] = stop_source;
@@ -589,18 +630,18 @@ JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest&
         auto res = pipeline_.run_indexing(workspace_id, job_type, force_full,
                                           stop_source->get_token(), job_id);
         if (!res) {
-            auto current = db_.jobs().get_by_id(job_id);
+            auto current = database().jobs().get_by_id(job_id);
             if (current.has_value() &&
                 (current->status == "queued" || current->status == "running")) {
                 std::string st = (res.error().code == ErrorCode::cancelled) ? "canceled" : "failed";
-                db_.jobs().finish_job(job_id, st, std::nullopt, res.error().message);
+                database().jobs().finish_job(job_id, st, std::nullopt, res.error().message);
             }
         }
     });
 
     lock.unlock();
 
-    auto created_job = db_.jobs().get_by_id(job_id);
+    auto created_job = database().jobs().get_by_id(job_id);
     if (!created_job.has_value()) {
         throw ApiError::internal_error("Failed to retrieve created indexing job");
     }
@@ -608,29 +649,24 @@ JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest&
 }
 
 WorkspaceStatusDto ApiService::get_workspace_status(int64_t workspace_id) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(workspace_id);
 
     std::optional<JobDto> latest_job = std::nullopt;
-    auto recent_jobs = db_.jobs().list_by_workspace(workspace_id, 1);
+    auto recent_jobs = database().jobs().list_by_workspace(workspace_id, 1);
     if (!recent_jobs.empty()) {
         latest_job = job_to_dto(recent_jobs[0]);
     }
 
-    auto files = db_.files().list_by_workspace(workspace_id, false);
-    auto symbols = db_.symbols().list_by_workspace(workspace_id);
-
-    DiagnosticCountsDto diag_counts;
-    auto diags = db_.diagnostics().list_by_workspace(workspace_id, std::nullopt, 100000, 0);
-    diag_counts.total = static_cast<int64_t>(diags.size());
-    for (const auto& d : diags) {
-        if (d.severity == "error") {
-            diag_counts.errors++;
-        } else if (d.severity == "warning") {
-            diag_counts.warnings++;
-        } else {
-            diag_counts.info++;
-        }
-    }
+    const auto file_count = database().files().count_by_workspace(workspace_id);
+    const auto symbol_count = database().symbols().count_by_workspace(workspace_id);
+    const auto stored_diag_counts = database().diagnostics().count_by_workspace(workspace_id);
+    DiagnosticCountsDto diag_counts{
+        .total = stored_diag_counts.total,
+        .errors = stored_diag_counts.errors,
+        .warnings = stored_diag_counts.warnings,
+        .info = stored_diag_counts.info,
+    };
 
     std::string status_str = to_string(ws.status);
     bool is_indexing_active = false;
@@ -648,17 +684,18 @@ WorkspaceStatusDto ApiService::get_workspace_status(int64_t workspace_id) {
         .status = std::move(status_str),
         .revision = ws.revision,
         .latest_job = std::move(latest_job),
-        .file_count = static_cast<int64_t>(files.size()),
-        .symbol_count = static_cast<int64_t>(symbols.size()),
+        .file_count = file_count,
+        .symbol_count = symbol_count,
         .diagnostic_counts = diag_counts,
     };
 }
 
 JobDto ApiService::get_job(int64_t job_id) {
+    DatabaseReadScope read_scope(*this);
     if (job_id <= 0) {
         throw ApiError::bad_request("invalid_id", "Job ID must be positive");
     }
-    auto j = db_.jobs().get_by_id(job_id);
+    auto j = database().jobs().get_by_id(job_id);
     if (!j.has_value()) {
         throw ApiError::not_found("job_not_found", "Job " + std::to_string(job_id) + " not found");
     }
@@ -676,9 +713,9 @@ JobDto ApiService::cancel_job(int64_t job_id) {
                 it->second->request_stop();
             }
         }
-        auto current = db_.jobs().get_by_id(job_id);
+        auto current = database().jobs().get_by_id(job_id);
         if (current.has_value() && (current->status == "queued" || !cancelled_in_pipeline)) {
-            db_.jobs().finish_job(job_id, "canceled", std::nullopt, "Canceled by user");
+            database().jobs().finish_job(job_id, "canceled", std::nullopt, "Canceled by user");
         }
     }
     return get_job(job_id);
@@ -688,9 +725,10 @@ JobDto ApiService::cancel_job(int64_t job_id) {
 // Tree, File Metadata & Range Content (F-06, F-10)
 // ==========================================
 WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& path) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(workspace_id);
 
-    if (db_.workspace_settings().get_profile_by_workspace(workspace_id)) {
+    if (database().workspace_settings().get_profile_by_workspace(workspace_id)) {
         fs::path requested(path);
         if (requested.is_absolute() && path != "/")
             throw ApiError::bad_request("path_traversal", "Tree path must be relative");
@@ -704,7 +742,7 @@ WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& p
         std::vector<TreeNodeDto> entries;
         std::unordered_set<std::string> seen;
         const auto match_prefix = prefix.empty() ? "" : prefix + "/";
-        for (const auto& file : db_.files().list_by_workspace(workspace_id, false)) {
+        for (const auto& file : database().files().list_by_workspace(workspace_id, false)) {
             if (!file.relative_path.starts_with(match_prefix))
                 continue;
             auto rest = file.relative_path.substr(match_prefix.size());
@@ -773,7 +811,7 @@ WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& p
                 .language = "",
             });
         } else if (entry.is_regular_file(ec)) {
-            auto file_rec = db_.files().get_by_path(workspace_id, entry_rel);
+            auto file_rec = database().files().get_by_path(workspace_id, entry_rel);
             if (file_rec.has_value()) {
                 entries.push_back(TreeNodeDto{
                     .name = filename,
@@ -815,6 +853,7 @@ WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& p
 }
 
 FileMetadataDto ApiService::get_file(int64_t workspace_id, int64_t file_id) {
+    DatabaseReadScope read_scope(*this);
     auto f = require_file(workspace_id, file_id);
     auto dto = file_to_dto(f);
     dto.origin_metadata = origin_for_workspace(f.workspace_id);
@@ -826,10 +865,11 @@ FileContentDto ApiService::get_file_content(int64_t workspace_id, int64_t file_i
                                             std::optional<int64_t> end_line,
                                             std::optional<int64_t> start_byte,
                                             std::optional<int64_t> end_byte) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(workspace_id);
     auto f = require_file(workspace_id, file_id);
 
-    auto capture_root = authorized_file_root(db_, f, ws);
+    auto capture_root = authorized_file_root(database(), f, ws);
     auto captured = filesystem::capture_file(f.path, policy_.max_file_size_bytes, capture_root);
     if (!captured.has_value()) {
         throw ApiError::not_found("file_read_error",
@@ -1002,6 +1042,7 @@ ApiService::get_or_load_cdb(const Workspace& ws, std::filesystem::path* out_effe
 
 FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t workspace_id,
                                                                    int64_t file_id) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(workspace_id);
     auto f = require_file(workspace_id, file_id);
 
@@ -1064,6 +1105,7 @@ FileCompileCommandResponseDto ApiService::get_file_compile_command(int64_t works
 
 WorkspaceCompileCommandsSummaryDto
 ApiService::get_workspace_compile_commands(int64_t workspace_id) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(workspace_id);
     std::filesystem::path effective_path;
     bool is_auto = false;
@@ -1087,13 +1129,14 @@ ApiService::get_workspace_compile_commands(int64_t workspace_id) {
 // Highlights, Symbols & Outline (F-07)
 // ==========================================
 HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64_t file_id) {
+    DatabaseReadScope read_scope(*this);
     auto ws = require_workspace(workspace_id);
     auto f = require_file(workspace_id, file_id);
 
     const auto& legend = HighlightLegend::default_legend();
     std::vector<adapters::HighlightToken> tokens;
 
-    auto capture_root = authorized_file_root(db_, f, ws);
+    auto capture_root = authorized_file_root(database(), f, ws);
     auto captured = filesystem::capture_file(f.path, policy_.max_file_size_bytes, capture_root);
     if (captured.has_value() && !captured->is_binary) {
         auto lang_res = language_from_string(f.language);
@@ -1131,7 +1174,7 @@ HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64
     }
 
     if (tokens.empty()) {
-        auto syms = db_.symbols().list_by_file(file_id);
+        auto syms = database().symbols().list_by_file(file_id);
         for (const auto& s : syms) {
             std::string_view kind_for_legend = s.kind;
             if (s.kind == "type_alias") {
@@ -1182,8 +1225,9 @@ HighlightResponseDto ApiService::get_file_highlights(int64_t workspace_id, int64
 }
 
 std::vector<SymbolDto> ApiService::get_file_symbols(int64_t workspace_id, int64_t file_id) {
+    DatabaseReadScope read_scope(*this);
     require_file(workspace_id, file_id);
-    auto syms = db_.symbols().list_by_file(file_id);
+    auto syms = database().symbols().list_by_file(file_id);
     std::vector<SymbolDto> dtos;
     dtos.reserve(syms.size());
     for (const auto& s : syms) {
@@ -1195,8 +1239,9 @@ std::vector<SymbolDto> ApiService::get_file_symbols(int64_t workspace_id, int64_
 }
 
 FileOutlineDto ApiService::get_file_outline(int64_t workspace_id, int64_t file_id) {
+    DatabaseReadScope read_scope(*this);
     require_file(workspace_id, file_id);
-    auto syms = db_.symbols().list_by_file(file_id);
+    auto syms = database().symbols().list_by_file(file_id);
 
     std::vector<SymbolOutlineNodeDto> nodes;
     nodes.reserve(syms.size());
@@ -1263,12 +1308,13 @@ std::vector<OccurrenceDto> ApiService::get_file_occurrences(int64_t workspace_id
                                                             std::optional<std::string> kind,
                                                             std::optional<int64_t> start_byte,
                                                             std::optional<int64_t> end_byte) {
+    DatabaseReadScope read_scope(*this);
     require_file(workspace_id, file_id);
     std::vector<Occurrence> occs;
     if (start_byte.has_value() && end_byte.has_value()) {
-        occs = db_.occurrences().find_at_range(file_id, *start_byte, *end_byte);
+        occs = database().occurrences().find_at_range(file_id, *start_byte, *end_byte);
     } else {
-        occs = db_.occurrences().list_by_file(file_id);
+        occs = database().occurrences().list_by_file(file_id);
     }
 
     std::vector<OccurrenceDto> dtos;
@@ -1278,9 +1324,10 @@ std::vector<OccurrenceDto> ApiService::get_file_occurrences(int64_t workspace_id
         }
         auto dto = occurrence_to_dto(o);
         if (o.symbol_id) {
-            auto target = db_.symbols().get_by_id(*o.symbol_id);
-            if (!target || (target->workspace_id != workspace_id &&
-                            !db_.workspaces().is_linked(workspace_id, target->workspace_id))) {
+            auto target = database().symbols().get_by_id(*o.symbol_id);
+            if (!target ||
+                (target->workspace_id != workspace_id &&
+                 !database().workspaces().is_linked(workspace_id, target->workspace_id))) {
                 dto.symbol_id.reset();
                 dto.resolution = "unresolved";
             }
@@ -1297,6 +1344,7 @@ PaginatedResultDto<SymbolDto>
 ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
                          std::optional<std::string> kind, std::optional<std::string> language,
                          std::optional<int64_t> file_id, int64_t limit, int64_t offset) {
+    DatabaseReadScope read_scope(*this);
     require_workspace(workspace_id);
     if (file_id.has_value()) {
         require_file(workspace_id, *file_id);
@@ -1306,20 +1354,20 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
 
     std::vector<Symbol> candidates;
     if (query.has_value() && !query->empty()) {
-        auto fts_hits = db_.fts().search_symbols(workspace_id, *query, 1000, 0);
+        auto fts_hits = database().fts().search_symbols(workspace_id, *query, 1000, 0);
         for (const auto& hit : fts_hits) {
-            auto sym = db_.symbols().get_by_id(hit.id);
+            auto sym = database().symbols().get_by_id(hit.id);
             if (sym.has_value() && sym->workspace_id == workspace_id) {
                 candidates.push_back(std::move(*sym));
             }
         }
         if (candidates.empty()) {
-            candidates = db_.symbols().find_by_name(workspace_id, *query);
+            candidates = database().symbols().find_by_name(workspace_id, *query);
         }
     } else if (file_id.has_value()) {
-        candidates = db_.symbols().list_by_file(*file_id);
+        candidates = database().symbols().list_by_file(*file_id);
     } else {
-        candidates = db_.symbols().list_by_workspace(workspace_id);
+        candidates = database().symbols().list_by_workspace(workspace_id);
     }
 
     std::vector<const Symbol*> filtered;
@@ -1361,10 +1409,11 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
 }
 
 SymbolDetailDto ApiService::get_symbol_detail(int64_t workspace_id, int64_t symbol_id) {
+    DatabaseReadScope read_scope(*this);
     auto sym = require_symbol(workspace_id, symbol_id);
     auto file = require_file(workspace_id, sym.file_id);
 
-    auto same_key_symbols = db_.symbols().get_by_key(sym.workspace_id, sym.symbol_key);
+    auto same_key_symbols = database().symbols().get_by_key(sym.workspace_id, sym.symbol_key);
     std::vector<SymbolDto> declarations;
     declarations.reserve(same_key_symbols.size());
     for (const auto& s : same_key_symbols) {
@@ -1373,9 +1422,9 @@ SymbolDetailDto ApiService::get_symbol_detail(int64_t workspace_id, int64_t symb
         declarations.push_back(std::move(dto));
     }
 
-    auto callers = db_.references().find_callers(workspace_id, symbol_id);
-    auto callees = db_.references().find_callees(workspace_id, symbol_id);
-    auto referencers = db_.references().find_referencers(workspace_id, symbol_id, 10000, 0);
+    auto callers = database().references().find_callers(workspace_id, symbol_id);
+    auto callees = database().references().find_callees(workspace_id, symbol_id);
+    auto referencers = database().references().find_referencers(workspace_id, symbol_id, 10000, 0);
 
     auto symbol_dto = symbol_to_dto(sym);
     symbol_dto.origin_metadata = origin_for_workspace(sym.workspace_id);
@@ -1394,11 +1443,12 @@ SymbolDetailDto ApiService::get_symbol_detail(int64_t workspace_id, int64_t symb
 PaginatedResultDto<ReferencerDto> ApiService::get_symbol_references(int64_t workspace_id,
                                                                     int64_t symbol_id,
                                                                     int64_t limit, int64_t offset) {
+    DatabaseReadScope read_scope(*this);
     require_symbol(workspace_id, symbol_id);
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
 
-    auto all_refs = db_.references().find_referencers(workspace_id, symbol_id, 100000, 0);
+    auto all_refs = database().references().find_referencers(workspace_id, symbol_id, 100000, 0);
     int64_t total = static_cast<int64_t>(all_refs.size());
 
     std::vector<ReferencerDto> items;
@@ -1406,7 +1456,7 @@ PaginatedResultDto<ReferencerDto> ApiService::get_symbol_references(int64_t work
         int64_t end = std::min(total, eff_offset + eff_limit);
         for (int64_t i = eff_offset; i < end; ++i) {
             auto dto = referencer_to_dto(all_refs[static_cast<size_t>(i)]);
-            if (auto f = db_.files().get_by_id(dto.file_id)) {
+            if (auto f = database().files().get_by_id(dto.file_id)) {
                 dto.origin_metadata = origin_for_workspace(f->workspace_id);
             }
             items.push_back(std::move(dto));
@@ -1425,8 +1475,9 @@ PaginatedResultDto<ReferencerDto> ApiService::get_symbol_references(int64_t work
 }
 
 std::vector<SymbolDto> ApiService::get_symbol_definitions(int64_t workspace_id, int64_t symbol_id) {
+    DatabaseReadScope read_scope(*this);
     auto sym = require_symbol(workspace_id, symbol_id);
-    auto defs = db_.symbols().get_by_key(sym.workspace_id, sym.symbol_key);
+    auto defs = database().symbols().get_by_key(sym.workspace_id, sym.symbol_key);
     std::vector<SymbolDto> dtos;
     for (const auto& s : defs) {
         if (s.is_definition) {
@@ -1447,14 +1498,15 @@ std::vector<SymbolDto> ApiService::get_symbol_definitions(int64_t workspace_id, 
 
 std::vector<CallerCalleeDto> ApiService::get_symbol_callers(int64_t workspace_id,
                                                             int64_t symbol_id) {
+    DatabaseReadScope read_scope(*this);
     require_symbol(workspace_id, symbol_id);
-    auto callers = db_.references().find_callers(workspace_id, symbol_id);
+    auto callers = database().references().find_callers(workspace_id, symbol_id);
     std::vector<CallerCalleeDto> dtos;
     dtos.reserve(callers.size());
     for (const auto& c : callers) {
         std::string rel_path;
         OriginMetadataDto origin;
-        if (auto f = db_.files().get_by_id(c.file_id)) {
+        if (auto f = database().files().get_by_id(c.file_id)) {
             rel_path = f->relative_path;
             origin = origin_for_workspace(f->workspace_id);
         }
@@ -1472,14 +1524,15 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callers(int64_t workspace_id
 
 std::vector<CallerCalleeDto> ApiService::get_symbol_callees(int64_t workspace_id,
                                                             int64_t symbol_id) {
+    DatabaseReadScope read_scope(*this);
     require_symbol(workspace_id, symbol_id);
-    auto callees = db_.references().find_callees(workspace_id, symbol_id);
+    auto callees = database().references().find_callees(workspace_id, symbol_id);
     std::vector<CallerCalleeDto> dtos;
     dtos.reserve(callees.size());
     for (const auto& c : callees) {
         std::string rel_path;
         OriginMetadataDto origin;
-        if (auto f = db_.files().get_by_id(c.file_id)) {
+        if (auto f = database().files().get_by_id(c.file_id)) {
             rel_path = f->relative_path;
             origin = origin_for_workspace(f->workspace_id);
         }
@@ -1498,6 +1551,7 @@ std::vector<CallerCalleeDto> ApiService::get_symbol_callees(int64_t workspace_id
 SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol_id, int depth,
                                             size_t max_nodes, size_t max_edges,
                                             const std::vector<std::string>& kinds) {
+    DatabaseReadScope read_scope(*this);
     auto root_sym = require_symbol(workspace_id, symbol_id);
 
     int eff_depth = std::clamp(depth, 1, 10);
@@ -1519,7 +1573,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
     bool truncated = false;
 
     std::string root_rel_path;
-    if (auto f = db_.files().get_by_id(root_sym.file_id)) {
+    if (auto f = database().files().get_by_id(root_sym.file_id)) {
         root_rel_path = f->relative_path;
     }
 
@@ -1546,7 +1600,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
         }
 
         // Outgoing relations
-        auto out_rels = db_.relations().find_by_source_symbol(curr_id);
+        auto out_rels = database().relations().find_by_source_symbol(curr_id);
         for (const auto& rel : out_rels) {
             if (rel.workspace_id != workspace_id)
                 continue;
@@ -1579,9 +1633,9 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                     truncated = true;
                     continue;
                 }
-                if (auto target_sym = db_.symbols().get_by_id(tid)) {
+                if (auto target_sym = database().symbols().get_by_id(tid)) {
                     std::string target_rel;
-                    if (auto tf = db_.files().get_by_id(target_sym->file_id)) {
+                    if (auto tf = database().files().get_by_id(target_sym->file_id)) {
                         target_rel = tf->relative_path;
                     }
                     nodes.push_back(GraphNodeDto{
@@ -1601,7 +1655,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
 
         // Callers / callees
         if (kinds.empty() || std::find(kinds.begin(), kinds.end(), "calls") != kinds.end()) {
-            auto callers = db_.relations().find_by_target_symbol(
+            auto callers = database().relations().find_by_target_symbol(
                 curr_id, std::make_optional(std::string("calls")));
             for (const auto& caller_relation : callers) {
                 if (caller_relation.workspace_id != workspace_id)
@@ -1626,12 +1680,12 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                         truncated = true;
                         continue;
                     }
-                    auto caller_symbol = db_.symbols().get_by_id(cid);
+                    auto caller_symbol = database().symbols().get_by_id(cid);
                     if (!caller_symbol)
                         continue;
                     std::string caller_rel;
                     OriginMetadataDto caller_origin;
-                    if (auto cf = db_.files().get_by_id(caller_symbol->file_id)) {
+                    if (auto cf = database().files().get_by_id(caller_symbol->file_id)) {
                         caller_rel = cf->relative_path;
                         caller_origin = cached_origin(cf->workspace_id);
                     }
@@ -1665,6 +1719,7 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
 PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspace_id,
                                                                  const std::string& query,
                                                                  int64_t limit, int64_t offset) {
+    DatabaseReadScope read_scope(*this);
     auto workspace = require_workspace(workspace_id);
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
@@ -1679,8 +1734,8 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
     int64_t total = 0;
     std::vector<RankedSourceHit> ranked;
     for (int64_t owner : owner_workspaces) {
-        total += db_.fts().count_search_files(owner, query);
-        auto hits = db_.fts().search_files(owner, query, wanted, 0);
+        total += database().fts().count_search_files(owner, query);
+        auto hits = database().fts().search_files(owner, query, wanted, 0);
         for (auto& hit : hits)
             ranked.push_back({std::move(hit), owner});
     }
@@ -1697,7 +1752,7 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
     for (int64_t i = eff_offset; i < end; ++i) {
         const auto& entry = ranked[static_cast<std::size_t>(i)];
         std::string relative_path;
-        if (auto file = db_.files().get_by_id(entry.hit.file_id))
+        if (auto file = database().files().get_by_id(entry.hit.file_id))
             relative_path = file->relative_path;
         items.push_back(SourceSearchHitDto{
             .file_id = entry.hit.file_id,
@@ -1722,11 +1777,12 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
 PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t workspace_id,
                                                                   const std::string& query,
                                                                   int64_t limit, int64_t offset) {
+    DatabaseReadScope read_scope(*this);
     auto workspace = require_workspace(workspace_id);
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
     std::vector<int64_t> owner_workspaces{workspace_id};
-    for (auto owner : db_.workspaces().linked_ids(workspace_id))
+    for (auto owner : database().workspaces().linked_ids(workspace_id))
         owner_workspaces.push_back(owner);
 
     struct RankedSymbolHit {
@@ -1737,14 +1793,14 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     const int64_t wanted = eff_offset + eff_limit;
     std::vector<RankedSymbolHit> ranked;
     for (int64_t owner : owner_workspaces) {
-        const auto fts_count = db_.fts().count_search_symbols(owner, query);
+        const auto fts_count = database().fts().count_search_symbols(owner, query);
         total += fts_count;
         if (fts_count > 0) {
-            for (auto& hit : db_.fts().search_symbols(owner, query, wanted, 0))
+            for (auto& hit : database().fts().search_symbols(owner, query, wanted, 0))
                 ranked.push_back({std::move(hit), owner});
             continue;
         }
-        auto by_name = db_.symbols().find_by_name(owner, query);
+        auto by_name = database().symbols().find_by_name(owner, query);
         total += static_cast<int64_t>(by_name.size());
         for (const auto& symbol : by_name) {
             ranked.push_back({SymbolSearchResult{
@@ -1759,7 +1815,8 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
         }
     }
 
-    auto unresolved_calls = db_.references().find_unresolved_calls(workspace_id, query, wanted);
+    auto unresolved_calls =
+        database().references().find_unresolved_calls(workspace_id, query, wanted);
     total += static_cast<int64_t>(unresolved_calls.size());
     for (auto& unres : unresolved_calls) {
         ranked.push_back({
@@ -1789,7 +1846,7 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     for (int64_t i = eff_offset; i < end; ++i) {
         const auto& entry = ranked[static_cast<std::size_t>(i)];
         std::string rel_path;
-        if (auto file = db_.files().get_by_id(entry.hit.file_id))
+        if (auto file = database().files().get_by_id(entry.hit.file_id))
             rel_path = file->relative_path;
         items.push_back(SymbolSearchHitDto{
             .id = entry.hit.id,
@@ -1819,8 +1876,10 @@ std::vector<DiagnosticDto>
 ApiService::get_workspace_diagnostics(int64_t workspace_id,
                                       const std::optional<std::string>& severity, int64_t limit,
                                       int64_t offset) {
+    DatabaseReadScope read_scope(*this);
     require_workspace(workspace_id);
-    auto raw_diags = db_.diagnostics().list_by_workspace(workspace_id, severity, limit, offset);
+    auto raw_diags =
+        database().diagnostics().list_by_workspace(workspace_id, severity, limit, offset);
     std::vector<DiagnosticDto> result;
     result.reserve(raw_diags.size());
 
@@ -1832,7 +1891,7 @@ ApiService::get_workspace_diagnostics(int64_t workspace_id,
             if (it != file_paths.end()) {
                 rel_path = it->second;
             } else {
-                auto f = db_.files().get_by_id(*d.file_id);
+                auto f = database().files().get_by_id(*d.file_id);
                 if (f) {
                     file_paths[*d.file_id] = f->relative_path;
                     rel_path = f->relative_path;
@@ -1859,8 +1918,9 @@ ApiService::get_workspace_diagnostics(int64_t workspace_id,
 }
 
 std::vector<DiagnosticDto> ApiService::get_file_diagnostics(int64_t workspace_id, int64_t file_id) {
+    DatabaseReadScope read_scope(*this);
     auto f = require_file(workspace_id, file_id);
-    auto raw_diags = db_.diagnostics().list_by_file(file_id);
+    auto raw_diags = database().diagnostics().list_by_file(file_id);
     std::vector<DiagnosticDto> result;
     result.reserve(raw_diags.size());
 

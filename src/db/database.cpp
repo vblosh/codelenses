@@ -16,6 +16,18 @@ std::unique_ptr<Database> Database::open(const std::string& path, bool apply_mig
     return db;
 }
 
+std::unique_ptr<Database> Database::open_reader(const std::string& path) {
+    return std::make_unique<Database>(Connection::open_readonly(path));
+}
+
+std::unique_ptr<Database> Database::open_reader() const {
+    const auto& path = conn_->path();
+    if (path.empty()) {
+        return nullptr;
+    }
+    return Database::open_reader(path);
+}
+
 std::unique_ptr<Database> Database::open_memory(bool apply_migrations) {
     auto conn = Connection::open_memory();
     auto db = std::make_unique<Database>(std::move(conn));

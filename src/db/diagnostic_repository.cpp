@@ -108,6 +108,27 @@ DiagnosticRepository::list_by_workspace(int64_t workspace_id,
     return results;
 }
 
+DiagnosticCounts DiagnosticRepository::count_by_workspace(int64_t workspace_id) {
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT COUNT(*),
+               COUNT(CASE WHEN severity = 'error' THEN 1 END),
+               COUNT(CASE WHEN severity = 'warning' THEN 1 END),
+               COUNT(CASE WHEN severity NOT IN ('error', 'warning') THEN 1 END)
+        FROM diagnostic
+        WHERE workspace_id = ?;
+    )SQL");
+    stmt.bind_int64(1, workspace_id);
+    if (!stmt.step()) {
+        return {};
+    }
+    return DiagnosticCounts{
+        .total = stmt.column_int64(0),
+        .errors = stmt.column_int64(1),
+        .warnings = stmt.column_int64(2),
+        .info = stmt.column_int64(3),
+    };
+}
+
 std::vector<Diagnostic> DiagnosticRepository::list_by_file(int64_t file_id) {
     std::string sql = "SELECT " + std::string(kDiagnosticSelectFields) +
                       " FROM diagnostic WHERE file_id = ? ORDER BY start_line, start_column;";

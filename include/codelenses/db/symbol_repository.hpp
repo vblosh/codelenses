@@ -26,6 +26,7 @@ public:
     [[nodiscard]] std::vector<Symbol> find_by_qualified_name(int64_t workspace_id,
                                                              const std::string& qualified_name);
     [[nodiscard]] std::vector<Symbol> list_by_workspace(int64_t workspace_id);
+    [[nodiscard]] int64_t count_by_workspace(int64_t workspace_id);
     bool delete_by_file(int64_t file_id);
 
 private:

@@ -22,6 +22,29 @@ describe("ApiClient", () => {
     expect(global.fetch).toHaveBeenCalledWith("http://localhost:8080/api/v1/workspaces", expect.any(Object));
   });
 
+  it("passes an abort signal to workspace status requests", async () => {
+    const signal = new AbortController().signal;
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        workspaceId: 1,
+        status: "idle",
+        revision: 0,
+        latestJob: null,
+        fileCount: 0,
+        symbolCount: 0,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+      }),
+    } as any);
+
+    await client.getWorkspaceStatus(1, signal);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/workspaces/1/status",
+      expect.objectContaining({ signal })
+    );
+  });
+
   it("fetches workspace tree with path query param", async () => {
     const mockTree = { workspaceId: 1, path: "src", entries: [] };
     vi.spyOn(global, "fetch").mockResolvedValueOnce({

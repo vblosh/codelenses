@@ -23,6 +23,9 @@ export class ToolbarComponent {
   private searchInput!: HTMLInputElement;
   private searchModeSelect!: HTMLSelectElement;
   private statusPollTimer: number | null = null;
+  private statusRequest: AbortController | null = null;
+  private statusRequestWorkspaceId: number | null = null;
+  private destroyed = false;
 
   constructor(store: StateStore, callbacks: ToolbarCallbacks) {
     this.store = store;
@@ -244,10 +247,36 @@ export class ToolbarComponent {
 
   async fetchStatus(): Promise<void> {
     const wsId = this.store.getState().workspaceId;
-    if (!wsId) return;
+    if (this.destroyed) return;
+    if (!wsId) {
+      this.statusRequest?.abort();
+      this.statusRequest = null;
+      this.statusRequestWorkspaceId = null;
+      return;
+    }
+    if (this.statusRequest) {
+      if (
+        !this.statusRequest.signal.aborted &&
+        this.statusRequestWorkspaceId === wsId
+      ) {
+        return;
+      }
+      this.statusRequest.abort();
+    }
+
+    const controller = new AbortController();
+    this.statusRequest = controller;
+    this.statusRequestWorkspaceId = wsId;
 
     try {
-      const statusDto: WorkspaceStatusDto = await api.getWorkspaceStatus(wsId);
+      const statusDto: WorkspaceStatusDto = await api.getWorkspaceStatus(wsId, controller.signal);
+      if (
+        controller.signal.aborted ||
+        this.destroyed ||
+        this.store.getState().workspaceId !== wsId
+      ) {
+        return;
+      }
       let statusKind: "idle" | "running" | "failed" = "idle";
       let text = "Idle";
 
@@ -269,6 +298,11 @@ export class ToolbarComponent {
       this.store.setIndexStatus(statusKind);
     } catch {
       // Quietly ignore intermittent status poll failure
+    } finally {
+      if (this.statusRequest === controller) {
+        this.statusRequest = null;
+        this.statusRequestWorkspaceId = null;
+      }
     }
   }
 
@@ -278,6 +312,10 @@ export class ToolbarComponent {
   }
 
   destroy(): void {
+    this.destroyed = true;
+    this.statusRequest?.abort();
+    this.statusRequest = null;
+    this.statusRequestWorkspaceId = null;
     if (this.statusPollTimer) {
       clearInterval(this.statusPollTimer);
       this.statusPollTimer = null;

@@ -164,6 +164,13 @@ std::vector<FileRecord> FileRepository::list_by_workspace(int64_t workspace_id,
     return results;
 }
 
+int64_t FileRepository::count_by_workspace(int64_t workspace_id) {
+    Statement stmt(conn_.handle(),
+                   "SELECT COUNT(*) FROM file WHERE workspace_id = ? AND is_deleted = 0;");
+    stmt.bind_int64(1, workspace_id);
+    return stmt.step() ? stmt.column_int64(0) : 0;
+}
+
 std::vector<FileStateItem> FileRepository::get_file_states(int64_t workspace_id) {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, relative_path, size_bytes, modified_ns, content_hash, is_deleted, language

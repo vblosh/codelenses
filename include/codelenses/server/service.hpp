@@ -106,6 +106,9 @@ public:
     void shutdown();
 
 private:
+    class DatabaseReadScope;
+
+    Database& database() noexcept;
     WorkspaceDto workspace_dto(const Workspace& ws);
     WorkspaceIndexSettings validate_settings(const WorkspaceIndexSettingsRequest& req,
                                              const Workspace& ws);

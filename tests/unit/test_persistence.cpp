@@ -1,3 +1,4 @@
+#include <chrono>
 #include <filesystem>
 #include <thread>
 
@@ -43,6 +44,47 @@ TEST_CASE("Connection initializes SQLite pragmas correctly", "[db][connection]")
     if (fs::exists(db_file)) {
         fs::remove(db_file);
     }
+}
+
+TEST_CASE("Read-only database connections observe committed WAL snapshots", "[db][connection]") {
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto db_file =
+        fs::temp_directory_path() / ("codelenses_readonly_" + std::to_string(nonce) + ".db");
+    auto remove_database_files = [&] {
+        std::error_code ec;
+        fs::remove(db_file, ec);
+        fs::remove(db_file.string() + "-wal", ec);
+        fs::remove(db_file.string() + "-shm", ec);
+    };
+    remove_database_files();
+
+    {
+        auto writer = Database::open(db_file.string());
+        Workspace workspace{.root_path = "/ws/read_only", .name = "Before commit"};
+        const auto workspace_id = writer->workspaces().create(workspace);
+        workspace.id = workspace_id;
+
+        auto reader = writer->open_reader();
+        REQUIRE(reader);
+
+        Transaction read_snapshot(reader->connection(), TransactionType::deferred);
+        REQUIRE(reader->workspaces().get_by_id(workspace_id)->name == "Before commit");
+
+        {
+            Transaction write_transaction(writer->connection());
+            workspace.name = "After commit";
+            REQUIRE(writer->workspaces().update(workspace));
+            write_transaction.commit();
+        }
+
+        CHECK(reader->workspaces().get_by_id(workspace_id)->name == "Before commit");
+        CHECK_THROWS_AS(reader->connection().execute("DELETE FROM workspace;"), DbError);
+
+        read_snapshot.commit();
+        CHECK(reader->workspaces().get_by_id(workspace_id)->name == "After commit");
+    }
+
+    remove_database_files();
 }
 
 TEST_CASE("Transaction RAII rollbacks on error and commits on request", "[db][transaction]") {
