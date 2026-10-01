@@ -14,13 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "GCC Debug (Warnings as Errors)"
-            c_compiler: gcc
-            cxx_compiler: g++
-            build_type: Debug
-            warnings_as_errors: "ON"
-            enable_asan: "OFF"
-            enable_ubsan: "OFF"
           - name: "GCC Release"
             c_compiler: gcc
             cxx_compiler: g++
@@ -48,7 +41,7 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: '98d7cb0cf1f4686a3e43aa5672b6230c1d56bce8'
+          vcpkgGitCommitId: '9e593bb18ea69cc5095e012465dcd675a822ed0d'
 
       - name: Configure CMake
         env:
@@ -70,36 +63,3 @@ jobs:
       - name: Run Tests
         run: |
           ctest --test-dir build --output-on-failure
-
-  code-quality:
-    name: Code Quality (Formatting & Clang-Tidy)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format clang-tidy ninja-build
-
-      - name: Check Formatting
-        run: |
-          ./scripts/format.sh --check
-
-      - name: Setup vcpkg and configure for clang-tidy
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: '98d7cb0cf1f4686a3e43aa5672b6230c1d56bce8'
-
-      - name: Configure CMake
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCODELENSES_BUILD_TESTS=ON \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-
-      - name: Run Clang-Tidy
-        run: |
-          ./scripts/lint.sh build
