@@ -13,7 +13,7 @@ import {
   parseCommandPreview,
 } from "../src/components/workspace-settings";
 import { AddWorkspaceModal } from "../src/components/add-workspace";
-import { LibraryManagerModal } from "../src/components/library-manager";
+import { IndexingSettingsForm } from "../src/components/indexing-settings";
 import { AppComponent } from "../src/components/app";
 import { api } from "../src/api";
 
@@ -47,14 +47,14 @@ describe("Frontend components", () => {
       expect(elem.querySelector(".brand")?.textContent).toContain("CodeLenses");
       expect(elem.querySelector(".workspace-select")).not.toBeNull();
       expect(elem.querySelector(".add-workspace-btn")).not.toBeNull();
-      expect(elem.querySelector(".manage-libs-btn")).not.toBeNull();
+      expect(elem.querySelector(".manage-links-btn")).not.toBeNull();
       expect(elem.querySelector(".search-input")).not.toBeNull();
       expect(elem.querySelector(".index-status-badge")).not.toBeNull();
 
       toolbar.destroy();
     });
 
-    it("triggers onAddWorkspace and onManageLibraries callbacks when buttons are clicked", async () => {
+    it("triggers onAddWorkspace and onManageLinks callbacks when buttons are clicked", async () => {
       vi.spyOn(api, "getWorkspaces").mockResolvedValueOnce({
         workspaces: [{ id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" }],
         total: 1,
@@ -62,8 +62,8 @@ describe("Frontend components", () => {
 
       const onSearch = vi.fn();
       const onAddWorkspace = vi.fn();
-      const onManageLibraries = vi.fn();
-      const toolbar = new ToolbarComponent(store, { onSearch, onAddWorkspace, onManageLibraries });
+      const onManageLinks = vi.fn();
+      const toolbar = new ToolbarComponent(store, { onSearch, onAddWorkspace, onManageLinks });
       const elem = toolbar.getElement();
 
       const addBtn = elem.querySelector(".add-workspace-btn") as HTMLButtonElement;
@@ -71,10 +71,10 @@ describe("Frontend components", () => {
       addBtn.click();
       expect(onAddWorkspace).toHaveBeenCalledTimes(1);
 
-      const libsBtn = elem.querySelector(".manage-libs-btn") as HTMLButtonElement;
+      const libsBtn = elem.querySelector(".manage-links-btn") as HTMLButtonElement;
       expect(libsBtn).not.toBeNull();
       libsBtn.click();
-      expect(onManageLibraries).toHaveBeenCalledTimes(1);
+      expect(onManageLinks).toHaveBeenCalledTimes(1);
 
       toolbar.destroy();
     });
@@ -180,7 +180,7 @@ describe("Frontend components", () => {
         updatedAt: "",
         origin: "library",
         ownerWorkspaceId: 2,
-        libraryProfileId: 9,
+        ownerWorkspaceName: "SDK",
         targetFramework: "net8.0",
       });
       vi.spyOn(api, "getFileContent").mockResolvedValueOnce({
@@ -216,9 +216,9 @@ describe("Frontend components", () => {
       const codeWindow = new CodeWindowComponent(store);
       await codeWindow.loadFile(23);
 
-      const badge = codeWindow.getElement().querySelector(".library-origin-badge");
-      expect(badge?.textContent).toBe("Library · net8.0");
-      expect(badge?.getAttribute("title")).toContain("profile #9");
+      const badge = codeWindow.getElement().querySelector(".workspace-origin-badge");
+      expect(badge?.textContent).toBe("SDK");
+      expect(badge?.getAttribute("title")).toContain("SDK");
     });
 
     it("displays notice for binary files", async () => {
@@ -1203,6 +1203,37 @@ describe("Frontend components", () => {
       expect(elem.querySelector(".load-more-refs-btn")).toBeNull();
     });
 
+    it("ignores a pending reference page after the linked context is invalidated", async () => {
+      let resolvePage!: (value: any) => void;
+      vi.spyOn(api, "getSymbolDetail").mockResolvedValue(null as any);
+      vi.spyOn(api, "getSymbolReferences").mockImplementation((_wsId, _symId, _limit, offset = 0) => {
+        if (offset === 0) {
+          return Promise.resolve({
+            items: [{ id: 1, referenceKind: "call", name: "Widget", resolution: "resolved", confidence: 1,
+              range: { start: { line: 1, column: 0, byte: 0 }, end: { line: 1, column: 1, byte: 0 } },
+              fileId: 2, relativePath: "use.cpp" }],
+            total: 2, limit: 1, offset: 0, hasMore: true,
+          });
+        }
+        return new Promise((resolve) => { resolvePage = resolve; });
+      });
+
+      const panel = new ReferencesComponent(store);
+      await panel.loadReferences(9);
+      const pendingPage = panel.loadMoreReferences();
+      await panel.loadReferences(null);
+      resolvePage({
+        items: [{ id: 2, referenceKind: "call", name: "Widget", resolution: "resolved", confidence: 1,
+          range: { start: { line: 2, column: 0, byte: 0 }, end: { line: 2, column: 1, byte: 0 } },
+          fileId: 3, relativePath: "stale.cpp" }],
+        total: 2, limit: 1, offset: 1, hasMore: false,
+      });
+      await pendingPage;
+
+      expect(panel.getElement().querySelectorAll(".reference-item")).toHaveLength(0);
+      expect(panel.getElement().textContent).toContain("No symbol selected");
+    });
+
     it("renders link to declaration and navigates to explicit declaration when present", async () => {
       vi.spyOn(api, "getSymbolDetail").mockResolvedValueOnce({
         symbol: {
@@ -1486,7 +1517,7 @@ describe("Frontend components", () => {
             rank: 1.0,
             origin: "library",
             ownerWorkspaceId: 20,
-            libraryProfileId: 7,
+            ownerWorkspaceName: "SDK",
             targetFramework: "net8.0",
           },
         ],
@@ -1507,7 +1538,7 @@ describe("Frontend components", () => {
       // Ensure no <img> tag was parsed/inserted
       expect(modal.querySelector("img")).toBeNull();
       expect(modal.textContent).toContain(maliciousSnippet);
-      expect(modal.textContent).toContain("Library · net8.0");
+      expect(modal.textContent).toContain("SDK");
 
       // Now test symbol search escaping
       vi.spyOn(api, "searchSymbols").mockResolvedValue({
@@ -1521,7 +1552,7 @@ describe("Frontend components", () => {
             rank: 1.0,
             origin: "library",
             ownerWorkspaceId: 20,
-            libraryProfileId: 7,
+            ownerWorkspaceName: "SDK",
             targetFramework: "net8.0",
           },
         ],
@@ -1539,7 +1570,7 @@ describe("Frontend components", () => {
       expect(modal.querySelector("svg.hack-tag")).toBeNull();
       expect(modal.querySelectorAll("svg").length).toBe(0);
       expect(modal.textContent).toContain(maliciousName);
-      expect(modal.textContent).toContain("Library · net8.0");
+      expect(modal.textContent).toContain("SDK");
 
       app.closeSearch();
     });
@@ -1911,37 +1942,6 @@ describe("Frontend components", () => {
       modalWithDelete.close();
     });
 
-    it("triggers onManageLibraries when Manage Profiles button is clicked", async () => {
-      const onManageLibraries = vi.fn();
-      const modalWithLibs = new WorkspaceSettingsModal(store, { onManageLibraries });
-
-      vi.spyOn(api, "getWorkspace").mockResolvedValueOnce({
-        id: 1,
-        name: "My Project",
-        rootPath: "/path/to/project",
-        status: "idle",
-        revision: 1,
-        createdAt: "",
-        updatedAt: "",
-      });
-      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValueOnce({
-        configuredPath: null,
-        effectivePath: null,
-        exists: false,
-        isAutoDetected: false,
-        totalCommands: 0,
-      });
-
-      await modalWithLibs.open(1);
-
-      const elem = modalWithLibs.getElement();
-      const manageBtn = elem.querySelector(".manage-lib-profiles-btn") as HTMLButtonElement;
-      expect(manageBtn).not.toBeNull();
-      manageBtn.click();
-
-      expect(onManageLibraries).toHaveBeenCalledTimes(1);
-      modalWithLibs.close();
-    });
   });
 
   describe("WorkspaceCompileCommandsModal", () => {
@@ -2220,284 +2220,188 @@ describe("Frontend components", () => {
     });
   });
 
-  describe("LibraryManagerModal", () => {
-    it("loads and renders registered library profiles", async () => {
-      const modal = new LibraryManagerModal(store);
-      vi.spyOn(api, "getLibraries").mockResolvedValueOnce({
-        libraries: [
-          {
-            id: 1,
-            workspaceId: 100,
-            name: "glibc",
-            language: "c",
-            provider: "system",
-            sourceRoots: ["/usr/include"],
-            defaultIncludeRoots: [],
-            defines: [],
-            includePatterns: [],
-            excludePatterns: [],
-            fingerprint: "111",
-            status: "idle",
-            createdAt: "",
-            updatedAt: "",
-          },
-        ],
-        total: 1,
-      });
-      vi.spyOn(api, "getWorkspaceLibraries").mockResolvedValueOnce({
-        workspaceId: 1,
-        libraries: [],
-        total: 0,
-      });
-
+  describe("Linked workspaces", () => {
+    it("links an existing workspace and unlinks it without indexing files", async () => {
+      const a = { id: 1, name: "A", rootPath: "/a", revision: 0, status: "idle", createdAt: "", updatedAt: "" };
+      const b = { ...a, id: 2, name: "B", rootPath: "/b" };
+      vi.spyOn(api, "getWorkspace").mockResolvedValue(a);
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockRejectedValue(new Error("no commands"));
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({ workspaces: [a, b], total: 2 });
+      const links = vi.spyOn(api, "getWorkspaceLinks").mockResolvedValue({ workspaces: [], total: 0 });
+      const link = vi.spyOn(api, "linkWorkspace").mockResolvedValue(b);
+      const unlink = vi.spyOn(api, "unlinkWorkspace").mockResolvedValue({ status: "unlinked" });
+      const index = vi.spyOn(api, "triggerIndexing");
+      const changed = vi.fn();
+      const modal = new WorkspaceSettingsModal(store, { onLinksChanged: changed });
       await modal.open(1);
-
-      const elem = modal.getElement();
-      expect(elem.style.display).toBe("flex");
-      expect(elem.textContent).toContain("glibc");
-      expect(elem.textContent).toContain("/usr/include");
-      expect(elem.querySelector(".delete-lib-profile-btn")).not.toBeNull();
-      expect(elem.querySelector(".attach-to-ws-btn")).not.toBeNull();
-
+      const el = modal.getElement();
+      (el.querySelector(".link-workspace-btn") as HTMLElement).click();
+      const select = el.querySelector(".available-workspaces-select") as HTMLSelectElement;
+      expect(select.options.length).toBe(1);
+      expect(select.value).toBe("2");
+      links.mockResolvedValue({ workspaces: [b], total: 1 });
+      (el.querySelector(".confirm-attach-btn") as HTMLElement).click();
+      await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(1));
+      expect(link).toHaveBeenCalledWith(1, 2);
+      expect(el.textContent).toContain("B");
+      links.mockResolvedValue({ workspaces: [], total: 0 });
+      (el.querySelector(".unlink-workspace-btn") as HTMLElement).click();
+      await vi.waitFor(() => expect(changed).toHaveBeenCalledTimes(2));
+      expect(unlink).toHaveBeenCalledWith(1, 2);
+      expect(index).not.toHaveBeenCalled();
       modal.close();
     });
 
-    it("validates form and creates a new library profile", async () => {
-      const onLibrariesChanged = vi.fn();
-      const modal = new LibraryManagerModal(store, { onLibrariesChanged });
-
-      vi.spyOn(api, "getLibraries").mockResolvedValue({
-        libraries: [],
-        total: 0,
-      });
-      vi.spyOn(api, "getWorkspaceLibraries").mockResolvedValue({
-        workspaceId: 1,
-        libraries: [],
-        total: 0,
-      });
+    it("keeps a pending link action bound to the workspace view where it started", async () => {
+      const a = { id: 1, name: "A", rootPath: "/a", revision: 0, status: "idle", createdAt: "", updatedAt: "" };
+      const b = { ...a, id: 2, name: "B", rootPath: "/b" };
+      let resolveLink!: (value: typeof b) => void;
+      vi.spyOn(api, "getWorkspace").mockImplementation(async (id) => id === 1 ? a : b);
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValue(null as any);
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({ workspaces: [a, b], total: 2 });
+      const getLinks = vi.spyOn(api, "getWorkspaceLinks").mockResolvedValue({ workspaces: [], total: 0 });
+      vi.spyOn(api, "linkWorkspace").mockReturnValue(new Promise((resolve) => { resolveLink = resolve; }));
+      const changed = vi.fn();
+      const modal = new WorkspaceSettingsModal(store, { onLinksChanged: changed });
 
       await modal.open(1);
+      const element = modal.getElement();
+      (element.querySelector(".link-workspace-btn") as HTMLButtonElement).click();
+      (element.querySelector(".confirm-attach-btn") as HTMLButtonElement).click();
+      await vi.waitFor(() => expect(api.linkWorkspace).toHaveBeenCalledWith(1, 2));
 
-      const elem = modal.getElement();
-      const toggleBtn = elem.querySelector(".toggle-create-lib-btn") as HTMLButtonElement;
-      toggleBtn.click();
+      await modal.open(2);
+      const callsAfterOpeningB = getLinks.mock.calls.length;
+      resolveLink(b);
+      await vi.waitFor(() => expect(changed).toHaveBeenCalledWith(1));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      const createForm = elem.querySelector(".create-lib-form") as HTMLElement;
-      expect(createForm.style.display).toBe("block");
-
-      const nameInput = elem.querySelector(".new-lib-name") as HTMLInputElement;
-      const rootsInput = elem.querySelector(".new-lib-roots") as HTMLInputElement;
-      const stdInput = elem.querySelector(".new-lib-std") as HTMLInputElement;
-      const submitBtn = elem.querySelector(".submit-create-lib-btn") as HTMLButtonElement;
-
-      // Click with empty fields shows banner error
-      submitBtn.click();
-      const banner = elem.querySelector(".lib-manager-banner") as HTMLElement;
-      expect(banner.textContent).toContain("name for the library");
-
-      nameInput.value = "libstdc++ 12";
-      rootsInput.value = "/usr/include/c++/12";
-      stdInput.value = "c++20";
-
-      const createSpy = vi.spyOn(api, "createLibrary").mockResolvedValueOnce({
-        id: 5,
-        workspaceId: 105,
-        name: "libstdc++ 12",
-        language: "cpp",
-        provider: "custom",
-        languageStandard: "c++20",
-        sourceRoots: ["/usr/include/c++/12"],
-        defaultIncludeRoots: [],
-        defines: [],
-        includePatterns: [],
-        excludePatterns: [],
-        fingerprint: "555",
-        status: "idle",
-        createdAt: "",
-        updatedAt: "",
-      });
-
-      submitBtn.click();
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(createSpy).toHaveBeenCalledWith({
-        name: "libstdc++ 12",
-        language: "cpp",
-        sourceRoots: ["/usr/include/c++/12"],
-        rootPath: "/usr/include/c++/12",
-        languageStandard: "c++20",
-        targetFramework: undefined,
-        provider: "custom",
-        sdkVersion: undefined,
-        defines: undefined,
-      });
-
-      expect(onLibrariesChanged).toHaveBeenCalledTimes(1);
+      expect(getLinks).toHaveBeenCalledTimes(callsAfterOpeningB);
+      expect(element.querySelector(".ws-root-path")?.textContent).toBe("/b");
+      expect(element.style.display).toBe("flex");
       modal.close();
     });
 
-    it("creates a C# source profile with multiple roots and a TFM", async () => {
-      const modal = new LibraryManagerModal(store);
-      vi.spyOn(api, "getLibraries").mockResolvedValue({ libraries: [], total: 0 });
-      vi.spyOn(api, "getWorkspaceLibraries").mockResolvedValue({
-        workspaceId: 1,
-        libraries: [],
-        total: 0,
-      });
-      await modal.open(1);
-      const elem = modal.getElement();
-      (elem.querySelector(".toggle-create-lib-btn") as HTMLButtonElement).click();
-      (elem.querySelector(".new-lib-name") as HTMLInputElement).value = "Example .NET sources";
-      const language = elem.querySelector(".new-lib-lang") as HTMLSelectElement;
-      language.value = "csharp";
-      language.dispatchEvent(new Event("change"));
-      (elem.querySelector(".new-lib-roots") as HTMLTextAreaElement).value =
-        "/sdk/reference, /sdk/shared";
-      (elem.querySelector(".new-lib-target-framework") as HTMLInputElement).value = "net8.0";
-      const createSpy = vi.spyOn(api, "createLibrary").mockResolvedValueOnce({
-        id: 7,
-        workspaceId: 107,
-        name: "Example .NET sources",
-        language: "csharp",
-        provider: "custom",
-        targetFramework: "net8.0",
-        sourceRoots: ["/sdk/reference", "/sdk/shared"],
-        defaultIncludeRoots: [],
-        defines: [],
-        includePatterns: [],
-        excludePatterns: [],
-        fingerprint: "csharp-7",
-        status: "idle",
-        createdAt: "",
-        updatedAt: "",
-      });
-      (elem.querySelector(".submit-create-lib-btn") as HTMLButtonElement).click();
-      await new Promise((resolve) => setTimeout(resolve, 10));
+    it("keeps save and reindex bound to the workspace where the action started", async () => {
+      const a = { id: 1, name: "A", rootPath: "/a", revision: 0, status: "idle", createdAt: "", updatedAt: "" };
+      const b = { ...a, id: 2, name: "B", rootPath: "/b" };
+      let resolveSave!: (value: typeof a) => void;
+      vi.spyOn(api, "getWorkspace").mockImplementation(async (id) => id === 1 ? a : b);
+      vi.spyOn(api, "getWorkspaceCompileCommands").mockResolvedValue(null as any);
+      vi.spyOn(api, "getWorkspaceLinks").mockResolvedValue({ workspaces: [], total: 0 });
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({ workspaces: [a, b], total: 2 });
+      const update = vi.spyOn(api, "updateWorkspace").mockReturnValue(new Promise((resolve) => { resolveSave = resolve; }));
+      const index = vi.spyOn(api, "triggerIndexing").mockResolvedValue({ status: "queued" } as any);
+      const saved = vi.fn();
+      const modal = new WorkspaceSettingsModal(store, { onSaved: saved });
 
-      expect(createSpy).toHaveBeenCalledWith({
-        name: "Example .NET sources",
-        language: "csharp",
-        sourceRoots: ["/sdk/reference", "/sdk/shared"],
-        rootPath: "/sdk/reference",
-        languageStandard: undefined,
-        targetFramework: "net8.0",
-        provider: "custom",
-        sdkVersion: undefined,
-        defines: undefined,
-      });
+      await modal.open(1);
+      (modal.getElement().querySelector(".save-index-settings-btn") as HTMLButtonElement).click();
+      await vi.waitFor(() => expect(update).toHaveBeenCalledWith(1, expect.any(Object)));
+      await modal.open(2);
+      resolveSave(a);
+      await vi.waitFor(() => expect(index).toHaveBeenCalledWith(1, "incremental", false));
+
+      expect(index).not.toHaveBeenCalledWith(2, "incremental", false);
+      expect(saved).toHaveBeenCalledWith(1);
+      expect(modal.getElement().querySelector(".ws-root-path")?.textContent).toBe("/b");
+      expect(modal.getElement().style.display).toBe("flex");
       modal.close();
     });
 
-    it("deletes a library profile when Delete Profile is confirmed", async () => {
-      const onLibrariesChanged = vi.fn();
-      const modal = new LibraryManagerModal(store, { onLibrariesChanged });
-
-      vi.spyOn(api, "getLibraries").mockResolvedValue({
-        libraries: [
-          {
-            id: 8,
-            workspaceId: 108,
-            name: "Old Profile",
-            language: "cpp",
-            provider: "custom",
-            sourceRoots: ["/opt/sdk"],
-            defaultIncludeRoots: [],
-            defines: [],
-            includePatterns: [],
-            excludePatterns: [],
-            fingerprint: "888",
-            status: "idle",
-            createdAt: "",
-            updatedAt: "",
-          },
-        ],
-        total: 1,
-      });
-      vi.spyOn(api, "getWorkspaceLibraries").mockResolvedValue({
+    it("invalidates stale search results and clears files and symbols no longer linked to the active workspace", async () => {
+      const ownTab = { fileId: 10, relativePath: "own.cpp", name: "own.cpp" };
+      const linkedTab = { fileId: 20, relativePath: "lib.cpp", name: "lib.cpp" };
+      store.setState({
         workspaceId: 1,
-        libraries: [],
-        total: 0,
+        selectedFileId: 20,
+        selectedLine: 7,
+        selectedSymbolId: 90,
+        selectedSymbolName: "LinkedSymbol",
+        openTabs: [ownTab, linkedTab],
       });
-
-      await modal.open(1);
-
-      const deleteSpy = vi.spyOn(api, "deleteLibrary").mockResolvedValueOnce({
-        status: "deleted",
-        id: 8,
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({ workspaces: [], total: 0 });
+      vi.spyOn(api, "getWorkspaceStatus").mockResolvedValue({
+        workspaceId: 1, status: "idle", revision: 1, fileCount: 0, symbolCount: 0,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
       });
-      vi.spyOn(window, "confirm").mockReturnValue(true);
+      vi.spyOn(api, "getFileMetadata").mockImplementation(async (_workspaceId, fileId) => {
+        if (fileId === 20) throw new Error("No longer linked");
+        return { id: 10, workspaceId: 1, path: "/own.cpp", relativePath: "own.cpp", name: "own.cpp",
+          language: "cpp", encoding: "utf-8", sizeBytes: 1, modifiedNs: 0, isBinary: false,
+          isGenerated: false, isDeleted: false, createdAt: "", updatedAt: "" };
+      });
+      vi.spyOn(api, "getSymbolDetail").mockRejectedValue(new Error("No longer linked"));
+      let resolveStale!: (value: any) => void;
+      const search = vi.spyOn(api, "searchSymbols")
+        .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }))
+        .mockResolvedValueOnce({
+          items: [{ id: 100, fileId: 10, relativePath: "own.cpp", name: "FreshResult", kind: "class", rank: 1 }],
+          total: 1, limit: 50, offset: 0, hasMore: false,
+        });
 
-      const elem = modal.getElement();
-      const deleteBtn = elem.querySelector(".delete-lib-profile-btn") as HTMLButtonElement;
-      expect(deleteBtn).not.toBeNull();
-      deleteBtn.click();
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const app = new AppComponent(container, store);
+      app.openSearch();
+      (app as any).searchModalInput.value = "Widget";
+      (app as any).searchModeSelect.value = "symbol";
+      const staleSearch = (app as any).performSearch() as Promise<void>;
+      expect(search).toHaveBeenCalledTimes(1);
+      const refresh = (app as any).refreshLinkedContext(1) as Promise<void>;
+      await refresh;
+      resolveStale({
+        items: [{ id: 99, fileId: 20, relativePath: "lib.cpp", name: "StaleResult", kind: "class", rank: 1 }],
+        total: 1, limit: 50, offset: 0, hasMore: false,
+      });
+      await staleSearch;
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(search).toHaveBeenCalledTimes(2);
+      expect(store.getState().workspaceId).toBe(1);
+      expect(store.getState().selectedFileId).toBeNull();
+      expect(store.getState().selectedSymbolId).toBeNull();
+      expect(store.getState().openTabs).toEqual([ownTab]);
+      expect((app as any).searchResultsList.textContent).toContain("FreshResult");
+      expect((app as any).searchResultsList.textContent).not.toContain("StaleResult");
 
-      expect(deleteSpy).toHaveBeenCalledWith(8);
-      expect(onLibrariesChanged).toHaveBeenCalledTimes(1);
-      modal.close();
+      app.closeSearch();
+      (app as any).toolbar.destroy();
+      (app as any).searchModalBackdrop.remove();
+      container.remove();
     });
 
-    it("attaches and detaches library from workspace", async () => {
-      const onLibrariesChanged = vi.fn();
-      const modal = new LibraryManagerModal(store, { onLibrariesChanged });
+    it("shows a linked declaration with zero usages while retaining the consumer context", async () => {
+      vi.spyOn(api, "getSymbolDetail").mockResolvedValue({
+        symbol: { id: 9, fileId: 20, name: "Widget", kind: "class", ownerWorkspaceId: 2, ownerWorkspaceName: "B", range: { start: { line: 4 } } },
+        file: { id: 20, relativePath: "Widget.cs" }, declarations: [], referencersCount: 0, callersCount: 0, calleesCount: 0,
+      } as any);
+      const references = vi.spyOn(api, "getSymbolReferences").mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0, hasMore: false });
+      const panel = new ReferencesComponent(store);
+      await panel.loadReferences(9);
+      const declaration = panel.getElement().querySelector(".declaration-link") as HTMLElement;
+      expect(declaration.textContent).toContain("B · Widget.cs:4");
+      declaration.click();
+      expect(store.getState().workspaceId).toBe(1);
+      expect(store.getState().selectedFileId).toBe(20);
+      expect(references).toHaveBeenCalledWith(1, 9, 50, 0);
+    });
 
-      vi.spyOn(api, "getLibraries").mockResolvedValue({
-        libraries: [
-          {
-            id: 9,
-            workspaceId: 109,
-            name: "glibc",
-            language: "c",
-            provider: "system",
-            sourceRoots: ["/usr/include"],
-            defaultIncludeRoots: [],
-            defines: [],
-            includePatterns: [],
-            excludePatterns: [],
-            fingerprint: "999",
-            status: "idle",
-            createdAt: "",
-            updatedAt: "",
-          },
-        ],
-        total: 1,
-      });
-      vi.spyOn(api, "getWorkspaceLibraries").mockResolvedValue({
-        workspaceId: 1,
-        libraries: [],
-        total: 0,
-      });
+    it("ignores an outdated reference response after switching workspace", async () => {
+      let complete!: (v: any) => void;
+      vi.spyOn(api, "getSymbolDetail").mockResolvedValue(null as any);
+      vi.spyOn(api, "getSymbolReferences").mockReturnValue(new Promise(resolve => { complete = resolve; }));
+      const panel = new ReferencesComponent(store);
+      const loading = panel.loadReferences(9);
+      store.setWorkspace(2);
+      complete({ items: [], total: 0, hasMore: false });
+      await loading;
+      expect(panel.getElement().textContent).toContain("No symbol selected");
+    });
 
-      await modal.open(1);
-
-      const attachSpy = vi.spyOn(api, "attachLibrary").mockResolvedValueOnce({
-        id: 9,
-        workspaceId: 109,
-        name: "glibc",
-        language: "c",
-        provider: "system",
-        sourceRoots: ["/usr/include"],
-        defaultIncludeRoots: [],
-        defines: [],
-        includePatterns: [],
-        excludePatterns: [],
-        fingerprint: "999",
-        status: "idle",
-        createdAt: "",
-        updatedAt: "",
-      });
-
-      const elem = modal.getElement();
-      const attachBtn = elem.querySelector(".attach-to-ws-btn") as HTMLButtonElement;
-      expect(attachBtn).not.toBeNull();
-      attachBtn.click();
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(attachSpy).toHaveBeenCalledWith(1, 9);
-      expect(onLibrariesChanged).toHaveBeenCalledTimes(1);
-      modal.close();
+    it("preserves advanced indexing fields and ordered roots", () => {
+      const form = new IndexingSettingsForm();
+      form.setValue({ language: "cpp", sourceRoots: ["/headers", "/runtime"], defaultIncludeRoots: ["/runtime", "/headers"], defines: ["FOO=1"], sdkVersion: "1" });
+      expect(form.getValue()).toMatchObject({ sourceRoots: ["/headers", "/runtime"], defaultIncludeRoots: ["/runtime", "/headers"], defines: ["FOO=1"] });
     });
   });
 });

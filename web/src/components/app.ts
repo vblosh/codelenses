@@ -1,5 +1,5 @@
 import type { StateStore } from "../state";
-import type { DiagnosticItem, SourceSearchHitDto, SymbolSearchHitDto } from "../types";
+import type { AppState, DiagnosticItem, SourceSearchHitDto, SymbolSearchHitDto } from "../types";
 import { api } from "../api";
 import { ToolbarComponent } from "./toolbar";
 import { ExplorerComponent } from "./explorer";
@@ -10,7 +10,6 @@ import { DiagnosticsComponent } from "./diagnostics";
 import { CompileCommandComponent } from "./compile-command";
 import { WorkspaceSettingsModal } from "./workspace-settings";
 import { AddWorkspaceModal } from "./add-workspace";
-import { LibraryManagerModal } from "./library-manager";
 
 export class AppComponent {
   private container: HTMLElement;
@@ -25,7 +24,6 @@ export class AppComponent {
   private compileCommand!: CompileCommandComponent;
   private settingsModal!: WorkspaceSettingsModal;
   private addWorkspaceModal!: AddWorkspaceModal;
-  private libraryManagerModal!: LibraryManagerModal;
 
   private mainGrid!: HTMLElement;
   private mobileTabsBar!: HTMLElement;
@@ -34,6 +32,8 @@ export class AppComponent {
   private searchModalBackdrop!: HTMLElement;
   private searchModalInput!: HTMLInputElement;
   private searchResultsList!: HTMLElement;
+  private searchVersion = 0;
+  private linkedContextVersion = 0;
   private searchModeSelect!: HTMLSelectElement;
 
   constructor(container: HTMLElement, store: StateStore) {
@@ -49,26 +49,24 @@ export class AppComponent {
     this.container.innerHTML = "";
 
     // 1. Modals
-    this.libraryManagerModal = new LibraryManagerModal(this.store, {
-      onLibrariesChanged: () => {
-        this.settingsModal.refreshLibraries();
-      },
-    });
-
     this.settingsModal = new WorkspaceSettingsModal(this.store, {
-      onSaved: () => {
+      onSaved: (workspaceId) => {
         this.toolbar.loadWorkspaces();
+        if (this.store.getState().workspaceId === workspaceId) {
+          this.reconcile();
+        }
+      },
+      onDeleted: (workspaceId) => {
+        this.toolbar.loadWorkspaces();
+        if (this.store.getState().workspaceId === workspaceId) {
+          this.store.setWorkspace(null);
+        }
         this.reconcile();
       },
-      onDeleted: () => {
-        this.toolbar.loadWorkspaces();
-        this.reconcile();
-      },
-      onManageLibraries: () => {
-        this.libraryManagerModal.open();
-      },
-      onLibrariesChanged: () => {
-        this.libraryManagerModal.loadLibraries();
+      onLinksChanged: (workspaceId) => {
+        if (this.store.getState().workspaceId === workspaceId) {
+          void this.refreshLinkedContext(workspaceId);
+        }
       },
     });
 
@@ -85,7 +83,7 @@ export class AppComponent {
       onSearch: (q, type) => this.openSearch(q, type),
       onOpenSettings: () => this.settingsModal.open(),
       onAddWorkspace: () => this.addWorkspaceModal.open(),
-      onManageLibraries: () => this.libraryManagerModal.open(),
+      onManageLinks: () => this.settingsModal.open(),
     });
     this.container.appendChild(this.toolbar.getElement());
 
@@ -473,10 +471,12 @@ export class AppComponent {
   }
 
   closeSearch(): void {
+    this.searchVersion++;
     this.searchModalBackdrop.style.display = "none";
   }
 
   private async performSearch(): Promise<void> {
+    const version = ++this.searchVersion;
     const query = this.searchModalInput.value.trim();
     const wsId = this.store.getState().workspaceId;
 
@@ -501,12 +501,15 @@ export class AppComponent {
 
       if (mode === "symbol") {
         const res = await api.searchSymbols(wsId, query, 50);
+        if (version !== this.searchVersion || wsId !== this.store.getState().workspaceId) return;
         this.renderSymbolSearchResults(res.items || []);
       } else {
         const res = await api.searchSource(wsId, query, 50);
+        if (version !== this.searchVersion || wsId !== this.store.getState().workspaceId) return;
         this.renderSourceSearchResults(res.items || []);
       }
     } catch (err: any) {
+      if (version !== this.searchVersion || wsId !== this.store.getState().workspaceId) return;
       this.searchResultsList.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-title" style="color: var(--error);">Search failed</div>
@@ -539,7 +542,7 @@ export class AppComponent {
       const pathSpan = document.createElement("span");
       pathSpan.textContent = item.relativePath || "File";
       titleDiv.appendChild(pathSpan);
-      this.appendLibraryOriginBadge(titleDiv, item);
+      this.appendWorkspaceOriginBadge(titleDiv, item);
 
       const snippetDiv = document.createElement("div");
       snippetDiv.className = "search-hit-snippet";
@@ -589,7 +592,7 @@ export class AppComponent {
       kindBadge.textContent =
         item.kind === "unresolved_call" ? "unresolved call" : item.kind || "symbol";
       titleDiv.appendChild(kindBadge);
-      this.appendLibraryOriginBadge(titleDiv, item);
+      this.appendWorkspaceOriginBadge(titleDiv, item);
 
       const snippetDiv = document.createElement("div");
       snippetDiv.className = "search-hit-snippet";
@@ -617,24 +620,103 @@ export class AppComponent {
     this.searchResultsList.appendChild(fragment);
   }
 
-  private appendLibraryOriginBadge(
+  private async refreshLinkedContext(expectedWorkspaceId?: number): Promise<void> {
+    const contextVersion = ++this.linkedContextVersion;
+    this.searchVersion++;
+
+    const workspaceId = this.store.getState().workspaceId;
+    if (!workspaceId || (expectedWorkspaceId !== undefined && workspaceId !== expectedWorkspaceId)) return;
+
+    if (this.searchModalBackdrop.style.display !== "none") {
+      this.searchResultsList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">Refreshing linked workspace results...</div>
+        </div>
+      `;
+    }
+
+    // Invalidate an in-flight reference page as soon as link visibility changes.
+    this.references.loadReferences(null);
+
+    const accessibleFiles = new Map<number, boolean>();
+    const accessibleSymbols = new Map<number, boolean>();
+
+    while (true) {
+      const state = this.store.getState();
+      if (contextVersion !== this.linkedContextVersion || state.workspaceId !== workspaceId) return;
+
+      const fileIds = new Set(state.openTabs.map((tab) => tab.fileId));
+      if (state.selectedFileId !== null) fileIds.add(state.selectedFileId);
+      const uncheckedFileIds = [...fileIds].filter((fileId) => !accessibleFiles.has(fileId));
+      const symbolId = state.selectedSymbolId;
+      const checkSymbol = symbolId !== null && !accessibleSymbols.has(symbolId);
+
+      if (!uncheckedFileIds.length && !checkSymbol) break;
+
+      await Promise.all([
+        ...uncheckedFileIds.map(async (fileId) => {
+          try {
+            await api.getFileMetadata(workspaceId, fileId);
+            accessibleFiles.set(fileId, true);
+          } catch {
+            accessibleFiles.set(fileId, false);
+          }
+        }),
+        ...(checkSymbol && symbolId !== null
+          ? [api.getSymbolDetail(workspaceId, symbolId)
+              .then((detail) => accessibleSymbols.set(symbolId, Boolean(detail?.symbol)))
+              .catch(() => accessibleSymbols.set(symbolId, false))]
+          : []),
+      ]);
+    }
+
+    const state = this.store.getState();
+    if (contextVersion !== this.linkedContextVersion || state.workspaceId !== workspaceId) return;
+
+    const openTabs = state.openTabs.filter((tab) => accessibleFiles.get(tab.fileId));
+    const selectedFileIsInaccessible = state.selectedFileId !== null &&
+      !accessibleFiles.get(state.selectedFileId);
+    const selectedSymbolIsInaccessible = state.selectedSymbolId !== null &&
+      !accessibleSymbols.get(state.selectedSymbolId);
+    const update: Partial<AppState> = {};
+
+    if (openTabs.length !== state.openTabs.length) update.openTabs = openTabs;
+    if (selectedFileIsInaccessible) {
+      update.selectedFileId = null;
+      update.selectedLine = null;
+      update.selectedSymbolId = null;
+      update.selectedSymbolName = null;
+    } else if (selectedSymbolIsInaccessible) {
+      update.selectedSymbolId = null;
+      update.selectedSymbolName = null;
+    }
+
+    if (Object.keys(update).length) this.store.setState(update);
+
+    await this.references.loadReferences(this.store.getState().selectedSymbolId);
+    if (
+      contextVersion === this.linkedContextVersion &&
+      this.store.getState().workspaceId === workspaceId &&
+      this.searchModalBackdrop.style.display !== "none"
+    ) {
+      await this.performSearch();
+    }
+  }
+
+  private appendWorkspaceOriginBadge(
     container: HTMLElement,
     item: {
       origin?: string;
       targetFramework?: string | null;
-      libraryProfileId?: number | null;
+      ownerWorkspaceName?: string;
       ownerWorkspaceId?: number;
     },
   ): void {
-    if (item.origin !== "library") return;
+    if (!item.ownerWorkspaceId || item.ownerWorkspaceId === this.store.getState().workspaceId) return;
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = item.targetFramework
-      ? `Library · ${item.targetFramework}`
-      : "Library source";
-    badge.title = item.libraryProfileId
-      ? `Source from library profile #${item.libraryProfileId}`
-      : `Source from workspace #${item.ownerWorkspaceId ?? "?"}`;
+    badge.textContent = item.ownerWorkspaceName || `Workspace #${item.ownerWorkspaceId}`;
+    badge.title = `Source from ${badge.textContent}`;
     badge.style.background = "rgba(16, 185, 129, 0.15)";
     badge.style.color = "#34d399";
     badge.style.fontSize = "10px";

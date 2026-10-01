@@ -41,7 +41,6 @@ Workspace read_workspace_row(Statement& stmt) {
     ws.revision = stmt.column_int64(10);
     ws.status = workspace_status_from_string(stmt.column_text(11));
     ws.last_error = stmt.column_optional_text(12);
-    ws.kind = workspace_kind_from_string(stmt.column_text(13));
     return ws;
 }
 
@@ -67,7 +66,7 @@ int64_t WorkspaceRepository::create(const Workspace& ws) {
     stmt.bind_int64(8, ws.revision);
     stmt.bind_text(9, to_string(ws.status));
     stmt.bind_optional_text(10, ws.last_error);
-    stmt.bind_text(11, to_string(ws.kind));
+    stmt.bind_text(11, "project");
 
     stmt.execute();
     return conn_.last_insert_rowid();
@@ -118,21 +117,46 @@ std::vector<Workspace> WorkspaceRepository::list_all() {
     return results;
 }
 
-std::vector<Workspace> WorkspaceRepository::list_by_kind(WorkspaceKind kind) {
-    Statement stmt(conn_.handle(), R"SQL(
-        SELECT id, root_path, name, include_json, exclude_json, default_ignores_json,
-               compile_commands_path, default_compile_command, created_at, updated_at, revision, status, last_error, kind
-        FROM workspace
-        WHERE kind = ?
-        ORDER BY id ASC;
-    )SQL");
-    stmt.bind_text(1, to_string(kind));
-
-    std::vector<Workspace> results;
-    while (stmt.step()) {
-        results.push_back(read_workspace_row(stmt));
-    }
-    return results;
+void WorkspaceRepository::link(int64_t workspace_id, int64_t target_id) {
+    Statement stmt(conn_.handle(), "INSERT INTO workspace_link(workspace_id, target_workspace_id) "
+                                   "VALUES (?, ?) ON CONFLICT DO NOTHING;");
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_int64(2, target_id);
+    stmt.execute();
+}
+void WorkspaceRepository::unlink(int64_t workspace_id, int64_t target_id) {
+    Statement stmt(
+        conn_.handle(),
+        "DELETE FROM workspace_link WHERE workspace_id = ? AND target_workspace_id = ?;");
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_int64(2, target_id);
+    stmt.execute();
+}
+bool WorkspaceRepository::is_linked(int64_t workspace_id, int64_t target_id) {
+    Statement stmt(
+        conn_.handle(),
+        "SELECT 1 FROM workspace_link WHERE workspace_id = ? AND target_workspace_id = ?;");
+    stmt.bind_int64(1, workspace_id);
+    stmt.bind_int64(2, target_id);
+    return stmt.step();
+}
+std::vector<int64_t> WorkspaceRepository::linked_ids(int64_t workspace_id) {
+    Statement stmt(conn_.handle(), "SELECT target_workspace_id FROM workspace_link WHERE "
+                                   "workspace_id = ? ORDER BY target_workspace_id;");
+    stmt.bind_int64(1, workspace_id);
+    std::vector<int64_t> ids;
+    while (stmt.step())
+        ids.push_back(stmt.column_int64(0));
+    return ids;
+}
+std::vector<int64_t> WorkspaceRepository::consumer_ids(int64_t target_id) {
+    Statement stmt(conn_.handle(), "SELECT workspace_id FROM workspace_link WHERE "
+                                   "target_workspace_id = ? ORDER BY workspace_id;");
+    stmt.bind_int64(1, target_id);
+    std::vector<int64_t> ids;
+    while (stmt.step())
+        ids.push_back(stmt.column_int64(0));
+    return ids;
 }
 
 bool WorkspaceRepository::update(const Workspace& ws) {

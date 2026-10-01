@@ -12,6 +12,7 @@ set(UNIT_TEST_SOURCES
     unit/test_indexing_pipeline.cpp
     unit/test_resolver.cpp
     unit/test_library_indexing.cpp
+    unit/test_workspace_links_review.cpp
     unit/test_http_api.cpp
     unit/test_c_adapter.cpp
     unit/test_cpp_adapter.cpp

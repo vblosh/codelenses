@@ -262,118 +262,36 @@ void HttpServer::register_routes() {
     });
 
     // ==========================================
-    // Library profiles (standard-library indexing)
-    // ==========================================
-    svr_.Post("/api/v1/libraries", [this](const httplib::Request& req, httplib::Response& res) {
-        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            if (r.body.empty()) {
-                throw ApiError::bad_request("empty_body", "Request body cannot be empty");
-            }
-            auto j = nlohmann::json::parse(r.body);
-            CreateLibraryRequest create_req = j.get<CreateLibraryRequest>();
-            auto dto = service_.create_library(create_req);
-            res.status = 201;
-            return dto;
-        });
-    });
-
-    svr_.Get("/api/v1/libraries", [this](const httplib::Request& req, httplib::Response& res) {
-        handle_json(req, res, [&](const httplib::Request&, const std::string&) -> nlohmann::json {
-            auto libs = service_.list_libraries();
-            return nlohmann::json{
-                {"libraries", libs},
-                {"total", libs.size()},
-            };
-        });
-    });
-
-    svr_.Get(R"(/api/v1/libraries/(\d+))", [this](const httplib::Request& req,
-                                                  httplib::Response& res) {
-        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            int64_t id = parse_id(r.matches[1].str(), "libraryId");
-            return service_.get_library(id);
-        });
-    });
-
-    svr_.Delete(R"(/api/v1/libraries/(\d+))", [this](const httplib::Request& req,
-                                                     httplib::Response& res) {
-        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            int64_t id = parse_id(r.matches[1].str(), "libraryId");
-            service_.delete_library(id);
-            return nlohmann::json{
-                {"status", "deleted"},
-                {"id", id},
-            };
-        });
-    });
-
-    svr_.Post(R"(/api/v1/libraries/(\d+)/index)", [this](const httplib::Request& req,
+    // Direct workspace links
+    svr_.Get(R"(/api/v1/workspaces/(\d+)/links)", [this](const httplib::Request& req,
                                                          httplib::Response& res) {
         handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            int64_t id = parse_id(r.matches[1].str(), "libraryId");
-            IndexJobRequest index_req;
-            if (!r.body.empty()) {
-                auto j = nlohmann::json::parse(r.body);
-                index_req = j.get<IndexJobRequest>();
-            }
-            auto dto = service_.trigger_library_index(id, index_req);
-            res.status = 202;
-            return dto;
-        });
-    });
-
-    svr_.Get(R"(/api/v1/libraries/(\d+)/status)", [this](const httplib::Request& req,
-                                                         httplib::Response& res) {
-        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            int64_t id = parse_id(r.matches[1].str(), "libraryId");
-            auto lib = service_.get_library(id);
-            return service_.get_workspace_status(lib.workspace_id);
-        });
-    });
-
-    svr_.Get(R"(/api/v1/workspaces/(\d+)/libraries)", [this](const httplib::Request& req,
-                                                             httplib::Response& res) {
-        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
-            auto libs = service_.list_workspace_libraries(ws_id);
+            auto id = parse_id(r.matches[1].str(), "workspaceId");
+            auto links = service_.list_workspace_links(id);
             return nlohmann::json{
-                {"workspaceId", ws_id},
-                {"libraries", libs},
-                {"total", libs.size()},
-            };
+                {"workspaceId", id}, {"workspaces", links}, {"total", links.size()}};
         });
     });
-
-    svr_.Post(R"(/api/v1/workspaces/(\d+)/libraries)", [this](const httplib::Request& req,
-                                                              httplib::Response& res) {
+    svr_.Post(R"(/api/v1/workspaces/(\d+)/links)", [this](const httplib::Request& req,
+                                                          httplib::Response& res) {
         handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
-            int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
-            if (r.body.empty()) {
-                throw ApiError::bad_request("empty_body", "Request body cannot be empty");
-            }
-            auto j = nlohmann::json::parse(r.body);
-            AttachLibraryRequest attach_req = j.get<AttachLibraryRequest>();
-            auto dto = service_.attach_library(ws_id, attach_req);
-            res.status = 201;
-            return dto;
+            auto id = parse_id(r.matches[1].str(), "workspaceId");
+            auto body = nlohmann::json::parse(r.body);
+            if (!body.contains("targetWorkspaceId") ||
+                !body["targetWorkspaceId"].is_number_integer())
+                throw ApiError::bad_request("missing_field",
+                                            "targetWorkspaceId must be an integer");
+            return service_.link_workspace(id, body["targetWorkspaceId"].get<int64_t>());
         });
     });
-
-    svr_.Delete(R"(/api/v1/workspaces/(\d+)/libraries/(\d+))",
-                [this](const httplib::Request& req, httplib::Response& res) {
-                    handle_json(req, res,
-                                [&](const httplib::Request& r, const std::string&)
-                                    -> nlohmann::json {
-                                    int64_t ws_id = parse_id(r.matches[1].str(), "workspaceId");
-                                    int64_t lib_id = parse_id(r.matches[2].str(), "libraryId");
-                                    service_.detach_library(ws_id, lib_id);
-                                    return nlohmann::json{
-                                        {"status", "detached"},
-                                        {"workspaceId", ws_id},
-                                        {"profileId", lib_id},
-                                    };
-                                });
-                });
+    svr_.Delete(R"(/api/v1/workspaces/(\d+)/links/(\d+))", [this](const httplib::Request& req,
+                                                                  httplib::Response& res) {
+        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
+            service_.unlink_workspace(parse_id(r.matches[1].str(), "workspaceId"),
+                                      parse_id(r.matches[2].str(), "targetWorkspaceId"));
+            return nlohmann::json{{"status", "unlinked"}};
+        });
+    });
 
     // ==========================================
     // Tree, File Metadata & Range Content (F-06, F-10)

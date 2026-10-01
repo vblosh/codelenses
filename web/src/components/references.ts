@@ -8,6 +8,7 @@ export class ReferencesComponent {
   private headerContainer!: HTMLElement;
   private listContainer!: HTMLElement;
 
+  private requestVersion = 0;
   private currentSymbolId: number | null = null;
   private currentItems: ReferencerDto[] = [];
   private totalCount: number = 0;
@@ -45,13 +46,14 @@ export class ReferencesComponent {
 
   private initEvents(): void {
     this.store.subscribe((state, changedKeys) => {
-      if (changedKeys.includes("selectedSymbolId")) {
+      if (changedKeys.includes("selectedSymbolId") || changedKeys.includes("workspaceId")) {
         this.loadReferences(state.selectedSymbolId);
       }
     });
   }
 
   async loadReferences(symbolId: number | null): Promise<void> {
+    const version = ++this.requestVersion;
     const wsId = this.store.getState().workspaceId;
     this.currentSymbolId = symbolId;
     this.currentItems = [];
@@ -83,13 +85,15 @@ export class ReferencesComponent {
         api.getSymbolReferences(wsId, symbolId, this.pageSize, 0),
       ]);
 
+      if (!this.isCurrentRequest(version, wsId, symbolId)) return;
       this.currentItems = refRes.items || [];
       this.totalCount = refRes.total ?? this.currentItems.length;
       this.hasMore = refRes.hasMore ?? (this.currentItems.length < this.totalCount);
 
-      this.renderHeader(detailRes);
+      this.renderHeader(detailRes, version, wsId, symbolId);
       this.renderReferencesList();
     } catch (err: any) {
+      if (!this.isCurrentRequest(version, wsId, symbolId)) return;
       this.headerContainer.style.display = "none";
       this.listContainer.innerHTML = `
         <div class="empty-state">
@@ -106,6 +110,9 @@ export class ReferencesComponent {
       return;
     }
 
+    const version = this.requestVersion;
+    const symbolId = this.currentSymbolId;
+    const offset = this.currentItems.length;
     this.isLoadingMore = true;
     const loadMoreBtn = this.listContainer.querySelector(".load-more-refs-btn") as HTMLButtonElement | null;
     if (loadMoreBtn) {
@@ -116,11 +123,12 @@ export class ReferencesComponent {
     try {
       const nextRes = await api.getSymbolReferences(
         wsId,
-        this.currentSymbolId,
+        symbolId,
         this.pageSize,
-        this.currentItems.length
+        offset
       );
 
+      if (!this.isCurrentRequest(version, wsId, symbolId)) return;
       const newItems = nextRes.items || [];
       this.currentItems = this.currentItems.concat(newItems);
       this.totalCount = nextRes.total ?? this.totalCount;
@@ -128,16 +136,31 @@ export class ReferencesComponent {
 
       this.renderReferencesList();
     } catch (err: any) {
-      if (loadMoreBtn) {
+      if (this.isCurrentRequest(version, wsId, symbolId) && loadMoreBtn) {
         loadMoreBtn.disabled = false;
         loadMoreBtn.textContent = `Error loading more (${err.message}) - Retry`;
       }
     } finally {
-      this.isLoadingMore = false;
+      if (this.isCurrentRequest(version, wsId, symbolId)) this.isLoadingMore = false;
     }
   }
 
-  private renderHeader(detail: SymbolDetailDto | null): void {
+  private isCurrentRequest(
+    version: number,
+    workspaceId: number,
+    symbolId: number | null,
+  ): boolean {
+    return version === this.requestVersion &&
+      this.currentSymbolId === symbolId &&
+      this.store.getState().workspaceId === workspaceId;
+  }
+
+  private renderHeader(
+    detail: SymbolDetailDto | null,
+    version: number,
+    workspaceId: number,
+    symbolId: number,
+  ): void {
     if (!detail || !detail.symbol) {
       this.headerContainer.style.display = "none";
       return;
@@ -210,7 +233,8 @@ export class ReferencesComponent {
     const declLink = document.createElement("a");
     declLink.className = "declaration-link";
     declLink.href = "#";
-    declLink.textContent = `${targetFilePath}:${targetLine}`;
+    const owner = sym.ownerWorkspaceName ? `${sym.ownerWorkspaceName} · ` : "";
+    declLink.textContent = `${owner}${targetFilePath}:${targetLine}`;
     declLink.title = `Jump to declaration at ${targetFilePath}:${targetLine}`;
 
     if (
@@ -218,14 +242,13 @@ export class ReferencesComponent {
       explicitDecl.fileId !== detail.file?.id &&
       !explicitDecl.relativePath
     ) {
-      const wsId = this.store.getState().workspaceId;
-      if (wsId) {
+      if (workspaceId) {
         api
-          .getFileMetadata(wsId, explicitDecl.fileId)
+          .getFileMetadata(workspaceId, explicitDecl.fileId)
           .then((meta) => {
-            if (meta?.relativePath) {
+            if (meta?.relativePath && this.isCurrentRequest(version, workspaceId, symbolId)) {
               targetFilePath = meta.relativePath;
-              declLink.textContent = `${meta.relativePath}:${targetLine}`;
+              declLink.textContent = `${owner}${meta.relativePath}:${targetLine}`;
               declLink.title = `Jump to declaration at ${meta.relativePath}:${targetLine}`;
             }
           })
@@ -239,7 +262,7 @@ export class ReferencesComponent {
         targetFileId,
         targetLine,
         { relativePath: targetFilePath },
-        explicitDecl?.id ?? this.currentSymbolId,
+        explicitDecl?.id ?? symbolId,
         sym.name
       );
     });

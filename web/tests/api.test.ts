@@ -279,201 +279,21 @@ describe("ApiClient", () => {
     );
   });
 
-  it("fetches libraries and creates a library profile", async () => {
-    const mockLibs = {
-      libraries: [
-        {
-          id: 1,
-          workspaceId: 10,
-          name: "glibc",
-          language: "c",
-          provider: "system",
-          sourceRoots: ["/usr/include"],
-          defaultIncludeRoots: [],
-          defines: [],
-          includePatterns: [],
-          excludePatterns: [],
-          fingerprint: "abc",
-          status: "idle",
-          createdAt: "",
-          updatedAt: "",
-        },
-      ],
-      total: 1,
-    };
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockLibs,
-    } as any);
-
-    const libs = await client.getLibraries();
-    expect(libs.libraries).toHaveLength(1);
-    expect(libs.libraries[0].name).toBe("glibc");
-
-    const newLib = {
-      id: 2,
-      workspaceId: 11,
-      name: "libstdc++",
-      language: "cpp",
-      provider: "gcc",
-      sourceRoots: ["/usr/include/c++/12"],
-      defaultIncludeRoots: [],
-      defines: [],
-      includePatterns: [],
-      excludePatterns: [],
-      fingerprint: "def",
-      status: "idle",
-      createdAt: "",
-      updatedAt: "",
-    };
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => newLib,
-    } as any);
-
-    const created = await client.createLibrary({
-      name: "libstdc++",
-      language: "cpp",
-      sourceRoots: ["/usr/include/c++/12"],
-      provider: "gcc",
-    });
-    expect(created.id).toBe(2);
-    expect(created.name).toBe("libstdc++");
-    expect(global.fetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/libraries",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          name: "libstdc++",
-          language: "cpp",
-          sourceRoots: ["/usr/include/c++/12"],
-          provider: "gcc",
-        }),
-      })
-    );
+  it("lists, links and unlinks workspaces", async () => {
+    const target = { id: 2, name: "B", rootPath: "/b" };
+    const fetch = vi.spyOn(global, "fetch").mockResolvedValue({ ok: true, json: async () => ({ workspaces: [target], total: 1 }) } as any);
+    expect((await client.getWorkspaceLinks(1)).workspaces[0].id).toBe(2);
+    expect(fetch).toHaveBeenLastCalledWith("http://localhost:8080/api/v1/workspaces/1/links", expect.anything());
+    await client.linkWorkspace(1, 2);
+    expect(fetch).toHaveBeenLastCalledWith("http://localhost:8080/api/v1/workspaces/1/links", expect.objectContaining({ method: "POST", body: JSON.stringify({ targetWorkspaceId: 2 }) }));
+    await client.unlinkWorkspace(1, 2);
+    expect(fetch).toHaveBeenLastCalledWith("http://localhost:8080/api/v1/workspaces/1/links/2", expect.objectContaining({ method: "DELETE" }));
   });
 
-  it("sends C# target framework metadata when creating a library profile", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 4,
-        workspaceId: 14,
-        name: "Reference sources",
-        language: "csharp",
-        provider: "dotnet",
-        targetFramework: "net8.0",
-        sourceRoots: ["/sdk/ref"],
-        defaultIncludeRoots: [],
-        defines: [],
-        includePatterns: [],
-        excludePatterns: [],
-        fingerprint: "csharp-fp",
-        status: "idle",
-        createdAt: "",
-        updatedAt: "",
-      }),
-    } as any);
-
-    const created = await client.createLibrary({
-      name: "Reference sources",
-      language: "csharp",
-      sourceRoots: ["/sdk/ref"],
-      provider: "dotnet",
-      targetFramework: "net8.0",
-    });
-    expect(created.targetFramework).toBe("net8.0");
-    expect(global.fetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/libraries",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          name: "Reference sources",
-          language: "csharp",
-          sourceRoots: ["/sdk/ref"],
-          provider: "dotnet",
-          targetFramework: "net8.0",
-        }),
-      })
-    );
-  });
-
-  it("deletes and indexes a library profile", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "deleted", id: 3 }),
-    } as any);
-
-    const delRes = await client.deleteLibrary(3);
-    expect(delRes.status).toBe("deleted");
-    expect(delRes.id).toBe(3);
-    expect(global.fetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/libraries/3",
-      expect.objectContaining({
-        method: "DELETE",
-      })
-    );
-
-    const mockJob = { id: 55, workspaceId: 11, jobType: "full", status: "queued" };
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockJob,
-    } as any);
-
-    const job = await client.indexLibrary(3);
-    expect(job.id).toBe(55);
-    expect(global.fetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/libraries/3/index",
-      expect.objectContaining({
-        method: "POST",
-      })
-    );
-  });
-
-  it("attaches and detaches library from workspace", async () => {
-    const mockAttached = {
-      id: 1,
-      workspaceId: 10,
-      name: "glibc",
-      language: "c",
-      provider: "system",
-      sourceRoots: ["/usr/include"],
-      defaultIncludeRoots: [],
-      defines: [],
-      includePatterns: [],
-      excludePatterns: [],
-      fingerprint: "abc",
-      status: "idle",
-      createdAt: "",
-      updatedAt: "",
-    };
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockAttached,
-    } as any);
-
-    const attachRes = await client.attachLibrary(1, 1);
-    expect(attachRes.id).toBe(1);
-    expect(global.fetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/workspaces/1/libraries",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ profileId: 1 }),
-      })
-    );
-
-    vi.spyOn(global, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "detached" }),
-    } as any);
-
-    const detachRes = await client.detachLibrary(1, 1);
-    expect(detachRes.status).toBe("detached");
-    expect(global.fetch).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/workspaces/1/libraries/1",
-      expect.objectContaining({
-        method: "DELETE",
-      })
-    );
+  it("creates a workspace with optional indexing settings", async () => {
+    const fetch = vi.spyOn(global, "fetch").mockResolvedValue({ ok: true, json: async () => ({ id: 2 }) } as any);
+    const request = { rootPath: "/sdk", indexingSettings: { language: "csharp", targetFramework: "net8.0", sourceRoots: ["/sdk", "/contracts"] } };
+    await client.createWorkspace(request);
+    expect(fetch).toHaveBeenLastCalledWith("http://localhost:8080/api/v1/workspaces", expect.objectContaining({ body: JSON.stringify(request) }));
   });
 });

@@ -14,7 +14,6 @@
 #include "codelenses/db/file_repository.hpp"
 #include "codelenses/db/fts_repository.hpp"
 #include "codelenses/db/job_repository.hpp"
-#include "codelenses/db/library_repository.hpp"
 #include "codelenses/db/migration.hpp"
 #include "codelenses/db/occurrence_repository.hpp"
 #include "codelenses/db/reference_repository.hpp"
@@ -22,6 +21,7 @@
 #include "codelenses/db/symbol_repository.hpp"
 #include "codelenses/db/transaction.hpp"
 #include "codelenses/db/workspace_repository.hpp"
+#include "codelenses/db/workspace_settings_repository.hpp"
 
 namespace codelenses {
 
@@ -73,7 +73,9 @@ public:
     [[nodiscard]] DiagnosticRepository& diagnostics() noexcept { return diagnostics_; }
     [[nodiscard]] JobRepository& jobs() noexcept { return jobs_; }
     [[nodiscard]] FtsRepository& fts() noexcept { return fts_; }
-    [[nodiscard]] LibraryRepository& libraries() noexcept { return libraries_; }
+    [[nodiscard]] WorkspaceSettingsRepository& workspace_settings() noexcept {
+        return workspace_settings_;
+    }
 
     [[nodiscard]] std::shared_ptr<IndexingCoordinator> indexing_coordinator() noexcept {
         return indexing_coord_;
@@ -96,7 +98,7 @@ private:
     DiagnosticRepository diagnostics_;
     JobRepository jobs_;
     FtsRepository fts_;
-    LibraryRepository libraries_;
+    WorkspaceSettingsRepository workspace_settings_;
 };
 
 } // namespace codelenses

@@ -7,6 +7,7 @@ export interface WorkspaceDto {
   defaultIgnores?: string[];
   compileCommandsPath?: string | null;
   defaultCompileCommand?: string | null;
+  indexingSettings?: WorkspaceIndexSettings | null;
   revision: number;
   status: string;
   lastError?: string | null;
@@ -22,6 +23,7 @@ export interface CreateWorkspaceRequest {
   defaultIgnores?: string[];
   compileCommandsPath?: string | null;
   defaultCompileCommand?: string | null;
+  indexingSettings?: WorkspaceIndexSettings | null;
 }
 
 export interface WorkspaceListResponse {
@@ -29,51 +31,15 @@ export interface WorkspaceListResponse {
   total: number;
 }
 
-export interface LibraryDto {
-  id: number;
-  workspaceId: number;
-  name: string;
-  language: string;
-  provider: string;
-  sdkVersion?: string | null;
-  targetEnvironment?: string | null;
-  languageStandard?: string | null;
-  targetFramework?: string | null;
-  sysroot?: string | null;
-  sourceRoots: string[];
-  defaultIncludeRoots: string[];
-  defines: string[];
-  includePatterns: string[];
-  excludePatterns: string[];
-  fingerprint: string;
-  status: string;
-  lastError?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface LibraryListResponse {
-  libraries: LibraryDto[];
-  total: number;
-}
-
-export interface WorkspaceLibrariesResponse {
-  workspaceId: number;
-  libraries: LibraryDto[];
-  total: number;
-}
-
-export interface CreateLibraryRequest {
-  name: string;
-  language: string;
-  sourceRoots: string[];
-  rootPath?: string;
+export interface WorkspaceIndexSettings {
+  language?: string;
   provider?: string;
   sdkVersion?: string | null;
   targetEnvironment?: string | null;
   languageStandard?: string | null;
   targetFramework?: string | null;
   sysroot?: string | null;
+  sourceRoots?: string[];
   defaultIncludeRoots?: string[];
   defines?: string[];
   includePatterns?: string[];
@@ -81,14 +47,10 @@ export interface CreateLibraryRequest {
 }
 
 export interface OriginMetadataDto {
-  origin?: "project" | "library" | string;
+  origin?: string;
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
-}
-
-export interface AttachLibraryRequest {
-  profileId: number;
 }
 
 export interface DiagnosticCountsDto {
@@ -161,7 +123,7 @@ export interface FileMetadataDto {
   updatedAt: string;
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -179,7 +141,7 @@ export interface FileContentDto {
   contentHash: string;
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -240,7 +202,7 @@ export interface SymbolDto {
   relativePath?: string | null;
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -255,7 +217,7 @@ export interface SymbolOutlineNodeDto {
   children: SymbolOutlineNodeDto[];
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -296,7 +258,7 @@ export interface ReferencerDto {
   containingQualifiedName?: string | null;
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -324,7 +286,7 @@ export interface SourceSearchHitDto {
   rank: number;
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -339,7 +301,7 @@ export interface SymbolSearchHitDto {
   line?: number | null;
   origin?: OriginMetadataDto["origin"];
   ownerWorkspaceId?: number;
-  libraryProfileId?: number | null;
+  ownerWorkspaceName?: string;
   targetFramework?: string | null;
 }
 
@@ -398,6 +360,7 @@ export interface WorkspaceCompileCommandsDto {
   isAutoDetected: boolean;
   totalCommands: number;
   defaultCompileCommand?: string | null;
+  indexingSettings?: WorkspaceIndexSettings | null;
 }
 
 export interface UpdateWorkspaceRequest {
@@ -406,6 +369,7 @@ export interface UpdateWorkspaceRequest {
   excludePatterns?: string[];
   compileCommandsPath?: string | null;
   defaultCompileCommand?: string | null;
+  indexingSettings?: WorkspaceIndexSettings | null;
 }
 
 export interface AppState {

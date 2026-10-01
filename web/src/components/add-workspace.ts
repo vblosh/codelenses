@@ -1,3 +1,4 @@
+import { IndexingSettingsForm } from "./indexing-settings";
 import type { WorkspaceDto, CreateWorkspaceRequest } from "../types";
 import { api } from "../api";
 
@@ -13,6 +14,7 @@ export class AddWorkspaceModal {
   private nameInput!: HTMLInputElement;
   private cdbInput!: HTMLInputElement;
   private defaultCmdInput!: HTMLInputElement;
+  private indexingSettings = new IndexingSettingsForm();
   private includePatternsInput!: HTMLInputElement;
   private excludePatternsInput!: HTMLInputElement;
   private bannerElem!: HTMLElement;
@@ -102,6 +104,7 @@ export class AddWorkspaceModal {
     this.nameInput = this.element.querySelector(".ws-add-name")!;
     this.cdbInput = this.element.querySelector(".ws-add-cdb")!;
     this.defaultCmdInput = this.element.querySelector(".ws-add-default-cmd")!;
+    this.element.querySelector(".modal-body")!.append(this.indexingSettings.element);
     this.includePatternsInput = this.element.querySelector(".ws-add-includes")!;
     this.excludePatternsInput = this.element.querySelector(".ws-add-excludes")!;
     this.bannerElem = this.element.querySelector(".add-ws-banner")!;
@@ -157,6 +160,7 @@ export class AddWorkspaceModal {
     this.cdbInput.value = "";
     this.defaultCmdInput.value = "";
     this.includePatternsInput.value = "";
+    this.indexingSettings.setValue(null);
     this.excludePatternsInput.value = "";
     this.hideError();
   }
@@ -197,6 +201,7 @@ export class AddWorkspaceModal {
       name: name || undefined,
       compileCommandsPath: cdbPath || null,
       defaultCompileCommand: defaultCmd || null,
+      indexingSettings: this.indexingSettings.getValue(),
       includePatterns: includePatterns.length > 0 ? includePatterns : undefined,
       excludePatterns: excludePatterns.length > 0 ? excludePatterns : undefined,
     };

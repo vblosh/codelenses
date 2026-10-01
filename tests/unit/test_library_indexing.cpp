@@ -10,7 +10,7 @@
 #include "codelenses/adapters/cpp_adapter.hpp"
 #include "codelenses/adapters/registry.hpp"
 #include "codelenses/db/database.hpp"
-#include "codelenses/domain/library.hpp"
+#include "codelenses/domain/workspace_index_settings.hpp"
 #include "codelenses/filesystem/discovery.hpp"
 #include "codelenses/index/indexer.hpp"
 #include "codelenses/resolver/compile_commands.hpp"
@@ -54,17 +54,27 @@ struct TempTestDir {
     }
 };
 
+WorkspaceDto create_configured_workspace(ApiService& service,
+                                         const WorkspaceIndexSettingsRequest& settings) {
+    CreateWorkspaceRequest request;
+    request.root_path = settings.source_roots.front();
+    request.name = settings.name;
+    request.indexing_settings = settings;
+    return service.create_workspace(request);
+}
+
 } // namespace
 
-TEST_CASE("C# target framework participates in library profile identity", "[library][fingerprint]") {
-    LibraryProfile profile{
+TEST_CASE("C# target framework participates in library profile identity",
+          "[library][fingerprint]") {
+    WorkspaceIndexSettings profile{
         .language = "csharp",
         .target_framework = "net8.0",
         .source_roots = {"/local/reference-source"},
     };
-    const auto net8_fingerprint = compute_library_fingerprint(profile);
+    const auto net8_fingerprint = compute_workspace_fingerprint(profile);
     profile.target_framework = "net9.0";
-    CHECK(compute_library_fingerprint(profile) != net8_fingerprint);
+    CHECK(compute_workspace_fingerprint(profile) != net8_fingerprint);
 }
 
 TEST_CASE("Compiler include ordering and suppression flags", "[library][compile_commands]") {
@@ -136,7 +146,8 @@ TEST_CASE("Compiler include ordering and suppression flags", "[library][compile_
         CHECK(paths[2] == fs::path("/usr/include/after"));
     }
 
-    SECTION("-nostdinc++ suppresses only C++ standard library directories, keeping C runtime headers") {
+    SECTION(
+        "-nostdinc++ suppresses only C++ standard library directories, keeping C runtime headers") {
         ctx.nostdincxx = true;
         auto paths = ctx.get_ordered_include_paths(false, "", default_dirs, true);
         REQUIRE(paths.size() == 4);
@@ -292,7 +303,7 @@ void worker_run() {
     ApiService service(*db, pipeline);
 
     // 1. Create Library profile
-    CreateLibraryRequest lib_req{
+    WorkspaceIndexSettingsRequest lib_req{
         .name = "SyntheticStdLib",
         .language = "cpp",
         .provider = "toolchain",
@@ -306,7 +317,7 @@ void worker_run() {
         .include_patterns = {},
         .exclude_patterns = {},
     };
-    auto lib_dto = service.create_library(lib_req);
+    auto lib_dto = create_configured_workspace(service, lib_req);
     REQUIRE(lib_dto.id > 0);
 
     auto wait_for_job = [&](int64_t job_id,
@@ -324,7 +335,7 @@ void worker_run() {
     };
 
     // Index the library
-    auto lib_job = service.trigger_library_index(lib_dto.id, IndexJobRequest{});
+    auto lib_job = service.trigger_indexing(lib_dto.id, IndexJobRequest{});
     REQUIRE(lib_job.id > 0);
     wait_for_job(lib_job.id);
 
@@ -333,10 +344,10 @@ void worker_run() {
     reqA.root_path = projA_root.string();
     reqA.name = "ProjectA";
     auto projA = service.create_workspace(reqA);
-    service.attach_library(projA.id, AttachLibraryRequest{.profile_id = lib_dto.id});
+    service.link_workspace(projA.id, lib_dto.id);
 
-    auto jobA = service.trigger_indexing(
-        projA.id, IndexJobRequest{.job_type = "full", .force_full = true});
+    auto jobA =
+        service.trigger_indexing(projA.id, IndexJobRequest{.job_type = "full", .force_full = true});
     wait_for_job(jobA.id);
 
     // 3. Create Project B and attach Library
@@ -344,10 +355,10 @@ void worker_run() {
     reqB.root_path = projB_root.string();
     reqB.name = "ProjectB";
     auto projB = service.create_workspace(reqB);
-    service.attach_library(projB.id, AttachLibraryRequest{.profile_id = lib_dto.id});
+    service.link_workspace(projB.id, lib_dto.id);
 
-    auto jobB = service.trigger_indexing(
-        projB.id, IndexJobRequest{.job_type = "full", .force_full = true});
+    auto jobB =
+        service.trigger_indexing(projB.id, IndexJobRequest{.job_type = "full", .force_full = true});
     wait_for_job(jobB.id);
 
     SECTION("Project A resolves std::vector via transitive include closure") {
@@ -378,7 +389,7 @@ void worker_run() {
 
     SECTION("Caller isolation across projects sharing the library") {
         // Find sdk_log symbol ID in the library
-        auto lib_symbols = db->symbols().list_by_workspace(lib_dto.workspace_id);
+        auto lib_symbols = db->symbols().list_by_workspace(lib_dto.id);
         auto log_sym_it = std::find_if(lib_symbols.begin(), lib_symbols.end(),
                                        [](const Symbol& s) { return s.name == "sdk_log"; });
         REQUIRE(log_sym_it != lib_symbols.end());
@@ -396,7 +407,7 @@ void worker_run() {
     }
 
     SECTION("Detaching library immediately revokes access to its files and symbols") {
-        auto lib_files = db->files().list_by_workspace(lib_dto.workspace_id, false);
+        auto lib_files = db->files().list_by_workspace(lib_dto.id, false);
         REQUIRE(!lib_files.empty());
         int64_t lib_file_id = lib_files[0].id;
 
@@ -404,7 +415,7 @@ void worker_run() {
         REQUIRE_NOTHROW(service.get_file(projA.id, lib_file_id));
 
         // Detach library from Project A
-        service.detach_library(projA.id, lib_dto.id);
+        service.unlink_workspace(projA.id, lib_dto.id);
 
         // Detached: Project A cannot access the library file
         REQUIRE_THROWS_AS(service.get_file(projA.id, lib_file_id), ApiError);
@@ -476,7 +487,7 @@ global using Example.Contracts;
         FAIL("Timed out waiting for C# indexing job " << job_id);
     };
 
-    CreateLibraryRequest library_request{
+    WorkspaceIndexSettingsRequest library_request{
         .name = "Example source",
         .language = "cs",
         .provider = "custom",
@@ -490,15 +501,16 @@ global using Example.Contracts;
     };
     auto missing_framework_request = library_request;
     missing_framework_request.target_framework.reset();
-    CHECK_THROWS_AS(service.create_library(missing_framework_request), ApiError);
-    auto library = service.create_library(library_request);
-    REQUIRE(library.language == "csharp");
-    REQUIRE(library.target_framework == "net8.0");
-    REQUIRE(library.source_roots.size() == 2);
-    auto source_roots = db->libraries().list_source_roots(library.id);
+    CHECK_NOTHROW(create_configured_workspace(service, missing_framework_request));
+    auto library = create_configured_workspace(service, library_request);
+    REQUIRE(library.indexing_settings->language == "csharp");
+    REQUIRE(library.indexing_settings->target_framework == "net8.0");
+    REQUIRE(library.indexing_settings->source_roots.size() == 2);
+    auto source_roots = db->workspace_settings().list_source_roots(
+        db->workspace_settings().get_profile_by_workspace(library.id)->id);
     REQUIRE(source_roots.size() == 2);
     const std::vector<int64_t> root_ids{source_roots[0].id, source_roots[1].id};
-    auto library_job = service.trigger_library_index(library.id, IndexJobRequest{});
+    auto library_job = service.trigger_indexing(library.id, IndexJobRequest{});
     wait_for_job(library_job.id);
 
     auto project = service.create_workspace(CreateWorkspaceRequest{
@@ -508,27 +520,26 @@ global using Example.Contracts;
         .exclude_patterns = {},
         .default_ignores = {},
     });
-    service.attach_library(project.id, AttachLibraryRequest{.profile_id = library.id});
+    service.link_workspace(project.id, library.id);
     auto project_job = service.trigger_indexing(
         project.id, IndexJobRequest{.job_type = "full", .force_full = true});
     wait_for_job(project_job.id);
 
-    auto library_files = db->files().list_by_workspace(library.workspace_id, false);
+    auto library_files = db->files().list_by_workspace(library.id, false);
     REQUIRE(library_files.size() == 3);
-    CHECK(std::all_of(library_files.begin(), library_files.end(), [](const auto& file) {
-        return file.relative_path.starts_with("root-");
-    }));
+    CHECK(std::all_of(library_files.begin(), library_files.end(),
+                      [](const auto& file) { return file.relative_path.starts_with("root-"); }));
 
-    auto library_file = std::find_if(library_files.begin(), library_files.end(), [](const auto& file) {
-        return file.name == "IService.cs";
-    });
+    auto library_file = std::find_if(library_files.begin(), library_files.end(),
+                                     [](const auto& file) { return file.name == "IService.cs"; });
     REQUIRE(library_file != library_files.end());
     auto file_dto = service.get_file(project.id, library_file->id);
-    CHECK(file_dto.origin_metadata.origin == "library");
-    CHECK(file_dto.origin_metadata.library_profile_id == library.id);
+    CHECK(file_dto.origin_metadata.origin == "workspace");
+    CHECK(file_dto.origin_metadata.owner_workspace_id == library.id);
     CHECK(file_dto.origin_metadata.target_framework == "net8.0");
-    CHECK(service.get_file_content(project.id, library_file->id).content.find("interface IService") !=
-          std::string::npos);
+    CHECK(
+        service.get_file_content(project.id, library_file->id).content.find("interface IService") !=
+        std::string::npos);
 
     auto occurrences = db->occurrences().list_by_workspace(project.id);
     auto find_occurrence = [&](const std::string& file_name, const std::string& name) {
@@ -561,16 +572,18 @@ global using Example.Contracts;
     REQUIRE(missing_framework_symbol != occurrences.end());
     CHECK(missing_framework_symbol->resolution == "unresolved");
 
-    auto base_type = std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
-        return occ.name == "Example.Contracts.BaseService" &&
-               occ.occurrence_kind == "inheritance";
-    });
+    auto base_type =
+        std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
+            return occ.name == "Example.Contracts.BaseService" &&
+                   occ.occurrence_kind == "inheritance";
+        });
     REQUIRE(base_type != occurrences.end());
     CHECK(base_type->resolution == "resolved");
-    auto interface_type = std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
-        return occ.name == "Example.Contracts.IService" &&
-               occ.occurrence_kind == "implementation";
-    });
+    auto interface_type =
+        std::find_if(occurrences.begin(), occurrences.end(), [](const Occurrence& occ) {
+            return occ.name == "Example.Contracts.IService" &&
+                   occ.occurrence_kind == "implementation";
+        });
     REQUIRE(interface_type != occurrences.end());
     CHECK(interface_type->resolution == "resolved");
 
@@ -582,8 +595,7 @@ global using Example.Contracts;
     REQUIRE(base_type->symbol_id.has_value());
     REQUIRE(interface_type->symbol_id.has_value());
     CHECK(std::any_of(app_graph.edges.begin(), app_graph.edges.end(), [&](const auto& edge) {
-        return edge.relation_kind == "inherits" &&
-               edge.target_symbol_id == *base_type->symbol_id;
+        return edge.relation_kind == "inherits" && edge.target_symbol_id == *base_type->symbol_id;
     }));
     CHECK(std::any_of(app_graph.edges.begin(), app_graph.edges.end(), [&](const auto& edge) {
         return edge.relation_kind == "implements" &&
@@ -593,18 +605,18 @@ global using Example.Contracts;
     auto static_call = find_occurrence("Program.cs", "Square");
     REQUIRE(static_call != occurrences.end());
     CHECK(static_call->resolution == "resolved");
-    auto library_symbols = db->symbols().list_by_workspace(library.workspace_id);
-    auto square = std::find_if(library_symbols.begin(), library_symbols.end(), [](const Symbol& symbol) {
-        return symbol.name == "Square";
-    });
+    auto library_symbols = db->symbols().list_by_workspace(library.id);
+    auto square = std::find_if(library_symbols.begin(), library_symbols.end(),
+                               [](const Symbol& symbol) { return symbol.name == "Square"; });
     REQUIRE(square != library_symbols.end());
     auto callers = service.get_symbol_callers(project.id, square->id);
     REQUIRE(callers.size() == 1);
     CHECK(callers[0].name == "GetArea");
 
-    auto same_roots_reindex = service.trigger_library_index(library.id, IndexJobRequest{});
+    auto same_roots_reindex = service.trigger_indexing(library.id, IndexJobRequest{});
     wait_for_job(same_roots_reindex.id);
-    const auto roots_after_reindex = db->libraries().list_source_roots(library.id);
+    const auto roots_after_reindex = db->workspace_settings().list_source_roots(
+        db->workspace_settings().get_profile_by_workspace(library.id)->id);
     REQUIRE(roots_after_reindex.size() == root_ids.size());
     CHECK(roots_after_reindex[0].id == root_ids[0]);
     CHECK(roots_after_reindex[1].id == root_ids[1]);
@@ -612,10 +624,10 @@ global using Example.Contracts;
     auto conflicting_request = library_request;
     conflicting_request.name = "Example source net9";
     conflicting_request.target_framework = "net9.0";
-    auto conflicting_library = service.create_library(conflicting_request);
-    auto conflicting_job = service.trigger_library_index(conflicting_library.id, IndexJobRequest{});
+    auto conflicting_library = create_configured_workspace(service, conflicting_request);
+    auto conflicting_job = service.trigger_indexing(conflicting_library.id, IndexJobRequest{});
     wait_for_job(conflicting_job.id);
-    service.attach_library(project.id, AttachLibraryRequest{.profile_id = conflicting_library.id});
+    service.link_workspace(project.id, conflicting_library.id);
     auto resolve_job = service.trigger_indexing(
         project.id, IndexJobRequest{.job_type = "incremental", .force_full = false});
     wait_for_job(resolve_job.id);
@@ -627,12 +639,129 @@ global using Example.Contracts;
 
     auto search = service.search_symbols(project.id, "IService", 20, 0);
     auto service_hit = std::find_if(search.items.begin(), search.items.end(), [](const auto& hit) {
-        return hit.origin_metadata.origin == "library" && hit.name == "IService";
+        return hit.origin_metadata.origin == "workspace" && hit.name == "IService";
     });
     REQUIRE(service_hit != search.items.end());
     CHECK((service_hit->origin_metadata.target_framework == "net8.0" ||
            service_hit->origin_metadata.target_framework == "net9.0"));
 
-    service.detach_library(project.id, library.id);
+    service.unlink_workspace(project.id, library.id);
     CHECK_THROWS_AS(service.get_file(project.id, library_file->id), ApiError);
+}
+
+TEST_CASE("Direct workspace links preserve visibility and reference isolation",
+          "[workspace-links]") {
+    TempTestDir base("workspace_links");
+    base.write("a/Use.cs", "using Example; public class App { Widget value; }");
+    base.write("b/Widget.cs",
+               "namespace Example; public class Widget { } public class Local { Widget value; }");
+    base.write("c/Hidden.cs", "namespace Hidden; public class Secret { }");
+    base.write("other/Use.cs", "using Example; public class Other { Widget value; }");
+    auto db = Database::open_memory();
+    IndexingPipeline pipeline(*db);
+    ApiService service(*db, pipeline);
+    auto create = [&](const std::string& name) {
+        CreateWorkspaceRequest req;
+        req.root_path = (base.path / name).string();
+        req.name = name;
+        return service.create_workspace(req).id;
+    };
+    auto a = create("a"), b = create("b"), c = create("c"), other = create("other");
+    for (auto id : {a, b, c, other})
+        REQUIRE(pipeline.run_indexing(id).has_value());
+    REQUIRE_THROWS_AS(service.link_workspace(a, a), ApiError);
+    REQUIRE_THROWS_AS(service.link_workspace(a, 9999), ApiError);
+    service.link_workspace(b, c);
+    service.link_workspace(a, b);
+    service.link_workspace(a, b);
+    service.link_workspace(other, b);
+    REQUIRE(service.list_workspace_links(a).size() == 1);
+    REQUIRE(service.search_symbols(a, "Secret", 20, 0).items.empty());
+    REQUIRE(service.search_symbols(b, "App", 20, 0).items.empty());
+    REQUIRE(service.search_source(a, "Local", 20, 0).items.empty());
+    auto hits = service.search_symbols(a, "Widget", 20, 0);
+    REQUIRE_FALSE(hits.items.empty());
+    const auto widget = hits.items.front().id;
+    REQUIRE(hits.items.front().origin_metadata.owner_workspace_id == b);
+    auto detail = service.get_symbol_detail(a, widget);
+    REQUIRE_FALSE(detail.declarations.empty());
+    auto refs = service.get_symbol_references(a, widget, 1, 0);
+    REQUIRE(refs.total > 0);
+    for (const auto& ref : refs.items)
+        REQUIRE(db->files().get_by_id(ref.file_id)->workspace_id == a);
+    auto no_refs = service.get_symbol_references(
+        c, service.search_symbols(c, "Secret", 20, 0).items.front().id);
+    CHECK(no_refs.total == 0);
+    auto c_file = db->files().list_by_workspace(c, false).front();
+    REQUIRE_THROWS_AS(service.get_file(a, c_file.id), ApiError);
+    service.link_workspace(b, a); // reciprocal links must not recurse
+    REQUIRE(pipeline.run_indexing(b).has_value());
+    REQUIRE_FALSE(service.get_symbol_references(a, widget).items.empty());
+    service.unlink_workspace(a, b);
+    service.unlink_workspace(a, b);
+    REQUIRE_THROWS_AS(service.get_symbol_detail(a, widget), ApiError);
+    for (const auto& occ : db->occurrences().list_by_workspace(a)) {
+        if (occ.name == "Widget" && occ.occurrence_kind == "reference")
+            CHECK(occ.resolution == "unresolved");
+    }
+    service.link_workspace(a, b);
+    service.delete_workspace(b);
+    REQUIRE(service.list_workspace_links(a).empty());
+    REQUIRE(service.list_workspace_links(other).empty());
+    for (const auto& hit : service.search_symbols(a, "Widget", 20, 0).items)
+        CHECK(hit.origin_metadata.owner_workspace_id == a);
+}
+
+TEST_CASE("Configured C++ workspace exposes all source roots and refreshes consumers",
+          "[workspace-links][cpp]") {
+    TempTestDir base("multi_root_workspace");
+    base.write("headers/api.h", "#include <detail.h>\nvoid sdk_call();\n");
+    base.write("platform/detail.h", "struct Detail {};\n");
+    base.write("app/use.cpp", "#include <api.h>\nvoid app() { sdk_call(); Detail value; }\n");
+    auto db = Database::open_memory();
+    IndexingPipeline pipeline(*db);
+    ApiService service(*db, pipeline);
+    CreateWorkspaceRequest sdk_request;
+    sdk_request.root_path = (base.path / "headers").string();
+    sdk_request.indexing_settings = WorkspaceIndexSettingsRequest{
+        .language = "cpp",
+        .source_roots = {(base.path / "headers").string(), (base.path / "platform").string()},
+        .default_include_roots = {(base.path / "headers").string(),
+                                  (base.path / "platform").string()},
+    };
+    const auto sdk = service.create_workspace(sdk_request).id;
+    CreateWorkspaceRequest app_request;
+    app_request.root_path = (base.path / "app").string();
+    const auto app = service.create_workspace(app_request).id;
+    REQUIRE(pipeline.run_indexing(sdk).has_value());
+    REQUIRE(pipeline.run_indexing(app).has_value());
+    auto tree = service.get_tree(sdk, "");
+    REQUIRE(tree.entries.size() == 2);
+    for (const auto& root : tree.entries) {
+        auto files = service.get_tree(sdk, root.path);
+        REQUIRE(files.entries.size() == 1);
+        REQUIRE(files.entries.front().file_id.has_value());
+        CHECK_FALSE(service.get_file_content(sdk, *files.entries.front().file_id).content.empty());
+    }
+    service.link_workspace(app, sdk);
+    const auto before = service.get_workspace(app).revision;
+    bool saw_detail = false;
+    for (const auto& occurrence : db->occurrences().list_by_workspace(app)) {
+        if (occurrence.name == "Detail") {
+            saw_detail = true;
+            CHECK(occurrence.resolution == "resolved");
+        }
+    }
+    REQUIRE(saw_detail);
+    base.write("headers/api.h", "#include <detail.h>\nvoid sdk_call();\nvoid added();\n");
+    REQUIRE(pipeline.run_indexing(sdk).has_value());
+    CHECK(service.get_workspace(app).revision > before);
+    REQUIRE_FALSE(service.search_symbols(app, "added", 20, 0).items.empty());
+    UpdateWorkspaceRequest update;
+    update.indexing_settings = sdk_request.indexing_settings;
+    update.indexing_settings->defines = {"FLAG=1"};
+    service.update_workspace(sdk, update);
+    auto reindex = pipeline.run_indexing(sdk);
+    REQUIRE(reindex.has_value());
+    CHECK(reindex->files_processed == 2);
 }

@@ -1,19 +1,21 @@
+import { IndexingSettingsForm } from "./indexing-settings";
 import type { StateStore } from "../state";
-import type { LibraryDto } from "../types";
+import type { WorkspaceDto } from "../types";
 import { api } from "../api";
 
 export interface WorkspaceSettingsCallbacks {
-  onSaved?: () => void;
+  onSaved?: (workspaceId: number) => void;
   onDeleted?: (workspaceId: number) => void;
-  onManageLibraries?: () => void;
-  onLibrariesChanged?: () => void;
+  onLinksChanged?: (workspaceId: number) => void;
 }
 
 export class WorkspaceSettingsModal {
   private element: HTMLElement;
   private store: StateStore;
   private callbacks: WorkspaceSettingsCallbacks;
+  private indexingSettings = new IndexingSettingsForm();
   private currentWsId: number | null = null;
+  private viewVersion = 0;
 
   private nameInput!: HTMLInputElement;
   private rootPathElem!: HTMLElement;
@@ -21,16 +23,15 @@ export class WorkspaceSettingsModal {
   private cdbStatusElem!: HTMLElement;
   private defaultCmdInput!: HTMLInputElement;
   private defaultCmdPreviewElem!: HTMLElement;
-  private attachedLibsListElem!: HTMLElement;
-  private attachLibBtn!: HTMLButtonElement;
-  private manageLibsBtn!: HTMLButtonElement;
+  private linkedWorkspacesListElem!: HTMLElement;
+  private linkWorkspaceBtn!: HTMLButtonElement;
   private deleteWsBtn!: HTMLButtonElement;
-  private attachLibFormElem!: HTMLElement;
-  private availableLibsSelect!: HTMLSelectElement;
+  private linkWorkspaceFormElem!: HTMLElement;
+  private availableWorkspacesSelect!: HTMLSelectElement;
   private confirmAttachBtn!: HTMLButtonElement;
   private cancelAttachBtn!: HTMLButtonElement;
-  private allLibraries: LibraryDto[] = [];
-  private attachedLibraries: LibraryDto[] = [];
+  private allWorkspaces: WorkspaceDto[] = [];
+  private linkedWorkspaces: WorkspaceDto[] = [];
   private saveAndIndexBtn!: HTMLButtonElement;
   private saveBtn!: HTMLButtonElement;
   private cancelBtn!: HTMLButtonElement;
@@ -99,23 +100,22 @@ export class WorkspaceSettingsModal {
             </div>
           </div>
 
-          <div class="form-group ws-libraries-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+          <div class="form-group ws-links-group" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-              <label class="form-label" style="margin-bottom: 0;">Libraries & Toolchain SDKs</label>
+              <label class="form-label" style="margin-bottom: 0;">Linked workspaces</label>
               <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn btn-sm manage-lib-profiles-btn" title="Open Library Profiles Manager">Manage Profiles</button>
-                <button type="button" class="btn btn-sm attach-lib-btn">+ Attach Library</button>
+                <button type="button" class="btn btn-sm link-workspace-btn">+ Link workspace</button>
               </div>
             </div>
             <div class="form-hint" style="margin-bottom: 8px;">
-              Attached C/C++ header trees or C# source/declaration trees. Direct file/symbol inspection requires active attachment; workspace re-indexing resolves or unlinks persisted references.
+              Search symbols and open declarations from directly linked workspaces. References show usages in the active workspace.
             </div>
-            <div class="attached-libraries-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
-            <div class="attach-lib-form" style="display: none; margin-top: 8px; padding: 10px; background: var(--bg-secondary); border-radius: 4px; border: 1px solid var(--border-color);">
-              <div style="font-weight: 600; margin-bottom: 6px; font-size: 12px;">Select Library Profile to Attach</div>
+            <div class="linked-workspaces-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            <div class="link-workspace-form" style="display: none; margin-top: 8px; padding: 10px; background: var(--bg-secondary); border-radius: 4px; border: 1px solid var(--border-color);">
+              <div style="font-weight: 600; margin-bottom: 6px; font-size: 12px;">Select workspace to link</div>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <select class="form-select available-libs-select" style="flex: 1; padding: 4px 8px; font-size: 12px;"></select>
-                <button type="button" class="btn btn-primary btn-sm confirm-attach-btn">Attach</button>
+                <select class="form-select available-workspaces-select" style="flex: 1; padding: 4px 8px; font-size: 12px;"></select>
+                <button type="button" class="btn btn-primary btn-sm confirm-attach-btn">Link</button>
                 <button type="button" class="btn btn-sm cancel-attach-btn">Cancel</button>
               </div>
             </div>
@@ -141,18 +141,18 @@ export class WorkspaceSettingsModal {
       </div>
     `;
 
+    this.element.querySelector(".ws-links-group")!.before(this.indexingSettings.element);
     this.rootPathElem = this.element.querySelector(".ws-root-path")!;
     this.nameInput = this.element.querySelector(".ws-name-input")!;
     this.cdbInput = this.element.querySelector(".ws-cdb-input")!;
     this.cdbStatusElem = this.element.querySelector(".cdb-status-banner")!;
     this.defaultCmdInput = this.element.querySelector(".ws-default-cmd-input")!;
     this.defaultCmdPreviewElem = this.element.querySelector(".ws-default-cmd-preview")!;
-    this.attachedLibsListElem = this.element.querySelector(".attached-libraries-list")!;
-    this.attachLibBtn = this.element.querySelector(".attach-lib-btn")!;
-    this.manageLibsBtn = this.element.querySelector(".manage-lib-profiles-btn")!;
+    this.linkedWorkspacesListElem = this.element.querySelector(".linked-workspaces-list")!;
+    this.linkWorkspaceBtn = this.element.querySelector(".link-workspace-btn")!;
     this.deleteWsBtn = this.element.querySelector(".delete-ws-btn")!;
-    this.attachLibFormElem = this.element.querySelector(".attach-lib-form")!;
-    this.availableLibsSelect = this.element.querySelector(".available-libs-select")!;
+    this.linkWorkspaceFormElem = this.element.querySelector(".link-workspace-form")!;
+    this.availableWorkspacesSelect = this.element.querySelector(".available-workspaces-select")!;
     this.confirmAttachBtn = this.element.querySelector(".confirm-attach-btn")!;
     this.cancelAttachBtn = this.element.querySelector(".cancel-attach-btn")!;
     this.saveAndIndexBtn = this.element.querySelector(".save-index-settings-btn")!;
@@ -181,14 +181,8 @@ export class WorkspaceSettingsModal {
       this.updateDefaultCmdPreview(this.defaultCmdInput.value);
     });
 
-    this.attachLibBtn.addEventListener("click", () => {
+    this.linkWorkspaceBtn.addEventListener("click", () => {
       this.showAttachForm();
-    });
-
-    this.manageLibsBtn.addEventListener("click", () => {
-      if (this.callbacks.onManageLibraries) {
-        this.callbacks.onManageLibraries();
-      }
     });
 
     this.deleteWsBtn.addEventListener("click", () => {
@@ -196,11 +190,11 @@ export class WorkspaceSettingsModal {
     });
 
     this.cancelAttachBtn.addEventListener("click", () => {
-      this.attachLibFormElem.style.display = "none";
+      this.linkWorkspaceFormElem.style.display = "none";
     });
 
     this.confirmAttachBtn.addEventListener("click", () => {
-      this.handleAttachLibrary();
+      this.handleLinkWorkspace();
     });
 
     this.saveBtn.addEventListener("click", () => this.handleSave(false));
@@ -211,8 +205,10 @@ export class WorkspaceSettingsModal {
     const wsId = workspaceId ?? this.store.getState().workspaceId;
     if (!wsId) return;
 
+    const viewVersion = ++this.viewVersion;
     this.currentWsId = wsId;
     this.element.style.display = "flex";
+    this.setActionButtonsDisabled(true);
 
     try {
       this.cdbStatusElem.innerHTML = `<span class="badge" style="opacity: 0.7;">Checking compilation database...</span>`;
@@ -221,6 +217,8 @@ export class WorkspaceSettingsModal {
         api.getWorkspaceCompileCommands(wsId).catch(() => null),
       ]);
 
+      if (!this.isCurrentView(wsId, viewVersion)) return;
+      this.indexingSettings.setValue(ws.indexingSettings);
       this.rootPathElem.textContent = ws.rootPath;
       this.nameInput.value = ws.name || "";
       this.cdbInput.value = ws.compileCommandsPath || "";
@@ -228,90 +226,104 @@ export class WorkspaceSettingsModal {
 
       this.renderCdbStatus(cdbInfo);
       this.updateDefaultCmdPreview(this.defaultCmdInput.value);
-      await this.loadLibraries(wsId);
+      await this.loadLinks(wsId, viewVersion);
+      if (!this.isCurrentView(wsId, viewVersion)) return;
+      this.setActionButtonsDisabled(false);
 
       if (focusDefaultCmd) {
         setTimeout(() => {
+          if (!this.isCurrentView(wsId, viewVersion)) return;
           this.defaultCmdInput.focus();
           this.defaultCmdInput.select();
         }, 50);
       }
     } catch (err: any) {
-      this.cdbStatusElem.innerHTML = `<span class="badge badge-error">Error loading settings: ${escapeHtml(err.message || String(err))}</span>`;
+      if (this.isCurrentView(wsId, viewVersion)) {
+        this.cdbStatusElem.innerHTML = `<span class="badge badge-error">Error loading settings: ${escapeHtml(err.message || String(err))}</span>`;
+      }
     }
   }
 
   close(): void {
+    this.viewVersion++;
+    this.currentWsId = null;
     this.element.style.display = "none";
-    this.attachLibFormElem.style.display = "none";
+    this.linkWorkspaceFormElem.style.display = "none";
   }
 
-  private async loadLibraries(wsId: number): Promise<void> {
+  private isCurrentView(workspaceId: number, viewVersion: number): boolean {
+    return this.currentWsId === workspaceId &&
+      this.viewVersion === viewVersion &&
+      this.element.style.display !== "none";
+  }
+
+  private setActionButtonsDisabled(disabled: boolean): void {
+    this.saveBtn.disabled = disabled;
+    this.saveAndIndexBtn.disabled = disabled;
+    this.deleteWsBtn.disabled = disabled;
+    this.linkWorkspaceBtn.disabled = disabled;
+    this.confirmAttachBtn.disabled = disabled;
+  }
+
+  private async loadLinks(wsId: number, viewVersion: number): Promise<void> {
+    if (!this.isCurrentView(wsId, viewVersion)) return;
     try {
-      this.attachedLibsListElem.innerHTML = `<span style="font-size: 11px; opacity: 0.7;">Loading attached libraries...</span>`;
+      this.linkedWorkspacesListElem.innerHTML = `<span style="font-size: 11px; opacity: 0.7;">Loading linked workspaces...</span>`;
       const [attachedRes, allRes] = await Promise.all([
-        api.getWorkspaceLibraries(wsId),
-        api.getLibraries(),
+        api.getWorkspaceLinks(wsId),
+        api.getWorkspaces(),
       ]);
-      this.attachedLibraries = attachedRes.libraries || [];
-      this.allLibraries = allRes.libraries || [];
-      this.renderAttachedLibraries();
+      if (!this.isCurrentView(wsId, viewVersion)) return;
+      this.linkedWorkspaces = attachedRes.workspaces || [];
+      this.allWorkspaces = allRes.workspaces || [];
+      this.renderLinkedWorkspaces();
     } catch (err: any) {
-      this.attachedLibsListElem.innerHTML = `<span class="badge badge-error">Failed to load libraries: ${escapeHtml(err.message || String(err))}</span>`;
+      if (this.isCurrentView(wsId, viewVersion)) {
+        this.linkedWorkspacesListElem.innerHTML = `<span class="badge badge-error">Failed to load links: ${escapeHtml(err.message || String(err))}</span>`;
+      }
     }
   }
 
-  private renderAttachedLibraries(): void {
-    if (!this.attachedLibraries.length) {
-      this.attachedLibsListElem.innerHTML = `
+  private renderLinkedWorkspaces(): void {
+    if (!this.linkedWorkspaces.length) {
+      this.linkedWorkspacesListElem.innerHTML = `
         <div style="font-size: 12px; color: var(--text-secondary); font-style: italic;">
-          No libraries attached to this workspace.
+          No workspaces linked.
         </div>
       `;
       return;
     }
 
-    this.attachedLibsListElem.innerHTML = this.attachedLibraries
+    this.linkedWorkspacesListElem.innerHTML = this.linkedWorkspaces
       .map((lib) => {
-        const langBadge = `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 10px;">${escapeHtml(lib.language.toUpperCase())}</span>`;
-        const stdBadge = lib.languageStandard
-          ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.languageStandard)}</span>`
-          : "";
-        const frameworkBadge = lib.targetFramework
-          ? `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px;">${escapeHtml(lib.targetFramework)}</span>`
-          : "";
-        const rootsCount = lib.sourceRoots?.length ?? 0;
-        const rootsInfo = `<span style="font-size: 11px; color: var(--text-secondary);">${rootsCount} root${rootsCount === 1 ? "" : "s"}</span>`;
-
         return `
-          <div class="library-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px;">
+          <div class="linked-workspace-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <strong style="font-size: 12px;">${escapeHtml(lib.name)}</strong>
-              ${langBadge}
-              ${stdBadge}
-              ${frameworkBadge}
-              ${rootsInfo}
+              <span>${escapeHtml(lib.rootPath)}</span>
             </div>
-            <button type="button" class="btn btn-sm detach-lib-btn" data-lib-id="${lib.id}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" title="Detach library from this workspace">Detach</button>
+            <button type="button" class="btn btn-sm unlink-workspace-btn" data-workspace-id="${lib.id}" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" title="Unlink workspace">Unlink</button>
           </div>
         `;
       })
       .join("");
 
-    this.attachedLibsListElem.querySelectorAll(".detach-lib-btn").forEach((btn) => {
+    this.linkedWorkspacesListElem.querySelectorAll(".unlink-workspace-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
-        const libId = Number((e.currentTarget as HTMLElement).getAttribute("data-lib-id"));
-        if (!this.currentWsId || !libId) return;
+        const libId = Number((e.currentTarget as HTMLElement).getAttribute("data-workspace-id"));
+        const workspaceId = this.currentWsId;
+        const viewVersion = this.viewVersion;
+        if (!workspaceId || !libId || !this.isCurrentView(workspaceId, viewVersion)) return;
         const button = btn as HTMLButtonElement;
         try {
           button.disabled = true;
-          await api.detachLibrary(this.currentWsId, libId);
-          await this.loadLibraries(this.currentWsId);
-          this.callbacks.onLibrariesChanged?.();
-          // Trigger re-resolution so persisted symbol links and dependencies are updated
-          api.triggerIndexing(this.currentWsId, "incremental", false).catch(() => {});
+          await api.unlinkWorkspace(workspaceId, libId);
+          this.callbacks.onLinksChanged?.(workspaceId);
+          await this.loadLinks(workspaceId, viewVersion);
         } catch (err: any) {
-          alert(`Failed to detach library: ${err.message || String(err)}`);
+          if (this.isCurrentView(workspaceId, viewVersion)) {
+            alert(`Failed to unlink workspace: ${err.message || String(err)}`);
+          }
         } finally {
           button.disabled = false;
         }
@@ -320,45 +332,40 @@ export class WorkspaceSettingsModal {
   }
 
   private showAttachForm(): void {
-    const attachedIds = new Set(this.attachedLibraries.map((l) => l.id));
-    const available = this.allLibraries.filter((l) => !attachedIds.has(l.id));
+    const attachedIds = new Set(this.linkedWorkspaces.map((l) => l.id));
+    const available = this.allWorkspaces.filter((l) => l.id !== this.currentWsId && !attachedIds.has(l.id));
 
     if (!available.length) {
-      if (confirm("No additional library profiles available to attach. Would you like to open the Library Manager to create one?")) {
-        if (this.callbacks.onManageLibraries) {
-          this.callbacks.onManageLibraries();
-        }
-      }
+      alert("No additional workspaces available. Create a workspace first.");
       return;
     }
+    this.availableWorkspacesSelect.innerHTML = available.map((w) =>
+      `<option value="${w.id}">${escapeHtml(w.name)} — ${escapeHtml(w.rootPath)}</option>`).join("");
 
-    this.availableLibsSelect.innerHTML = available
-      .map(
-        (l) =>
-          `<option value="${l.id}">${escapeHtml(l.name)} (${escapeHtml(l.language.toUpperCase())}${l.targetFramework ? ` / ${escapeHtml(l.targetFramework)}` : l.languageStandard ? ` / ${escapeHtml(l.languageStandard)}` : ""})</option>`
-      )
-      .join("");
-
-    this.attachLibFormElem.style.display = "block";
+    this.linkWorkspaceFormElem.style.display = "block";
   }
 
-  private async handleAttachLibrary(): Promise<void> {
-    if (!this.currentWsId) return;
-    const profileId = Number(this.availableLibsSelect.value);
+  private async handleLinkWorkspace(): Promise<void> {
+    const workspaceId = this.currentWsId;
+    const viewVersion = this.viewVersion;
+    if (!workspaceId || !this.isCurrentView(workspaceId, viewVersion)) return;
+    const profileId = Number(this.availableWorkspacesSelect.value);
     if (!profileId) return;
 
     try {
       this.confirmAttachBtn.disabled = true;
-      await api.attachLibrary(this.currentWsId, profileId);
-      this.attachLibFormElem.style.display = "none";
-      await this.loadLibraries(this.currentWsId);
-      this.callbacks.onLibrariesChanged?.();
-      // Trigger incremental indexing so references resolve against newly attached library headers
-      api.triggerIndexing(this.currentWsId, "incremental", false).catch(() => {});
+      await api.linkWorkspace(workspaceId, profileId);
+      this.callbacks.onLinksChanged?.(workspaceId);
+      if (this.isCurrentView(workspaceId, viewVersion)) {
+        this.linkWorkspaceFormElem.style.display = "none";
+      }
+      await this.loadLinks(workspaceId, viewVersion);
     } catch (err: any) {
-      alert(`Failed to attach library: ${err.message || String(err)}`);
+      if (this.isCurrentView(workspaceId, viewVersion)) {
+        alert(`Failed to link workspace: ${err.message || String(err)}`);
+      }
     } finally {
-      this.confirmAttachBtn.disabled = false;
+      if (this.isCurrentView(workspaceId, viewVersion)) this.confirmAttachBtn.disabled = false;
     }
   }
 
@@ -429,7 +436,9 @@ export class WorkspaceSettingsModal {
   }
 
   private async handleSave(reindex: boolean): Promise<void> {
-    if (!this.currentWsId) return;
+    const workspaceId = this.currentWsId;
+    const viewVersion = this.viewVersion;
+    if (!workspaceId || !this.isCurrentView(workspaceId, viewVersion)) return;
 
     const name = this.nameInput.value.trim();
     const cdbPath = this.cdbInput.value.trim() || null;
@@ -439,37 +448,38 @@ export class WorkspaceSettingsModal {
       this.saveBtn.disabled = true;
       this.saveAndIndexBtn.disabled = true;
 
-      await api.updateWorkspace(this.currentWsId, {
+      await api.updateWorkspace(workspaceId, {
         name: name || undefined,
+        indexingSettings: this.indexingSettings.getValue(),
         compileCommandsPath: cdbPath,
         defaultCompileCommand: defaultCmd,
       });
 
       if (reindex) {
-        await api.triggerIndexing(this.currentWsId, "incremental", false);
+        await api.triggerIndexing(workspaceId, "incremental", false);
       }
 
-      this.close();
-      if (this.callbacks.onSaved) {
-        this.callbacks.onSaved();
-      }
+      if (this.isCurrentView(workspaceId, viewVersion)) this.close();
+      this.callbacks.onSaved?.(workspaceId);
     } catch (err: any) {
-      alert(`Failed to save settings: ${err.message}`);
+      if (this.isCurrentView(workspaceId, viewVersion)) alert(`Failed to save settings: ${err.message}`);
     } finally {
-      this.saveBtn.disabled = false;
-      this.saveAndIndexBtn.disabled = false;
+      if (this.isCurrentView(workspaceId, viewVersion)) this.setActionButtonsDisabled(false);
     }
   }
 
-  async refreshLibraries(): Promise<void> {
-    if (this.currentWsId) {
-      await this.loadLibraries(this.currentWsId);
+  async refreshLinks(): Promise<void> {
+    const workspaceId = this.currentWsId;
+    if (workspaceId) {
+      await this.loadLinks(workspaceId, this.viewVersion);
     }
   }
 
   private async handleDeleteWorkspace(): Promise<void> {
-    if (!this.currentWsId) return;
-    const wsName = this.nameInput.value || this.rootPathElem.textContent || `Workspace #${this.currentWsId}`;
+    const workspaceId = this.currentWsId;
+    const viewVersion = this.viewVersion;
+    if (!workspaceId || !this.isCurrentView(workspaceId, viewVersion)) return;
+    const wsName = this.nameInput.value || this.rootPathElem.textContent || `Workspace #${workspaceId}`;
     if (
       !confirm(
         `Are you sure you want to delete workspace "${wsName}"? All indexed files, symbols, and references will be permanently removed.`
@@ -477,19 +487,19 @@ export class WorkspaceSettingsModal {
     ) {
       return;
     }
+    if (!this.isCurrentView(workspaceId, viewVersion)) return;
 
     try {
       this.deleteWsBtn.disabled = true;
-      await api.deleteWorkspace(this.currentWsId);
-      const deletedId = this.currentWsId;
-      this.close();
-      if (this.callbacks.onDeleted) {
-        this.callbacks.onDeleted(deletedId);
-      }
+      await api.deleteWorkspace(workspaceId);
+      if (this.isCurrentView(workspaceId, viewVersion)) this.close();
+      this.callbacks.onDeleted?.(workspaceId);
     } catch (err: any) {
-      alert(`Failed to delete workspace: ${err.message || String(err)}`);
+      if (this.isCurrentView(workspaceId, viewVersion)) {
+        alert(`Failed to delete workspace: ${err.message || String(err)}`);
+      }
     } finally {
-      this.deleteWsBtn.disabled = false;
+      if (this.isCurrentView(workspaceId, viewVersion)) this.deleteWsBtn.disabled = false;
     }
   }
 }

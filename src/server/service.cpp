@@ -11,11 +11,13 @@
 #include <unordered_set>
 
 #include "codelenses/adapters/registry.hpp"
+#include "codelenses/db/statement.hpp"
 #include "codelenses/filesystem/discovery.hpp"
 #include "codelenses/filesystem/file_capture.hpp"
 #include "codelenses/filesystem/path.hpp"
 #include "codelenses/parser/reference_adapter.hpp"
 #include "codelenses/resolver/compile_commands.hpp"
+#include "codelenses/resolver/resolver.hpp"
 #include "codelenses/treesitter/grammars.hpp"
 #include "codelenses/treesitter/parser.hpp"
 
@@ -92,21 +94,22 @@ std::filesystem::path authorized_file_root(Database& db, const FileRecord& file,
     auto owner_workspace = file.workspace_id == requested_workspace.id
                                ? std::make_optional(requested_workspace)
                                : db.workspaces().get_by_id(file.workspace_id);
-    if (!owner_workspace || owner_workspace->kind != WorkspaceKind::library) {
-        return owner_workspace ? std::filesystem::path(owner_workspace->root_path)
-                              : std::filesystem::path(requested_workspace.root_path);
+    if (!owner_workspace) {
+        return requested_workspace.root_path;
     }
 
-    auto profile = db.libraries().get_profile_by_workspace(owner_workspace->id);
+    auto profile = db.workspace_settings().get_profile_by_workspace(owner_workspace->id);
     if (profile) {
         std::error_code file_ec;
         auto canonical_file = std::filesystem::canonical(file.path, file_ec);
         if (!file_ec) {
-            for (const auto& source_root : db.libraries().list_source_roots(profile->id)) {
+            for (const auto& source_root : db.workspace_settings().list_source_roots(profile->id)) {
                 std::filesystem::path root_path(source_root.path);
-                if (root_path.is_relative()) root_path = owner_workspace->root_path / root_path;
+                if (root_path.is_relative())
+                    root_path = owner_workspace->root_path / root_path;
                 auto canonical_root = filesystem::canonicalize_workspace_root(root_path);
-                if (canonical_root && filesystem::is_contained_in(*canonical_root, canonical_file)) {
+                if (canonical_root &&
+                    filesystem::is_contained_in(*canonical_root, canonical_file)) {
                     return *canonical_root;
                 }
             }
@@ -115,9 +118,9 @@ std::filesystem::path authorized_file_root(Database& db, const FileRecord& file,
     return owner_workspace->root_path;
 }
 
-void authorize_library_source_roots(Database& db, const WorkspacePolicy& policy,
-                                    const LibraryProfile& profile) {
-    auto roots = db.libraries().list_source_roots(profile.id);
+void authorize_workspace_source_roots(Database& db, const WorkspacePolicy& policy,
+                                      const WorkspaceIndexSettings& profile) {
+    auto roots = db.workspace_settings().list_source_roots(profile.id);
     auto owner_workspace = db.workspaces().get_by_id(profile.workspace_id);
     for (const auto& source_root : roots) {
         std::filesystem::path root_path(source_root.path);
@@ -127,12 +130,12 @@ void authorize_library_source_roots(Database& db, const WorkspacePolicy& policy,
         auto status = fs::symlink_status(root_path, ec);
         if (!ec && fs::is_symlink(status) && !policy.allow_external_symlinks) {
             throw ApiError::forbidden("forbidden_workspace_root",
-                                      "Library source root is now a disallowed symlink");
+                                      "Workspace source root is now a disallowed symlink");
         }
         auto canonical_root = filesystem::canonicalize_workspace_root(root_path);
         if (!canonical_root.has_value()) {
             throw ApiError::bad_request("invalid_workspace_root",
-                                        "Library source root is no longer accessible: " +
+                                        "Workspace source root is no longer accessible: " +
                                             root_path.string());
         }
         std::string reason;
@@ -196,21 +199,19 @@ Workspace ApiService::require_workspace(int64_t id) {
 }
 
 FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
-    auto requested_workspace = require_workspace(workspace_id);
+    require_workspace(workspace_id);
     if (file_id <= 0) {
         throw ApiError::bad_request("invalid_id", "File ID must be positive");
     }
     auto f = db_.files().get_by_id(file_id);
     if (!f.has_value()) {
-        throw ApiError::not_found("file_not_found", "File " + std::to_string(file_id) +
-                                                        " not found");
+        throw ApiError::not_found("file_not_found",
+                                  "File " + std::to_string(file_id) + " not found");
     }
-    if (f->workspace_id == workspace_id && requested_workspace.kind == WorkspaceKind::project) {
+    if (f->workspace_id == workspace_id) {
         return *f;
     }
-    auto profile = db_.libraries().get_profile_by_workspace(f->workspace_id);
-    if (requested_workspace.kind == WorkspaceKind::project && profile.has_value() &&
-        db_.libraries().is_attached(workspace_id, profile->id)) {
+    if (db_.workspaces().is_linked(workspace_id, f->workspace_id)) {
         return *f;
     }
     throw ApiError::not_found("file_not_found", "File " + std::to_string(file_id) +
@@ -219,21 +220,19 @@ FileRecord ApiService::require_file(int64_t workspace_id, int64_t file_id) {
 }
 
 Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
-    auto requested_workspace = require_workspace(workspace_id);
+    require_workspace(workspace_id);
     if (symbol_id <= 0) {
         throw ApiError::bad_request("invalid_id", "Symbol ID must be positive");
     }
     auto s = db_.symbols().get_by_id(symbol_id);
     if (!s.has_value()) {
-        throw ApiError::not_found("symbol_not_found", "Symbol " + std::to_string(symbol_id) +
-                                                          " not found");
+        throw ApiError::not_found("symbol_not_found",
+                                  "Symbol " + std::to_string(symbol_id) + " not found");
     }
-    if (s->workspace_id == workspace_id && requested_workspace.kind == WorkspaceKind::project) {
+    if (s->workspace_id == workspace_id) {
         return *s;
     }
-    auto profile = db_.libraries().get_profile_by_workspace(s->workspace_id);
-    if (requested_workspace.kind == WorkspaceKind::project && profile.has_value() &&
-        db_.libraries().is_attached(workspace_id, profile->id)) {
+    if (db_.workspaces().is_linked(workspace_id, s->workspace_id)) {
         return *s;
     }
     throw ApiError::not_found("symbol_not_found", "Symbol " + std::to_string(symbol_id) +
@@ -243,10 +242,11 @@ Symbol ApiService::require_symbol(int64_t workspace_id, int64_t symbol_id) {
 
 OriginMetadataDto ApiService::origin_for_workspace(int64_t owner_workspace_id) {
     OriginMetadataDto origin{.owner_workspace_id = owner_workspace_id};
-    auto profile = db_.libraries().get_profile_by_workspace(owner_workspace_id);
+    if (auto ws = db_.workspaces().get_by_id(owner_workspace_id))
+        origin.owner_workspace_name = ws->name;
+    auto profile = db_.workspace_settings().get_profile_by_workspace(owner_workspace_id);
     if (profile.has_value()) {
-        origin.origin = "library";
-        origin.library_profile_id = profile->id;
+
         origin.target_framework = profile->target_framework;
     }
     return origin;
@@ -255,7 +255,27 @@ OriginMetadataDto ApiService::origin_for_workspace(int64_t owner_workspace_id) {
 // ==========================================
 // Workspace CRUD (F-04)
 // ==========================================
+namespace {
+// Share the indexing coordinator so link/configuration mutations cannot race a writer.
+class WorkspaceMutation {
+    std::shared_ptr<IndexingCoordinator> coord_;
+
+public:
+    explicit WorkspaceMutation(Database& db) : coord_(db.indexing_coordinator()) {
+        std::unique_lock lock(coord_->mutex);
+        coord_->cv.wait(lock, [&] { return !coord_->job_running; });
+        coord_->job_running = true;
+    }
+    ~WorkspaceMutation() {
+        std::lock_guard lock(coord_->mutex);
+        coord_->job_running = false;
+        coord_->cv.notify_all();
+    }
+};
+} // namespace
+
 WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
+    WorkspaceMutation guard(db_);
     if (req.root_path.empty()) {
         throw ApiError::bad_request("missing_field", "Field 'rootPath' is required");
     }
@@ -281,11 +301,6 @@ WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
     }
 
     std::string root_str = canonical_root->string();
-    auto existing = db_.workspaces().get_by_root_path(root_str);
-    if (existing.has_value()) {
-        return workspace_to_dto(*existing);
-    }
-
     std::string name = req.name;
     if (name.empty()) {
         name = canonical_root->filename().string();
@@ -310,98 +325,71 @@ WorkspaceDto ApiService::create_workspace(const CreateWorkspaceRequest& req) {
         .status = WorkspaceStatus::idle,
     };
 
+    auto settings = req.indexing_settings
+                        ? std::make_optional(validate_settings(*req.indexing_settings, ws))
+                        : std::nullopt;
+    Transaction tx(db_.connection(), TransactionType::immediate);
     int64_t id = db_.workspaces().create(ws);
+    if (settings) {
+        settings->workspace_id = id;
+        db_.workspace_settings().create_profile(*settings);
+    }
+    tx.commit();
     auto created = db_.workspaces().get_by_id(id);
     if (!created.has_value()) {
         throw ApiError::internal_error("Failed to retrieve created workspace");
     }
-    return workspace_to_dto(*created);
+    return workspace_dto(*created);
 }
 
 WorkspaceDto ApiService::get_workspace(int64_t id) {
     auto ws = require_workspace(id);
-    return workspace_to_dto(ws);
+    return workspace_dto(ws);
 }
 
 std::vector<WorkspaceDto> ApiService::list_workspaces() {
-    auto all = db_.workspaces().list_by_kind(WorkspaceKind::project);
+    auto all = db_.workspaces().list_all();
     std::vector<WorkspaceDto> dtos;
     dtos.reserve(all.size());
     for (const auto& w : all) {
-        dtos.push_back(workspace_to_dto(w));
+        dtos.push_back(workspace_dto(w));
     }
     return dtos;
 }
 
-namespace {
-
-LibraryDto library_to_dto(const LibraryProfile& profile, const Workspace& ws) {
-    return LibraryDto{
-        .id = profile.id,
-        .workspace_id = profile.workspace_id,
-        .name = profile.name,
-        .language = profile.language,
-        .provider = profile.provider,
-        .sdk_version = profile.sdk_version,
-        .target_environment = profile.target_environment,
-        .language_standard = profile.language_standard,
-        .target_framework = profile.target_framework,
-        .sysroot = profile.sysroot,
-        .source_roots = profile.source_roots,
-        .default_include_roots = profile.default_include_roots,
-        .defines = profile.defines,
-        .include_patterns = profile.include_patterns,
-        .exclude_patterns = profile.exclude_patterns,
-        .fingerprint = profile.fingerprint,
-        .status = to_string(ws.status),
-        .last_error = ws.last_error,
-        .created_at = profile.created_at,
-        .updated_at = profile.updated_at,
-    };
-}
-
-} // namespace
-
-LibraryDto ApiService::create_library(const CreateLibraryRequest& req) {
-    if (req.source_roots.empty() || req.source_roots.front().empty()) {
-        throw ApiError::bad_request("missing_field",
-                                    "Field 'sourceRoots' must contain at least one root");
-    }
-    if (req.name.empty()) {
-        throw ApiError::bad_request("missing_field", "Field 'name' is required");
-    }
+WorkspaceIndexSettings ApiService::validate_settings(const WorkspaceIndexSettingsRequest& req,
+                                                     const Workspace& ws) {
     std::string language = req.language;
-    std::transform(language.begin(), language.end(), language.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-    if (language == "c#" || language == "cs") language = "csharp";
-    if (language != "c" && language != "cpp" && language != "csharp") {
-        throw ApiError::bad_request("invalid_language",
-                                    "Library language must be 'c', 'cpp', or 'csharp'");
+    if (language == "cs" || language == "c#")
+        language = "csharp";
+    if (!language.empty() && !language_from_string(language).has_value())
+        throw ApiError::bad_request("invalid_language", "Unknown indexing language");
+    auto source_roots = req.source_roots;
+    if (source_roots.empty())
+        source_roots.push_back(ws.root_path);
+    for (auto& root : source_roots) {
+        if (fs::path(root).is_relative())
+            root = (fs::path(ws.root_path) / root).string();
     }
-    if (language == "csharp" && (!req.target_framework || req.target_framework->empty())) {
-        throw ApiError::bad_request("missing_field",
-                                    "Field 'targetFramework' is required for C# libraries");
-    }
-
     std::vector<std::string> canonical_roots;
     std::unordered_set<std::string> seen_roots;
-    for (const auto& source_root : req.source_roots) {
+    for (const auto& source_root : source_roots) {
         if (source_root.empty()) {
-            throw ApiError::bad_request("invalid_workspace_root", "Library source roots cannot be empty");
+            throw ApiError::bad_request("invalid_workspace_root",
+                                        "Workspace source roots cannot be empty");
         }
         std::error_code root_ec;
         auto root_status = fs::symlink_status(source_root, root_ec);
         if (!root_ec && fs::is_symlink(root_status) && !policy_.allow_external_symlinks) {
             throw ApiError::forbidden(
                 "forbidden_workspace_root",
-                "Library roots cannot be symlinks when allow_external_symlinks is disabled");
+                "Workspace roots cannot be symlinks when allow_external_symlinks is disabled");
         }
         auto canonical = filesystem::canonicalize_workspace_root(source_root);
         if (!canonical.has_value()) {
-            throw ApiError::bad_request("invalid_workspace_root",
-                                        "Library root path does not exist or is not a directory: " +
-                                            source_root);
+            throw ApiError::bad_request(
+                "invalid_workspace_root",
+                "Workspace root path does not exist or is not a directory: " + source_root);
         }
         std::string root_reason;
         if (!policy_.is_allowed_root(*canonical, &root_reason)) {
@@ -412,15 +400,9 @@ LibraryDto ApiService::create_library(const CreateLibraryRequest& req) {
         }
     }
 
-    // The first source root is the backing workspace root.
-    if (canonical_roots.empty()) {
-        throw ApiError::bad_request("missing_field", "Field 'sourceRoots' must contain a root");
-    }
-    const std::string& root_str = canonical_roots.front();
-
-    LibraryProfile profile{
-        .workspace_id = 0,
-        .name = req.name,
+    WorkspaceIndexSettings profile{
+        .workspace_id = ws.id,
+        .name = ws.name,
         .language = language,
         .provider = req.provider,
         .sdk_version = req.sdk_version,
@@ -434,137 +416,73 @@ LibraryDto ApiService::create_library(const CreateLibraryRequest& req) {
         .include_patterns = req.include_patterns,
         .exclude_patterns = req.exclude_patterns,
     };
-    profile.fingerprint = compute_library_fingerprint(profile);
+    profile.fingerprint = compute_workspace_fingerprint(profile);
 
-    // Check if an identical profile already exists for this backing root
-    auto existing_ws_list = db_.workspaces().list_by_kind(WorkspaceKind::library);
-    for (const auto& ws_cand : existing_ws_list) {
-        if (ws_cand.root_path == root_str) {
-            auto ep = db_.libraries().get_profile_by_workspace(ws_cand.id);
-            if (ep.has_value() && ep->fingerprint == profile.fingerprint) {
-                return library_to_dto(*ep, ws_cand);
-            }
-        }
-    }
-
-    Workspace ws{
-        .root_path = root_str,
-        .name = req.name,
-        .kind = WorkspaceKind::library,
-        .include_patterns = req.include_patterns,
-        .exclude_patterns = req.exclude_patterns,
-        .default_ignores = policy_.default_ignores,
-        .status = WorkspaceStatus::idle,
-    };
-
-    int64_t ws_id = 0;
-    int64_t profile_id = 0;
-    {
-        Transaction tx(db_.connection(), TransactionType::immediate);
-        ws_id = db_.workspaces().create(ws);
-        profile.workspace_id = ws_id;
-        profile_id = db_.libraries().create_profile(profile);
-        tx.commit();
-    }
-
-    auto created = db_.libraries().get_profile(profile_id);
-    auto ws_created = db_.workspaces().get_by_id(ws_id);
-    if (!created.has_value() || !ws_created.has_value()) {
-        throw ApiError::internal_error("Failed to retrieve created library profile");
-    }
-    return library_to_dto(*created, *ws_created);
+    return profile;
 }
 
-std::vector<LibraryDto> ApiService::list_libraries() {
-    auto profiles = db_.libraries().list_profiles();
-    std::vector<LibraryDto> dtos;
-    dtos.reserve(profiles.size());
-    for (const auto& p : profiles) {
-        auto ws = db_.workspaces().get_by_id(p.workspace_id);
-        if (ws.has_value()) {
-            dtos.push_back(library_to_dto(p, *ws));
-        }
+WorkspaceDto ApiService::workspace_dto(const Workspace& ws) {
+    auto dto = workspace_to_dto(ws);
+    if (auto settings = db_.workspace_settings().get_profile_by_workspace(ws.id)) {
+        WorkspaceIndexSettingsRequest req;
+        req.language = settings->language;
+        req.provider = settings->provider;
+        req.sdk_version = settings->sdk_version;
+        req.target_environment = settings->target_environment;
+        req.language_standard = settings->language_standard;
+        req.target_framework = settings->target_framework;
+        req.sysroot = settings->sysroot;
+        req.source_roots = settings->source_roots;
+        req.default_include_roots = settings->default_include_roots;
+        req.defines = settings->defines;
+        req.include_patterns = settings->include_patterns;
+        req.exclude_patterns = settings->exclude_patterns;
+        dto.indexing_settings = std::move(req);
     }
-    return dtos;
+    return dto;
 }
 
-LibraryDto ApiService::get_library(int64_t profile_id) {
-    if (profile_id <= 0) {
-        throw ApiError::bad_request("invalid_id", "Library profile ID must be positive");
-    }
-    auto profile = db_.libraries().get_profile(profile_id);
-    if (!profile.has_value()) {
-        throw ApiError::not_found("library_not_found",
-                                  "Library profile " + std::to_string(profile_id) + " not found");
-    }
-    auto ws = db_.workspaces().get_by_id(profile->workspace_id);
-    if (!ws.has_value()) {
-        throw ApiError::internal_error("Library backing workspace missing");
-    }
-    return library_to_dto(*profile, *ws);
+void ApiService::refresh_resolution(int64_t workspace_id) {
+    resolver::WorkspaceResolver resolver(db_);
+    auto result = resolver.resolve_workspace(workspace_id);
+    if (!result)
+        throw ApiError::internal_error(result.error().message);
+    db_.workspaces().increment_revision(workspace_id);
 }
 
-void ApiService::delete_library(int64_t profile_id) {
-    auto dto = get_library(profile_id);
-    int64_t ws_id = dto.workspace_id;
-    db_.libraries().delete_profile(profile_id);
-    delete_workspace(ws_id);
-}
-
-JobDto ApiService::trigger_library_index(int64_t profile_id, const IndexJobRequest& req) {
-    auto profile = db_.libraries().get_profile(profile_id);
-    if (!profile.has_value()) {
-        throw ApiError::not_found("library_not_found",
-                                  "Library profile " + std::to_string(profile_id) + " not found");
-    }
-    return trigger_indexing(profile->workspace_id, req);
-}
-
-std::vector<LibraryDto> ApiService::list_workspace_libraries(int64_t workspace_id) {
+std::vector<WorkspaceDto> ApiService::list_workspace_links(int64_t workspace_id) {
     require_workspace(workspace_id);
-    auto attached = db_.libraries().list_attached(workspace_id);
-    std::vector<LibraryDto> dtos;
-    dtos.reserve(attached.size());
-    for (const auto& p : attached) {
-        auto ws = db_.workspaces().get_by_id(p.workspace_id);
-        if (ws.has_value()) {
-            dtos.push_back(library_to_dto(p, *ws));
-        }
-    }
-    return dtos;
+    std::vector<WorkspaceDto> result;
+    for (auto id : db_.workspaces().linked_ids(workspace_id))
+        result.push_back(get_workspace(id));
+    return result;
 }
 
-LibraryDto ApiService::attach_library(int64_t workspace_id, const AttachLibraryRequest& req) {
-    auto ws = require_workspace(workspace_id);
-    if (ws.kind == WorkspaceKind::library) {
-        throw ApiError::bad_request("invalid_target",
-                                    "Cannot attach libraries to a library workspace");
-    }
-    auto profile = db_.libraries().get_profile(req.profile_id);
-    if (!profile.has_value()) {
-        throw ApiError::not_found("library_not_found",
-                                  "Library profile " + std::to_string(req.profile_id) +
-                                      " not found");
-    }
-    db_.libraries().attach(workspace_id, req.profile_id);
-    auto lib_ws = db_.workspaces().get_by_id(profile->workspace_id);
-    if (!lib_ws.has_value()) {
-        throw ApiError::internal_error("Library backing workspace missing");
-    }
-    return library_to_dto(*profile, *lib_ws);
-}
-
-void ApiService::detach_library(int64_t workspace_id, int64_t profile_id) {
+WorkspaceDto ApiService::link_workspace(int64_t workspace_id, int64_t target_id) {
+    WorkspaceMutation guard(db_);
     require_workspace(workspace_id);
-    if (!db_.libraries().detach(workspace_id, profile_id)) {
-        throw ApiError::not_found("attachment_not_found",
-                                  "Library profile " + std::to_string(profile_id) +
-                                      " is not attached to workspace " +
-                                      std::to_string(workspace_id));
-    }
+    auto target = require_workspace(target_id);
+    if (workspace_id == target_id)
+        throw ApiError::bad_request("self_link", "A workspace cannot link to itself");
+    if (db_.workspaces().is_linked(workspace_id, target_id))
+        return workspace_dto(target);
+    db_.workspaces().link(workspace_id, target_id);
+    refresh_resolution(workspace_id);
+    return workspace_dto(target);
+}
+
+void ApiService::unlink_workspace(int64_t workspace_id, int64_t target_id) {
+    WorkspaceMutation guard(db_);
+    require_workspace(workspace_id);
+    require_workspace(target_id);
+    if (!db_.workspaces().is_linked(workspace_id, target_id))
+        return;
+    db_.workspaces().unlink(workspace_id, target_id);
+    refresh_resolution(workspace_id);
 }
 
 WorkspaceDto ApiService::update_workspace(int64_t id, const UpdateWorkspaceRequest& req) {
+    WorkspaceMutation guard(db_);
     auto ws = require_workspace(id);
 
     if (req.name.has_value()) {
@@ -584,22 +502,40 @@ WorkspaceDto ApiService::update_workspace(int64_t id, const UpdateWorkspaceReque
         ws.default_compile_command = *req.default_compile_command;
     }
 
+    Transaction tx(db_.connection(), TransactionType::immediate);
+    if (req.indexing_settings) {
+        auto settings = validate_settings(*req.indexing_settings, ws);
+        auto old = db_.workspace_settings().get_profile_by_workspace(id);
+        if (old) {
+            settings.id = old->id;
+            db_.workspace_settings().update_profile(settings);
+        } else {
+            db_.workspace_settings().create_profile(settings);
+        }
+        if (!old || old->fingerprint != settings.fingerprint) {
+            Statement invalidate(db_.connection().handle(),
+                                 "UPDATE file SET modified_ns = 0, content_hash = NULL, parse_hash "
+                                 "= NULL WHERE workspace_id = ?;");
+            invalidate.bind_int64(1, id);
+            invalidate.execute();
+        }
+    }
     db_.workspaces().update(ws);
+    tx.commit();
     auto updated = db_.workspaces().get_by_id(id);
-    return workspace_to_dto(*updated);
+    return workspace_dto(*updated);
 }
 
 void ApiService::delete_workspace(int64_t id) {
-    require_workspace(id);
-    invalidate_cdb_cache(id);
-    {
-        std::lock_guard<std::mutex> lock(threads_mutex_);
-        reserved_workspaces_.erase(id);
-    }
-    if (pipeline_.is_indexing(id)) {
+    if (pipeline_.is_indexing(id))
         static_cast<void>(pipeline_.cancel_workspace(id));
-    }
+    WorkspaceMutation guard(db_);
+    require_workspace(id);
+    auto consumers = db_.workspaces().consumer_ids(id);
+    invalidate_cdb_cache(id);
     db_.workspaces().delete_by_id(id);
+    for (auto consumer : consumers)
+        refresh_resolution(consumer);
 }
 
 // ==========================================
@@ -607,13 +543,8 @@ void ApiService::delete_workspace(int64_t id) {
 // ==========================================
 JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest& req) {
     auto workspace = require_workspace(workspace_id);
-    if (workspace.kind == WorkspaceKind::library) {
-        auto profile = db_.libraries().get_profile_by_workspace(workspace_id);
-        if (!profile.has_value()) {
-            throw ApiError::not_found("library_not_found", "Library profile not found");
-        }
-        authorize_library_source_roots(db_, policy_, *profile);
-    }
+    if (auto settings = db_.workspace_settings().get_profile_by_workspace(workspace_id))
+        authorize_workspace_source_roots(db_, policy_, *settings);
 
     std::unique_lock<std::mutex> lock(threads_mutex_);
     if (shutting_down_.load()) {
@@ -758,8 +689,45 @@ JobDto ApiService::cancel_job(int64_t job_id) {
 // ==========================================
 WorkspaceTreeDto ApiService::get_tree(int64_t workspace_id, const std::string& path) {
     auto ws = require_workspace(workspace_id);
-    if (ws.kind == WorkspaceKind::library) {
-        throw ApiError::not_found("workspace_not_found", "Library backing workspaces are not directly browsable");
+
+    if (db_.workspace_settings().get_profile_by_workspace(workspace_id)) {
+        fs::path requested(path);
+        if (requested.is_absolute() && path != "/")
+            throw ApiError::bad_request("path_traversal", "Tree path must be relative");
+        for (const auto& part : requested)
+            if (part == "..")
+                throw ApiError::bad_request("path_traversal", "Tree path cannot contain '..'");
+        std::string prefix =
+            path == "/" || path == "." ? "" : requested.lexically_normal().generic_string();
+        while (!prefix.empty() && prefix.back() == '/')
+            prefix.pop_back();
+        std::vector<TreeNodeDto> entries;
+        std::unordered_set<std::string> seen;
+        const auto match_prefix = prefix.empty() ? "" : prefix + "/";
+        for (const auto& file : db_.files().list_by_workspace(workspace_id, false)) {
+            if (!file.relative_path.starts_with(match_prefix))
+                continue;
+            auto rest = file.relative_path.substr(match_prefix.size());
+            auto slash = rest.find('/');
+            auto name = rest.substr(0, slash);
+            if (name.empty() || !seen.insert(name).second)
+                continue;
+            const bool directory = slash != std::string::npos;
+            entries.push_back(TreeNodeDto{
+                .name = name,
+                .path = match_prefix + name,
+                .type = directory ? "directory" : "file",
+                .file_id = directory ? std::nullopt : std::make_optional(file.id),
+                .size_bytes = directory ? 0 : file.size_bytes,
+                .is_binary = !directory && file.is_binary,
+                .language = directory ? "" : file.language,
+            });
+        }
+        std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+            return a.type == b.type ? a.name < b.name : a.type == "directory";
+        });
+        return WorkspaceTreeDto{
+            .workspace_id = workspace_id, .path = prefix, .entries = std::move(entries)};
     }
 
     auto canonical_root = filesystem::canonicalize_workspace_root(ws.root_path);
@@ -1308,7 +1276,16 @@ std::vector<OccurrenceDto> ApiService::get_file_occurrences(int64_t workspace_id
         if (kind.has_value() && !kind->empty() && o.occurrence_kind != *kind) {
             continue;
         }
-        dtos.push_back(occurrence_to_dto(o));
+        auto dto = occurrence_to_dto(o);
+        if (o.symbol_id) {
+            auto target = db_.symbols().get_by_id(*o.symbol_id);
+            if (!target || (target->workspace_id != workspace_id &&
+                            !db_.workspaces().is_linked(workspace_id, target->workspace_id))) {
+                dto.symbol_id.reset();
+                dto.resolution = "unresolved";
+            }
+        }
+        dtos.push_back(std::move(dto));
     }
     return dtos;
 }
@@ -1363,11 +1340,11 @@ ApiService::list_symbols(int64_t workspace_id, std::optional<std::string> query,
     std::vector<SymbolDto> paged;
     if (eff_offset < total) {
         int64_t end = std::min(total, eff_offset + eff_limit);
-        const auto origin = origin_for_workspace(workspace_id);
         paged.reserve(static_cast<size_t>(end - eff_offset));
         for (int64_t i = eff_offset; i < end; ++i) {
             auto dto = symbol_to_dto(*filtered[static_cast<size_t>(i)]);
-            dto.origin_metadata = origin;
+            dto.origin_metadata =
+                origin_for_workspace(filtered[static_cast<size_t>(i)]->workspace_id);
             paged.push_back(std::move(dto));
         }
     }
@@ -1533,7 +1510,8 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
     std::unordered_map<int64_t, OriginMetadataDto> origin_cache;
     auto cached_origin = [&](int64_t owner_workspace_id) {
         auto it = origin_cache.find(owner_workspace_id);
-        if (it != origin_cache.end()) return it->second;
+        if (it != origin_cache.end())
+            return it->second;
         auto origin = origin_for_workspace(owner_workspace_id);
         origin_cache.emplace(owner_workspace_id, origin);
         return origin;
@@ -1570,6 +1548,8 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
         // Outgoing relations
         auto out_rels = db_.relations().find_by_source_symbol(curr_id);
         for (const auto& rel : out_rels) {
+            if (rel.workspace_id != workspace_id)
+                continue;
             if (!rel.target_symbol_id.has_value())
                 continue;
 
@@ -1624,7 +1604,8 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
             auto callers = db_.relations().find_by_target_symbol(
                 curr_id, std::make_optional(std::string("calls")));
             for (const auto& caller_relation : callers) {
-                if (caller_relation.workspace_id != workspace_id) continue;
+                if (caller_relation.workspace_id != workspace_id)
+                    continue;
                 const int64_t cid = caller_relation.source_symbol_id;
 
                 if (edges.size() >= eff_max_edges) {
@@ -1646,7 +1627,8 @@ SymbolGraphDto ApiService::get_symbol_graph(int64_t workspace_id, int64_t symbol
                         continue;
                     }
                     auto caller_symbol = db_.symbols().get_by_id(cid);
-                    if (!caller_symbol) continue;
+                    if (!caller_symbol)
+                        continue;
                     std::string caller_rel;
                     OriginMetadataDto caller_origin;
                     if (auto cf = db_.files().get_by_id(caller_symbol->file_id)) {
@@ -1684,15 +1666,10 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
                                                                  const std::string& query,
                                                                  int64_t limit, int64_t offset) {
     auto workspace = require_workspace(workspace_id);
-    if (workspace.kind != WorkspaceKind::project) {
-        throw ApiError::not_found("workspace_not_found", "Library workspaces are not directly searchable");
-    }
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
 
     std::vector<int64_t> owner_workspaces{workspace_id};
-    for (const auto& profile : db_.libraries().list_attached(workspace_id))
-        owner_workspaces.push_back(profile.workspace_id);
 
     struct RankedSourceHit {
         FileSearchResult hit;
@@ -1704,10 +1681,12 @@ PaginatedResultDto<SourceSearchHitDto> ApiService::search_source(int64_t workspa
     for (int64_t owner : owner_workspaces) {
         total += db_.fts().count_search_files(owner, query);
         auto hits = db_.fts().search_files(owner, query, wanted, 0);
-        for (auto& hit : hits) ranked.push_back({std::move(hit), owner});
+        for (auto& hit : hits)
+            ranked.push_back({std::move(hit), owner});
     }
     std::stable_sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
-        if (a.hit.rank != b.hit.rank) return a.hit.rank < b.hit.rank;
+        if (a.hit.rank != b.hit.rank)
+            return a.hit.rank < b.hit.rank;
         if (a.owner_workspace_id != b.owner_workspace_id)
             return a.owner_workspace_id < b.owner_workspace_id;
         return a.hit.file_id < b.hit.file_id;
@@ -1744,14 +1723,11 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
                                                                   const std::string& query,
                                                                   int64_t limit, int64_t offset) {
     auto workspace = require_workspace(workspace_id);
-    if (workspace.kind != WorkspaceKind::project) {
-        throw ApiError::not_found("workspace_not_found", "Library workspaces are not directly searchable");
-    }
     int64_t eff_limit = std::clamp(limit, 1L, static_cast<int64_t>(policy_.max_page_size));
     int64_t eff_offset = std::max(0L, offset);
     std::vector<int64_t> owner_workspaces{workspace_id};
-    for (const auto& profile : db_.libraries().list_attached(workspace_id))
-        owner_workspaces.push_back(profile.workspace_id);
+    for (auto owner : db_.workspaces().linked_ids(workspace_id))
+        owner_workspaces.push_back(owner);
 
     struct RankedSymbolHit {
         SymbolSearchResult hit;
@@ -1801,7 +1777,8 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     }
 
     std::stable_sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
-        if (a.hit.rank != b.hit.rank) return a.hit.rank < b.hit.rank;
+        if (a.hit.rank != b.hit.rank)
+            return a.hit.rank < b.hit.rank;
         if (a.owner_workspace_id != b.owner_workspace_id)
             return a.owner_workspace_id < b.owner_workspace_id;
         return a.hit.id < b.hit.id;
@@ -1812,7 +1789,8 @@ PaginatedResultDto<SymbolSearchHitDto> ApiService::search_symbols(int64_t worksp
     for (int64_t i = eff_offset; i < end; ++i) {
         const auto& entry = ranked[static_cast<std::size_t>(i)];
         std::string rel_path;
-        if (auto file = db_.files().get_by_id(entry.hit.file_id)) rel_path = file->relative_path;
+        if (auto file = db_.files().get_by_id(entry.hit.file_id))
+            rel_path = file->relative_path;
         items.push_back(SymbolSearchHitDto{
             .id = entry.hit.id,
             .file_id = entry.hit.file_id,

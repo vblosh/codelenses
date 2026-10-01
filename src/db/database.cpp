@@ -28,7 +28,7 @@ std::unique_ptr<Database> Database::open_memory(bool apply_migrations) {
 Database::Database(std::unique_ptr<Connection> conn)
     : conn_(std::move(conn)), workspaces_(*conn_), files_(*conn_), symbols_(*conn_),
       occurrences_(*conn_), references_(*conn_), relations_(*conn_), dependencies_(*conn_),
-      diagnostics_(*conn_), jobs_(*conn_), fts_(*conn_), libraries_(*conn_) {}
+      diagnostics_(*conn_), jobs_(*conn_), fts_(*conn_), workspace_settings_(*conn_) {}
 
 void Database::replace_file_index(int64_t file_id, const FileIndexData& data) {
     // Section 6: Transactional file replacement

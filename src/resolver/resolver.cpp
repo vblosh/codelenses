@@ -138,10 +138,18 @@ WorkspaceResolver::WorkspaceResolver(Database& db) : db_(db) {}
 
 namespace {
 
+// Dependency lookup uses physical paths; multi-root display paths retain durable root IDs.
+std::string dependency_path(const FileRecord& file, const std::filesystem::path& root) {
+    auto relative = std::filesystem::path(file.path).lexically_relative(root);
+    if (!relative.empty() && !relative.generic_string().starts_with(".."))
+        return relative.generic_string();
+    return file.path;
+}
+
 // Resolution context for one attached library. Each library gets its own DependencyResolver
 // rooted at the library root, plus identity maps so results can be attributed to the owner.
-struct LibraryScope {
-    LibraryProfile profile;
+struct LinkedWorkspaceScope {
+    WorkspaceIndexSettings profile;
     Workspace workspace;
     DependencyResolver dep_resolver;
     std::unordered_map<std::string, int64_t> file_id_by_rel_path;
@@ -177,6 +185,11 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         file_id_by_path[f.relative_path] = f.id;
         auto lang = language_from_string(f.language).value_or(Language::unknown);
         dep_resolver.register_file(f.id, f.relative_path, lang);
+        if (lang == Language::c || lang == Language::cpp) {
+            auto physical = dependency_path(f, root);
+            dep_resolver.register_file(f.id, physical, lang);
+            file_id_by_path[physical] = f.id;
+        }
     }
 
     configure_compilation_database(dep_resolver, root, ws->compile_commands_path,
@@ -184,9 +197,9 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
     configure_tsconfig_paths(dep_resolver, root);
     configure_go_module(dep_resolver, root);
 
-    if (ws->kind == codelenses::WorkspaceKind::library) {
+    if (db_.workspace_settings().get_profile_by_workspace(workspace_id)) {
         dep_resolver.set_allow_suffix_fallback(false);
-        auto lib_prof = db_.libraries().get_profile_by_workspace(workspace_id);
+        auto lib_prof = db_.workspace_settings().get_profile_by_workspace(workspace_id);
         if (lib_prof.has_value()) {
             std::vector<std::filesystem::path> def_dirs;
             for (const auto& r : lib_prof->default_include_roots) {
@@ -198,15 +211,22 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
 
     // 1b. Attached libraries: build an isolated resolution scope per library so that project
     // files resolve first and library identities never collide with project paths.
-    std::vector<LibraryScope> libraries;
-    if (ws->kind != codelenses::WorkspaceKind::library) {
-        for (const auto& profile : db_.libraries().list_attached(workspace_id)) {
-            auto lib_ws = db_.workspaces().get_by_id(profile.workspace_id);
+    std::vector<LinkedWorkspaceScope> libraries;
+    {
+        for (auto linked_id : db_.workspaces().linked_ids(workspace_id)) {
+            auto lib_ws = db_.workspaces().get_by_id(linked_id);
             if (!lib_ws.has_value()) {
                 continue;
             }
 
-            LibraryScope scope;
+            auto profile = db_.workspace_settings().get_profile_by_workspace(linked_id).value_or(
+                WorkspaceIndexSettings{});
+            if (profile.default_include_roots.empty())
+                profile.default_include_roots = profile.source_roots;
+            if (profile.default_include_roots.empty())
+                profile.default_include_roots.push_back(lib_ws->root_path);
+            profile.name = lib_ws->name;
+            LinkedWorkspaceScope scope;
             scope.profile = profile;
             scope.workspace = *lib_ws;
             std::filesystem::path lib_root(lib_ws->root_path);
@@ -225,6 +245,11 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
                 scope.file_id_by_rel_path[lf.relative_path] = lf.id;
                 auto lang = language_from_string(lf.language).value_or(Language::unknown);
                 scope.dep_resolver.register_file(lf.id, lf.relative_path, lang);
+                if (lang == Language::c || lang == Language::cpp) {
+                    auto physical = dependency_path(lf, lib_root);
+                    scope.dep_resolver.register_file(lf.id, physical, lang);
+                    scope.file_id_by_rel_path[physical] = lf.id;
+                }
             }
             libraries.push_back(std::move(scope));
         }
@@ -248,8 +273,10 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         }
 
         auto lang = language_from_string(it_f->second.language).value_or(Language::unknown);
-        auto target =
-            dep_resolver.resolve_dependency(lang, it_f->second.relative_path, dep.raw_name);
+        const auto source_path = (lang == Language::c || lang == Language::cpp)
+                                     ? dependency_path(it_f->second, root)
+                                     : it_f->second.relative_path;
+        auto target = dep_resolver.resolve_dependency(lang, source_path, dep.raw_name);
 
         std::optional<int64_t> project_tgt_id;
         if (target.target_file_path.has_value()) {
@@ -264,14 +291,13 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         std::optional<int64_t> library_tgt_id;
         if (!project_tgt_id.has_value() && !libraries.empty()) {
             for (auto& lib : libraries) {
-                auto lib_target =
-                    lib.dep_resolver.resolve_dependency(lang, it_f->second.relative_path,
-                                                        dep.raw_name);
+                auto lib_target = lib.dep_resolver.resolve_dependency(
+                    lang, it_f->second.relative_path, dep.raw_name);
                 if (lib_target.target_file_path.has_value()) {
                     auto it_tgt = lib.file_id_by_rel_path.find(*lib_target.target_file_path);
                     if (it_tgt != lib.file_id_by_rel_path.end()) {
                         target = lib_target;
-                        target.reason = "library:" + lib.profile.name;
+                        target.reason = "workspace:" + lib.profile.name;
                         library_tgt_id = it_tgt->second;
                         break;
                     }
@@ -315,6 +341,11 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         auto lib_deps = db_.dependencies().list_by_workspace(lib.workspace.id);
         for (const auto& ld : lib_deps) {
             if (ld.target_file_id.has_value()) {
+                auto target_file = db_.files().get_by_id(*ld.target_file_id);
+                if (!target_file ||
+                    (target_file->workspace_id != workspace_id &&
+                     !db_.workspaces().is_linked(workspace_id, target_file->workspace_id)))
+                    continue;
                 file_imports[ld.source_file_id].push_back(*ld.target_file_id);
             }
         }
@@ -387,8 +418,7 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
 
     std::vector<int64_t> visible_csharp_library_owners;
     for (const auto& lib : libraries) {
-        if (lib.profile.language == "csharp")
-            visible_csharp_library_owners.push_back(lib.workspace.id);
+        visible_csharp_library_owners.push_back(lib.workspace.id);
     }
 
     // 4. Resolve Occurrences
@@ -396,17 +426,21 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
     std::vector<CSharpImportDirective> csharp_imports;
     for (const auto& import_occurrence : occurrences) {
         if (import_occurrence.occurrence_kind != "import" ||
-            !import_occurrence.metadata_json.has_value()) continue;
+            !import_occurrence.metadata_json.has_value())
+            continue;
         auto file = files_by_id.find(import_occurrence.file_id);
         if (file == files_by_id.end() ||
             language_from_string(file->second.language).value_or(Language::unknown) !=
-                Language::csharp) continue;
+                Language::csharp)
+            continue;
         try {
             auto metadata = nlohmann::json::parse(*import_occurrence.metadata_json);
-            if (!metadata.contains("csharpImport") || !metadata["csharpImport"].is_object()) continue;
+            if (!metadata.contains("csharpImport") || !metadata["csharpImport"].is_object())
+                continue;
             const auto& info = metadata["csharpImport"];
-            if (!info.contains("kind") || !info["kind"].is_string() ||
-                !info.contains("target") || !info["target"].is_string()) continue;
+            if (!info.contains("kind") || !info["kind"].is_string() || !info.contains("target") ||
+                !info["target"].is_string())
+                continue;
             CSharpImportDirective directive;
             directive.file_id = import_occurrence.file_id;
             directive.kind = info["kind"].get<std::string>();
@@ -420,9 +454,10 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
                 directive.scope = info["scope"].get<std::string>();
 
             std::string normalized_target = directive.target;
-            if (normalized_target.starts_with("global::")) normalized_target.erase(0, 8);
-            for (std::size_t pos = normalized_target.find("::");
-                 pos != std::string::npos; pos = normalized_target.find("::", pos)) {
+            if (normalized_target.starts_with("global::"))
+                normalized_target.erase(0, 8);
+            for (std::size_t pos = normalized_target.find("::"); pos != std::string::npos;
+                 pos = normalized_target.find("::", pos)) {
                 normalized_target.replace(pos, 2, ".");
                 ++pos;
             }
@@ -431,12 +466,13 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
             bool target_is_type = false;
             for (const auto* target_symbol : target_symbols) {
                 if (language_from_string(target_symbol->language).value_or(Language::unknown) !=
-                    Language::csharp) continue;
+                    Language::csharp)
+                    continue;
                 if (target_symbol->owner_workspace_id != 0 &&
-                    std::find(visible_csharp_library_owners.begin(),
-                              visible_csharp_library_owners.end(),
-                              target_symbol->owner_workspace_id) ==
-                        visible_csharp_library_owners.end()) continue;
+                    std::find(
+                        visible_csharp_library_owners.begin(), visible_csharp_library_owners.end(),
+                        target_symbol->owner_workspace_id) == visible_csharp_library_owners.end())
+                    continue;
                 if (target_symbol->kind == "namespace") {
                     target_is_namespace = true;
                 } else {
@@ -445,10 +481,12 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
             }
             if (target_is_type && !target_is_namespace) {
                 directive.target_kind = "type";
-                if (directive.kind == "namespace_or_type") directive.kind = "type";
+                if (directive.kind == "namespace_or_type")
+                    directive.kind = "type";
             } else if (target_is_namespace && !target_is_type) {
                 directive.target_kind = "namespace";
-                if (directive.kind == "namespace_or_type") directive.kind = "namespace";
+                if (directive.kind == "namespace_or_type")
+                    directive.kind = "namespace";
             }
             csharp_imports.push_back(std::move(directive));
         } catch (...) {
@@ -470,11 +508,11 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         const auto& imported = get_transitive_imports(occ.file_id);
 
         auto res = lang == Language::csharp
-                       ? symbol_resolver.resolve_csharp_occurrence(
-                             occ, it_f->second.relative_path, csharp_imports,
-                             visible_csharp_library_owners)
+                       ? symbol_resolver.resolve_csharp_occurrence(occ, it_f->second.relative_path,
+                                                                   csharp_imports,
+                                                                   visible_csharp_library_owners)
                        : symbol_resolver.resolve_occurrence(occ, it_f->second.relative_path, lang,
-                                                           imported);
+                                                            imported);
 
         std::optional<int64_t> resolved_sym_id = std::nullopt;
         if (res.resolution == Resolution::resolved && !res.candidates.empty()) {
@@ -514,9 +552,9 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         const auto& imported = get_transitive_imports(ref.source_file_id);
 
         auto res = lang == Language::csharp
-                       ? symbol_resolver.resolve_csharp_reference(
-                             ref, it_f->second.relative_path, csharp_imports,
-                             visible_csharp_library_owners)
+                       ? symbol_resolver.resolve_csharp_reference(ref, it_f->second.relative_path,
+                                                                  csharp_imports,
+                                                                  visible_csharp_library_owners)
                        : symbol_resolver.resolve_reference(ref, it_f->second.relative_path, lang,
                                                            imported);
 
@@ -537,7 +575,8 @@ Result<ResolutionStats> WorkspaceResolver::resolve_workspace(int64_t workspace_i
         if (ref.metadata_json.has_value() && !ref.metadata_json->empty()) {
             try {
                 meta_obj = nlohmann::json::parse(*ref.metadata_json);
-            } catch (...) {}
+            } catch (...) {
+            }
         }
         if (!res.candidates.empty()) {
             std::vector<int64_t> cand_ids;

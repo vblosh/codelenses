@@ -40,7 +40,8 @@ TEST_CASE("MigrationRunner creates migration table and applies initial schema", 
         REQUIRE(stmt_fts.column_int64(0) == 0);
 
         Statement occurrence_schema(
-            conn->handle(), "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'occurrence';");
+            conn->handle(),
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'occurrence';");
         REQUIRE(occurrence_schema.step());
         CHECK(occurrence_schema.column_text(0).find("'inheritance'") != std::string::npos);
     }
@@ -207,18 +208,21 @@ TEST_CASE("MigrationRunner preserves populated workspace and child rows when upg
 
     // 4. Assert all rows survived intact and foreign key integrity is preserved
     {
-        Statement s_ws(conn->handle(), "SELECT id, root_path, name, kind FROM workspace WHERE id = 1;");
+        Statement s_ws(conn->handle(),
+                       "SELECT id, root_path, name, kind FROM workspace WHERE id = 1;");
         REQUIRE(s_ws.step());
         REQUIRE(s_ws.column_int64(0) == 1);
         REQUIRE(s_ws.column_text(1) == "/workspace/project1");
         REQUIRE(s_ws.column_text(2) == "Project One");
         REQUIRE(s_ws.column_text(3) == "project");
 
-        Statement s_file(conn->handle(), "SELECT count(*) FROM file WHERE id = 10 AND workspace_id = 1;");
+        Statement s_file(conn->handle(),
+                         "SELECT count(*) FROM file WHERE id = 10 AND workspace_id = 1;");
         REQUIRE(s_file.step());
         REQUIRE(s_file.column_int64(0) == 1);
 
-        Statement s_sym(conn->handle(), "SELECT count(*) FROM symbol WHERE id = 100 AND workspace_id = 1;");
+        Statement s_sym(conn->handle(),
+                        "SELECT count(*) FROM symbol WHERE id = 100 AND workspace_id = 1;");
         REQUIRE(s_sym.step());
         REQUIRE(s_sym.column_int64(0) == 1);
 
@@ -226,7 +230,8 @@ TEST_CASE("MigrationRunner preserves populated workspace and child rows when upg
         REQUIRE(s_occ.step());
         REQUIRE(s_occ.column_int64(0) == 1);
 
-        Statement s_content(conn->handle(), "SELECT count(*) FROM file_content WHERE file_id = 10;");
+        Statement s_content(conn->handle(),
+                            "SELECT count(*) FROM file_content WHERE file_id = 10;");
         REQUIRE(s_content.step());
         REQUIRE(s_content.column_int64(0) == 1);
 
@@ -246,7 +251,8 @@ TEST_CASE("C# library migration preserves every configured source root", "[migra
     conn->execute(migrations[0].up_sql);
     conn->execute("INSERT INTO schema_migration (version, name) VALUES (1, '001_initial_schema');");
     conn->execute(migrations[1].up_sql);
-    conn->execute("INSERT INTO schema_migration (version, name) VALUES (2, '002_library_indexes');");
+    conn->execute(
+        "INSERT INTO schema_migration (version, name) VALUES (2, '002_library_indexes');");
     conn->execute(R"SQL(
         INSERT INTO workspace (id, root_path, name, kind)
         VALUES (1, '/legacy/library', 'Legacy library', 'library');
@@ -257,7 +263,7 @@ TEST_CASE("C# library migration preserves every configured source root", "[migra
     runner.apply_pending(*conn);
 
     Statement roots(conn->handle(),
-                    "SELECT ordinal, root_path FROM library_source_root WHERE profile_id = 1 "
+                    "SELECT ordinal, root_path FROM workspace_source_root WHERE profile_id = 1 "
                     "ORDER BY ordinal;");
     REQUIRE(roots.step());
     CHECK(roots.column_int64(0) == 0);
@@ -268,7 +274,53 @@ TEST_CASE("C# library migration preserves every configured source root", "[migra
     CHECK_FALSE(roots.step());
 
     Statement framework(conn->handle(),
-                        "SELECT target_framework FROM library_profile WHERE id = 1;");
+                        "SELECT target_framework FROM workspace_index_settings WHERE id = 1;");
     REQUIRE(framework.step());
     CHECK(framework.column_optional_text(0) == std::nullopt);
+}
+
+TEST_CASE("Workspace link migration preserves indexes, roots, and shared-root configurations",
+          "[migration][workspace-links]") {
+    auto db = Database::open_memory(false);
+    auto& conn = db->connection();
+    auto& runner = db->migration_runner();
+    runner.ensure_migration_table(conn);
+    conn.execute("PRAGMA foreign_keys = OFF;");
+    for (const auto& migration : runner.registered_migrations()) {
+        if (migration.version >= 5)
+            break;
+        conn.execute(migration.up_sql);
+        Statement record(conn.handle(),
+                         "INSERT INTO schema_migration(version, name) VALUES (?, ?);");
+        record.bind_int64(1, migration.version);
+        record.bind_text(2, migration.name);
+        record.execute();
+    }
+    conn.execute(R"SQL(
+        INSERT INTO workspace(id, root_path, name, kind) VALUES
+            (1, '/project', 'A', 'project'), (2, '/sdk', 'B', 'library'), (3, '/sdk', 'C', 'library');
+        INSERT INTO library_profile(id, workspace_id, name, language, source_roots_json, target_framework)
+            VALUES (10, 2, 'B', 'csharp', '["/sdk", "/contracts"]', 'net8.0'),
+                   (11, 3, 'C', 'csharp', '["/sdk"]', 'net9.0');
+        INSERT INTO library_source_root(id, profile_id, ordinal, root_path)
+            VALUES (20, 10, 0, '/sdk'), (21, 10, 1, '/contracts'), (22, 11, 0, '/sdk');
+        INSERT INTO workspace_library(workspace_id, profile_id) VALUES (1, 10), (1, 11);
+        INSERT INTO file(id, workspace_id, path, relative_path, name) VALUES (30, 2, '/sdk/Widget.cs', 'root-20/Widget.cs', 'Widget.cs');
+    )SQL");
+    runner.apply_pending(conn);
+    REQUIRE(db->workspaces().linked_ids(1) == std::vector<int64_t>{2, 3});
+    REQUIRE(db->workspaces().list_all().size() == 3);
+    auto settings = db->workspace_settings().get_profile_by_workspace(2);
+    REQUIRE(settings);
+    CHECK(settings->id == 10);
+    CHECK(settings->target_framework == "net8.0");
+    const auto roots = db->workspace_settings().list_source_roots(10);
+    REQUIRE(roots.size() == 2);
+    CHECK(roots[0].id == 20);
+    CHECK(roots[1].id == 21);
+    REQUIRE(db->files().get_by_id(30));
+    CHECK(db->files().get_by_id(30)->relative_path == "root-20/Widget.cs");
+    Statement foreign_keys(conn.handle(), "PRAGMA foreign_key_check;");
+    CHECK_FALSE(foreign_keys.step());
+    REQUIRE_NOTHROW(runner.apply_pending(conn));
 }

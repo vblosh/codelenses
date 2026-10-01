@@ -154,7 +154,7 @@ export class CodeWindowComponent {
         <div class="code-path">
           <span class="file-path-text">No file open</span>
           <span class="badge lang-badge" style="display: none;"></span>
-          <span class="badge library-origin-badge" style="display: none;"></span>
+          <span class="badge workspace-origin-badge" style="display: none;"></span>
           <button class="badge compile-badge" style="display: none;" title="Active compile command context (click to inspect)"></button>
         </div>
         <div class="code-nav">
@@ -174,7 +174,7 @@ export class CodeWindowComponent {
     this.tabsBar = this.element.querySelector(".code-tabs-bar")!;
     this.pathElem = this.element.querySelector(".file-path-text")!;
     this.langBadge = this.element.querySelector(".lang-badge")!;
-    this.originBadge = this.element.querySelector(".library-origin-badge")!;
+    this.originBadge = this.element.querySelector(".workspace-origin-badge")!;
     this.compileBadge = this.element.querySelector(".compile-badge")!;
     this.navControls = this.element.querySelector(".code-nav")!;
     this.bannerContainer = this.element.querySelector(".range-banner-area")!;
@@ -1067,16 +1067,12 @@ export class CodeWindowComponent {
   }
 
   private updateOriginBadge(file: FileMetadataDto): void {
-    if (file.origin !== "library") {
+    if (!file.ownerWorkspaceId || file.ownerWorkspaceId === this.store.getState().workspaceId) {
       this.originBadge.style.display = "none";
       return;
     }
-    this.originBadge.textContent = file.targetFramework
-      ? `Library · ${file.targetFramework}`
-      : "Library source";
-    this.originBadge.title = file.libraryProfileId
-      ? `Source from library profile #${file.libraryProfileId}`
-      : `Source from workspace #${file.ownerWorkspaceId ?? "?"}`;
+    this.originBadge.textContent = file.ownerWorkspaceName || `Workspace #${file.ownerWorkspaceId}`;
+    this.originBadge.title = `Source from ${this.originBadge.textContent}`;
     this.originBadge.style.display = "inline-flex";
   }
 

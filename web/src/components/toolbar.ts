@@ -6,7 +6,7 @@ export interface ToolbarCallbacks {
   onSearch: (query: string, type: "source" | "symbol") => void;
   onOpenSettings?: () => void;
   onAddWorkspace?: () => void;
-  onManageLibraries?: () => void;
+  onManageLinks?: () => void;
 }
 
 export class ToolbarComponent {
@@ -66,12 +66,12 @@ export class ToolbarComponent {
             </svg>
             <span>Add</span>
           </button>
-          <button class="btn-icon manage-libs-btn" title="Manage standard libraries & SDK profiles">
+          <button class="btn-icon manage-links-btn" title="Manage linked workspaces">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
             </svg>
-            <span>Libraries</span>
+            <span>Links</span>
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@ export class ToolbarComponent {
     this.workspaceSelect = this.element.querySelector(".workspace-select")!;
     this.settingsBtn = this.element.querySelector(".ws-settings-btn")!;
     this.addWsBtn = this.element.querySelector(".add-workspace-btn")!;
-    this.manageLibsBtn = this.element.querySelector(".manage-libs-btn")!;
+    this.manageLibsBtn = this.element.querySelector(".manage-links-btn")!;
     this.statusBadge = this.element.querySelector(".index-status-badge")!;
     this.statusText = this.element.querySelector(".status-text")!;
     this.indexBtn = this.element.querySelector(".index-btn")!;
@@ -131,8 +131,8 @@ export class ToolbarComponent {
     });
 
     this.manageLibsBtn.addEventListener("click", () => {
-      if (this.callbacks.onManageLibraries) {
-        this.callbacks.onManageLibraries();
+      if (this.callbacks.onManageLinks) {
+        this.callbacks.onManageLinks();
       }
     });
 

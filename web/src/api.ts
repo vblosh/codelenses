@@ -18,11 +18,6 @@ import type {
   FileCompileCommandDto,
   WorkspaceCompileCommandsDto,
   UpdateWorkspaceRequest,
-  LibraryDto,
-  LibraryListResponse,
-  WorkspaceLibrariesResponse,
-  CreateLibraryRequest,
-  AttachLibraryRequest,
   CreateWorkspaceRequest,
 } from "./types";
 
@@ -236,57 +231,20 @@ export class ApiClient {
     );
   }
 
-  async getLibraries(): Promise<LibraryListResponse> {
-    return this.request<LibraryListResponse>("/api/v1/libraries");
+  async getWorkspaceLinks(workspaceId: number): Promise<WorkspaceListResponse> {
+    return this.request<WorkspaceListResponse>(`/api/v1/workspaces/${workspaceId}/links`);
   }
 
-  async createLibrary(req: CreateLibraryRequest): Promise<LibraryDto> {
-    return this.request<LibraryDto>("/api/v1/libraries", {
+  async linkWorkspace(workspaceId: number, targetWorkspaceId: number): Promise<WorkspaceDto> {
+    return this.request<WorkspaceDto>(`/api/v1/workspaces/${workspaceId}/links`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req),
+      body: JSON.stringify({ targetWorkspaceId }),
     });
   }
 
-  async getLibrary(id: number): Promise<LibraryDto> {
-    return this.request<LibraryDto>(`/api/v1/libraries/${id}`);
-  }
-
-  async deleteLibrary(id: number): Promise<{ status: string; id: number }> {
-    return this.request<{ status: string; id: number }>(`/api/v1/libraries/${id}`, {
-      method: "DELETE",
-    });
-  }
-
-  async indexLibrary(id: number): Promise<JobDto> {
-    return this.request<JobDto>(`/api/v1/libraries/${id}/index`, {
-      method: "POST",
-    });
-  }
-
-  async getWorkspaceLibraries(workspaceId: number): Promise<WorkspaceLibrariesResponse> {
-    return this.request<WorkspaceLibrariesResponse>(`/api/v1/workspaces/${workspaceId}/libraries`);
-  }
-
-  async attachLibrary(
-    workspaceId: number,
-    req: AttachLibraryRequest | number
-  ): Promise<LibraryDto> {
-    const body = typeof req === "number" ? { profileId: req } : req;
-    return this.request<LibraryDto>(`/api/v1/workspaces/${workspaceId}/libraries`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  }
-
-  async detachLibrary(workspaceId: number, libraryId: number): Promise<{ status: string }> {
-    return this.request<{ status: string }>(
-      `/api/v1/workspaces/${workspaceId}/libraries/${libraryId}`,
-      {
-        method: "DELETE",
-      }
-    );
+  async unlinkWorkspace(workspaceId: number, targetWorkspaceId: number): Promise<{ status: string }> {
+    return this.request<{ status: string }>(`/api/v1/workspaces/${workspaceId}/links/${targetWorkspaceId}`, { method: "DELETE" });
   }
 }
 

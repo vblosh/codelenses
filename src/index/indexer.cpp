@@ -1,8 +1,8 @@
 #include "codelenses/index/indexer.hpp"
 
-#include <chrono>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <deque>
 #include <future>
 #include <iostream>
@@ -236,7 +236,8 @@ ExtractionResult extract_file(int64_t workspace_id, int64_t job_id, const Planne
             if (occurrence_metadata.has_value()) {
                 try {
                     auto parsed = nlohmann::json::parse(*occurrence_metadata);
-                    if (parsed.is_object()) metadata = std::move(parsed);
+                    if (parsed.is_object())
+                        metadata = std::move(parsed);
                 } catch (...) {
                 }
             }
@@ -501,6 +502,11 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         }
     } cleanup{*this, workspace_id, job_id_override.value_or(0), coord};
 
+    // A queued job may have waited while its workspace was edited or deleted.
+    ws = db_.workspaces().get_by_id(workspace_id);
+    if (!ws)
+        return unexpected_result<IndexResult>(ErrorCode::not_found, "workspace not found");
+
     int64_t job_id = 0;
     if (job_id_override.has_value()) {
         job_id = *job_id_override;
@@ -581,28 +587,26 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
     disc_opts.default_ignores = ws->default_ignores;
     disc_opts.max_file_size_bytes = options_.max_file_size_bytes;
 
-    std::optional<LibraryProfile> lib_profile;
-    if (ws->kind == WorkspaceKind::library) {
-        lib_profile = db_.libraries().get_profile_by_workspace(workspace_id);
-        if (lib_profile.has_value()) {
-            if (!lib_profile->include_patterns.empty()) {
-                disc_opts.include_patterns = lib_profile->include_patterns;
-            }
-            if (!lib_profile->exclude_patterns.empty()) {
-                disc_opts.exclude_patterns = lib_profile->exclude_patterns;
-            }
-            if (lib_profile->language == "cpp") {
-                disc_opts.allow_extensionless_headers = true;
-                disc_opts.extensionless_language = Language::cpp;
-                disc_opts.extension_overrides[".tcc"] = Language::cpp;
-                disc_opts.extension_overrides[".inc"] = Language::cpp;
-                disc_opts.ambiguous_header_mode = Language::cpp;
-            } else if (lib_profile->language == "c") {
-                disc_opts.extension_overrides[".inc"] = Language::c;
-                disc_opts.ambiguous_header_mode = Language::c;
-            }
+    auto lib_profile = db_.workspace_settings().get_profile_by_workspace(workspace_id);
+    if (lib_profile) {
+        if (!lib_profile->include_patterns.empty()) {
+            disc_opts.include_patterns = lib_profile->include_patterns;
         }
-    } else {
+        if (!lib_profile->exclude_patterns.empty()) {
+            disc_opts.exclude_patterns = lib_profile->exclude_patterns;
+        }
+        if (lib_profile->language == "cpp") {
+            disc_opts.allow_extensionless_headers = true;
+            disc_opts.extensionless_language = Language::cpp;
+            disc_opts.extension_overrides[".tcc"] = Language::cpp;
+            disc_opts.extension_overrides[".inc"] = Language::cpp;
+            disc_opts.ambiguous_header_mode = Language::cpp;
+        } else if (lib_profile->language == "c") {
+            disc_opts.extension_overrides[".inc"] = Language::c;
+            disc_opts.ambiguous_header_mode = Language::c;
+        }
+    }
+    if (!disc_opts.ambiguous_header_mode.has_value()) {
         if (default_cmd != nullptr) {
             if (default_cmd->is_cpp()) {
                 disc_opts.ambiguous_header_mode = Language::cpp;
@@ -610,7 +614,8 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                 disc_opts.ambiguous_header_mode = Language::c;
             }
         }
-        if (!disc_opts.ambiguous_header_mode.has_value() && raw_cdb != nullptr && !raw_cdb->empty()) {
+        if (!disc_opts.ambiguous_header_mode.has_value() && raw_cdb != nullptr &&
+            !raw_cdb->empty()) {
             for (const auto& entry : raw_cdb->entries()) {
                 if (entry.is_cpp()) {
                     disc_opts.ambiguous_header_mode = Language::cpp;
@@ -620,31 +625,29 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         }
     }
 
-    if (ws->kind == WorkspaceKind::library) {
+    if (lib_profile.has_value()) {
         adapters::CompileCommandContext lib_cmd;
         if (default_cmd != nullptr) {
             lib_cmd = *default_cmd;
         }
         lib_cmd.conservative_preproc = true;
-        if (lib_profile.has_value()) {
-            if (!lib_cmd.language_standard.has_value() && lib_profile->language_standard.has_value()) {
-                lib_cmd.language_standard = lib_profile->language_standard;
-            }
-            if (lib_profile->sysroot.has_value() && !lib_profile->sysroot->empty()) {
-                lib_cmd.sysroot = std::filesystem::path(*lib_profile->sysroot);
-            }
-            for (const auto& d : lib_profile->defines) {
-                lib_cmd.defines.push_back(d);
-            }
-            for (const auto& r : lib_profile->default_include_roots) {
-                lib_cmd.search_entries.push_back(adapters::IncludeSearchEntry{
-                    .directory = std::filesystem::path(r),
-                    .category = adapters::IncludeCategory::default_toolchain,
-                    .origin = adapters::IncludeOrigin::configured_profile,
-                    .role = (lib_profile->language == "cpp") ? adapters::RootRole::cpp_library
-                                                             : adapters::RootRole::c_runtime,
-                });
-            }
+        if (!lib_cmd.language_standard.has_value() && lib_profile->language_standard.has_value()) {
+            lib_cmd.language_standard = lib_profile->language_standard;
+        }
+        if (lib_profile->sysroot.has_value() && !lib_profile->sysroot->empty()) {
+            lib_cmd.sysroot = std::filesystem::path(*lib_profile->sysroot);
+        }
+        for (const auto& d : lib_profile->defines) {
+            lib_cmd.defines.push_back(d);
+        }
+        for (const auto& r : lib_profile->default_include_roots) {
+            lib_cmd.search_entries.push_back(adapters::IncludeSearchEntry{
+                .directory = std::filesystem::path(r),
+                .category = adapters::IncludeCategory::default_toolchain,
+                .origin = adapters::IncludeOrigin::configured_profile,
+                .role = (lib_profile->language == "cpp") ? adapters::RootRole::cpp_library
+                                                         : adapters::RootRole::c_runtime,
+            });
         }
         default_cmd = std::make_shared<const resolver::CompileCommand>(std::move(lib_cmd));
     }
@@ -652,10 +655,10 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
 
     filesystem::FileDiscovery discovery(disc_opts);
     std::vector<filesystem::DiscoveredFile> discovered;
-    if (ws->kind == WorkspaceKind::library && lib_profile.has_value()) {
-        auto roots = db_.libraries().list_source_roots(lib_profile->id);
+    if (lib_profile.has_value()) {
+        auto roots = db_.workspace_settings().list_source_roots(lib_profile->id);
         if (roots.empty()) {
-            roots.push_back(LibrarySourceRoot{
+            roots.push_back(WorkspaceSourceRoot{
                 .id = 0,
                 .profile_id = lib_profile->id,
                 .ordinal = 0,
@@ -666,7 +669,8 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         const bool multiple_roots = roots.size() > 1;
         for (const auto& source_root : roots) {
             std::filesystem::path source_path(source_root.path);
-            if (source_path.is_relative()) source_path = canonical_root / source_path;
+            if (source_path.is_relative())
+                source_path = canonical_root / source_path;
             auto root_result = filesystem::canonicalize_workspace_root(source_path);
             if (!root_result) {
                 auto error = root_result.error();
@@ -688,13 +692,15 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
             for (auto file : *root_files) {
                 if (lib_profile->language == "csharp") {
                     auto extension = file.absolute_path.extension().string();
-                    std::transform(extension.begin(), extension.end(), extension.begin(),
-                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-                    if (extension != ".cs") continue;
+                    std::transform(
+                        extension.begin(), extension.end(), extension.begin(),
+                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                    if (extension != ".cs")
+                        continue;
                 }
                 std::error_code canonical_ec;
-                auto canonical_file = std::filesystem::weakly_canonical(file.absolute_path,
-                                                                          canonical_ec);
+                auto canonical_file =
+                    std::filesystem::weakly_canonical(file.absolute_path, canonical_ec);
                 const std::string canonical_key =
                     canonical_ec ? file.absolute_path.lexically_normal().string()
                                  : canonical_file.string();
@@ -702,15 +708,14 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                     continue;
                 }
                 if (multiple_roots || lib_profile->language == "csharp") {
-                    file.relative_path = "root-" + std::to_string(source_root.id) + "/" +
-                                         file.relative_path;
+                    file.relative_path =
+                        "root-" + std::to_string(source_root.id) + "/" + file.relative_path;
                 }
                 discovered.push_back(std::move(file));
             }
         }
-        std::sort(discovered.begin(), discovered.end(), [](const auto& a, const auto& b) {
-            return a.relative_path < b.relative_path;
-        });
+        std::sort(discovered.begin(), discovered.end(),
+                  [](const auto& a, const auto& b) { return a.relative_path < b.relative_path; });
     } else {
         auto disc_res = discovery.discover(canonical_root);
         if (!disc_res) {
@@ -926,17 +931,17 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
         };
     }
 
-    // Refresh consuming projects when a library index changed, even though their own files
-    // did not change.
-    if (resolve_res && ws->kind == WorkspaceKind::library) {
-        auto profile = db_.libraries().get_profile_by_workspace(workspace_id);
-        if (profile.has_value()) {
-            for (int64_t consumer_id : db_.libraries().list_consumers(profile->id)) {
-                if (job_stop.stop_requested()) {
-                    break;
-                }
-                static_cast<void>(workspace_resolver.resolve_workspace(consumer_id, job_stop));
-            }
+    // Only direct consumers need a refresh; do not recursively follow cycles.
+    if (resolve_res) {
+        for (auto consumer_id : db_.workspaces().consumer_ids(workspace_id)) {
+            if (job_stop.stop_requested())
+                break;
+            auto refreshed = workspace_resolver.resolve_workspace(consumer_id, job_stop);
+            if (refreshed)
+                db_.workspaces().increment_revision(consumer_id);
+            else
+                db_.workspaces().update_status(consumer_id, WorkspaceStatus::error,
+                                               refreshed.error().message);
         }
     }
 

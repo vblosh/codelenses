@@ -257,8 +257,8 @@ The repository includes a complete GitHub Actions workflow (`.github/workflows/c
 
 ---
 
-## Standard Library Indexing
+## Linked Workspaces
 
-CodeLenses provides local-first indexing for C and C++ standard libraries and platform toolchain headers (e.g. GCC libstdc++, Clang libc++, glibc) with strict caller isolation, deterministic search ordering, and include-evidence symbol resolution.
+Link workspace A to B to search B's symbols and open its declarations while keeping reference usages scoped to A. Links are directional and direct. Standard libraries and other local dependencies use the same workspace model, with optional advanced indexing settings for SDK source roots and headers.
 
-For setup instructions, REST API examples, and configuration guides, refer to the [User Guide: C/C++ Standard Library Indexing](docs/user_guide_standard_libraries.md).
+See the [linked workspaces guide](docs/user_guide_standard_libraries.md) for browser setup, API examples, language coverage, and migration from library profiles.
