@@ -14,6 +14,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: "GCC Debug (Warnings as Errors)"
+            c_compiler: gcc
+            cxx_compiler: g++
+            build_type: Debug
+            warnings_as_errors: "ON"
+            enable_asan: "OFF"
+            enable_ubsan: "OFF"
           - name: "GCC Release"
             c_compiler: gcc
             cxx_compiler: g++
@@ -28,6 +35,10 @@ jobs:
             warnings_as_errors: "ON"
             enable_asan: "ON"
             enable_ubsan: "ON"
+
+    env:
+      CCACHE_DIR: /home/runner/.cache/ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
 
     steps:
       - name: Checkout repository
@@ -66,9 +77,17 @@ jobs:
             -DCODELENSES_ENABLE_UBSAN=${{ matrix.enable_ubsan }} \
             -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
 
+      - name: Zero ccache statistics
+        run: |
+          ccache -z
+
       - name: Build
         run: |
           cmake --build build --parallel
+
+      - name: Show ccache statistics
+        run: |
+          ccache -s
 
       - name: Run Tests
         run: |

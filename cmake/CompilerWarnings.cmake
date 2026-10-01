@@ -66,6 +66,8 @@ function(codelenses_set_compiler_warnings TARGET_NAME)
         endif()
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(TARGET_WARNINGS ${GCC_CLANG_WARNINGS} ${GCC_ONLY_WARNINGS})
+        # GCC 12/13/14 have known false positive null-dereference warnings in libstdc++ headers at -O3
+        list(REMOVE_ITEM TARGET_WARNINGS -Wnull-dereference)
         if(CODELENSES_WARNINGS_AS_ERRORS)
             list(APPEND TARGET_WARNINGS -Werror)
         endif()

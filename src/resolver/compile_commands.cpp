@@ -1,6 +1,7 @@
 #include "codelenses/resolver/compile_commands.hpp"
 
 #include <fstream>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
 
@@ -349,7 +350,9 @@ CompilationDatabase::load_file(const std::filesystem::path& file_path,
                                                           file_path.string());
     }
 
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    std::string content = ss.str();
     return parse_json(content, workspace_root);
 }
 

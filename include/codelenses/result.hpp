@@ -1,7 +1,16 @@
 #pragma once
 
 #include <cstdint>
+#if defined(__clang__) && defined(__cpp_concepts) && (__cpp_concepts < 202002L)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wbuiltin-macro-redefined"
+#undef __cpp_concepts
+#define __cpp_concepts 202002L
 #include <expected>
+#pragma clang diagnostic pop
+#else
+#include <expected>
+#endif
 #include <optional>
 #include <string>
 #include <string_view>

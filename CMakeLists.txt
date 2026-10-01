@@ -15,6 +15,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Workaround for Clang <= 18 with libstdc++ (GCC 13/14) where libstdc++'s <expected>
+# requires __cpp_concepts >= 202002L while Clang reports 201907L.
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+    add_compile_definitions(__cpp_concepts=202002L)
+    add_compile_options(-Wno-builtin-macro-redefined)
+endif()
+
 # Default to Debug if not specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
