@@ -633,7 +633,9 @@ JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest&
             auto current = database().jobs().get_by_id(job_id);
             if (current.has_value() &&
                 (current->status == "queued" || current->status == "running")) {
-                std::string st = (res.error().code == ErrorCode::cancelled) ? "cancelled" : "failed";
+                std::string st = (res.error().code == ErrorCode::cancelled)
+                                     ? "cancelled"
+                                     : "failed";
                 database().jobs().finish_job(job_id, st, std::nullopt, res.error().message);
             }
         }

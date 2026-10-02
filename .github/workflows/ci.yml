@@ -39,6 +39,8 @@ jobs:
     env:
       CCACHE_DIR: /home/runner/.cache/ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
+      FETCHCONTENT_BASE_DIR: /home/runner/.cache/fetchcontent
 
     steps:
       - name: Checkout repository
@@ -46,8 +48,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ccache ninja-build
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ccache
 
       - name: Cache compiler outputs
         uses: actions/cache@v4
@@ -56,6 +58,23 @@ jobs:
           key: ${{ runner.os }}-ccache-${{ matrix.c_compiler }}-${{ matrix.build_type }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-ccache-${{ matrix.c_compiler }}-${{ matrix.build_type }}-
+
+      - name: Cache vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg/archives
+          key: ${{ runner.os }}-vcpkg-${{ matrix.c_compiler }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-${{ matrix.c_compiler }}-${{ matrix.build_type }}-
+            ${{ runner.os }}-vcpkg-
+
+      - name: Cache Tree-sitter grammars
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/fetchcontent
+          key: ${{ runner.os }}-fetchcontent-${{ hashFiles('cmake/TreeSitterGrammar.cmake', 'CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-fetchcontent-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -75,6 +94,8 @@ jobs:
             -DCODELENSES_WARNINGS_AS_ERRORS=${{ matrix.warnings_as_errors }} \
             -DCODELENSES_ENABLE_ASAN=${{ matrix.enable_asan }} \
             -DCODELENSES_ENABLE_UBSAN=${{ matrix.enable_ubsan }} \
+            -DFETCHCONTENT_BASE_DIR=${{ env.FETCHCONTENT_BASE_DIR }} \
+            -DFETCHCONTENT_UPDATES_DISCONNECTED=ON \
             -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
 
       - name: Zero ccache statistics
@@ -91,4 +112,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          ctest --test-dir build --output-on-failure
+          ctest --test-dir build --output-on-failure --parallel 2

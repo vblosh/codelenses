@@ -400,6 +400,7 @@ export class ToolbarComponent {
   }
 
   private syncIndexButton(): void {
+    if (this.destroyed) return;
     const wsId = this.store.getState().workspaceId;
     let label = "Index";
     let title = "Re-index workspace";

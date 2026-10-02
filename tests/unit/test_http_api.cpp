@@ -826,6 +826,7 @@ TEST_CASE("HTTP readers stay responsive while the indexing connection is busy",
     const auto workspace_id = std::to_string(workspace.id);
     const auto file_id = std::to_string(file->id);
     const std::vector<std::string> paths = {
+        "/api/v1/health",
         "/api/v1/workspaces/" + workspace_id + "/status",
         "/api/v1/jobs/" + std::to_string(indexed->job_id),
         "/api/v1/workspaces/" + workspace_id + "/tree?path=src",
