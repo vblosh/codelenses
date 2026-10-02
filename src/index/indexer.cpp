@@ -824,7 +824,12 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                     }
                 }
                 if (!ext_res.diagnostics.empty()) {
+                    Transaction tx(db_.connection(), TransactionType::immediate);
+                    if (ext_res.planned.file_id > 0) {
+                        db_.diagnostics().delete_by_file(ext_res.planned.file_id);
+                    }
                     db_.diagnostics().insert_batch(ext_res.diagnostics);
+                    tx.commit();
                 }
                 continue;
             }
@@ -870,10 +875,8 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
                     diag.file_id = file_id;
                 }
 
+                ext_res.index_data.diagnostics = std::move(ext_res.diagnostics);
                 db_.replace_file_index(file_id, ext_res.index_data);
-                if (!ext_res.diagnostics.empty()) {
-                    db_.diagnostics().insert_batch(ext_res.diagnostics);
-                }
                 files_processed++;
             }
         }

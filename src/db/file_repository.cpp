@@ -269,6 +269,16 @@ int64_t FileRepository::cleanup_deleted_files_derived_data(int64_t workspace_id)
     // Section 7: Deleted-file cleanup
     Transaction tx(conn_, TransactionType::immediate);
 
+    Statement del_diag(conn_.handle(), R"SQL(
+        DELETE FROM diagnostic
+        WHERE file_id IN (
+            SELECT id FROM file
+            WHERE workspace_id = ? AND is_deleted = 1
+        );
+    )SQL");
+    del_diag.bind_int64(1, workspace_id);
+    del_diag.execute();
+
     Statement del_occ(conn_.handle(), R"SQL(
         DELETE FROM occurrence
         WHERE file_id IN (

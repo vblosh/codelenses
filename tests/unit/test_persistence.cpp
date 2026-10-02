@@ -506,6 +506,54 @@ TEST_CASE("Transactional file replacement updates metadata and replaces derived 
     }
 }
 
+TEST_CASE("Diagnostic replacement rolls back with a failed file index update",
+          "[db][replacement][diagnostics]") {
+    auto db = Database::open_memory();
+    const auto ws_id = db->workspaces().create(
+        Workspace{.root_path = "/ws/diagnostics", .name = "Diagnostics"});
+    const auto file_id = db->files().insert(FileRecord{
+        .workspace_id = ws_id,
+        .path = "/ws/diagnostics/main.c",
+        .relative_path = "main.c",
+        .name = "main.c",
+        .content_hash = "before",
+    });
+    Diagnostic old_diag{
+        .workspace_id = ws_id,
+        .file_id = file_id,
+        .severity = "error",
+        .source = "parser",
+        .code = "syntax.error",
+        .message = "Original diagnostic",
+    };
+    db->diagnostics().insert(old_diag);
+
+    auto new_diag = old_diag;
+    new_diag.message = "Replacement diagnostic";
+    auto invalid_diag = new_diag;
+    invalid_diag.severity = "invalid";
+    FileIndexData data{
+        .content_hash = "after",
+        .diagnostics = {new_diag, invalid_diag},
+    };
+    REQUIRE_THROWS_AS(db->replace_file_index(file_id, data), DbError);
+    const auto remaining = db->diagnostics().list_by_file(file_id);
+    REQUIRE(remaining.size() == 1);
+    CHECK(remaining[0].message == old_diag.message);
+    CHECK(db->files().get_by_id(file_id)->content_hash == "before");
+
+    data.diagnostics = {new_diag};
+    db->replace_file_index(file_id, data);
+    db->replace_file_index(file_id, data);
+    const auto replaced = db->diagnostics().list_by_file(file_id);
+    REQUIRE(replaced.size() == 1);
+    CHECK(replaced[0].message == new_diag.message);
+
+    data.diagnostics.clear();
+    db->replace_file_index(file_id, data);
+    CHECK(db->diagnostics().list_by_file(file_id).empty());
+}
+
 TEST_CASE("File state comparison and stale record cleanup", "[db][files][cleanup]") {
     auto db = Database::open_memory();
 
@@ -565,8 +613,29 @@ TEST_CASE("File state comparison and stale record cleanup", "[db][files][cleanup
     auto f1_rec = db->files().get_by_id(f1);
     REQUIRE(f1_rec->is_deleted == false);
 
+    for (const auto file_id : {f1, f2}) {
+        db->diagnostics().insert(Diagnostic{
+            .workspace_id = ws_id,
+            .file_id = file_id,
+            .severity = "error",
+            .source = "parser",
+            .code = "syntax.error",
+            .message = "File diagnostic",
+        });
+    }
+    db->diagnostics().insert(Diagnostic{
+        .workspace_id = ws_id,
+        .severity = "warning",
+        .source = "indexer",
+        .code = "job.warning",
+        .message = "Diagnostic without a file",
+    });
+
     // Derived data cleanup (Section 7)
     db->files().cleanup_deleted_files_derived_data(ws_id);
+    CHECK(db->diagnostics().list_by_file(f2).empty());
+    CHECK(db->diagnostics().list_by_file(f1).size() == 1);
+    CHECK(db->diagnostics().count_by_workspace(ws_id).total == 2);
 
     // Verify symbols of f2 deleted
     REQUIRE(db->symbols().list_by_file(f2).empty());

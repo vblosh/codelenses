@@ -71,6 +71,8 @@ void Database::replace_file_index(int64_t file_id, const FileIndexData& data) {
     update_file.execute();
 
     // 2. Remove derived records before inserting the new extraction
+    diagnostics_.delete_by_file(file_id);
+
     Statement del_occ(conn_->handle(), "DELETE FROM occurrence WHERE file_id = ?;");
     del_occ.bind_int64(1, file_id);
     del_occ.execute();
@@ -178,6 +180,7 @@ void Database::replace_file_index(int64_t file_id, const FileIndexData& data) {
     relations_.insert_batch(relations);
 
     dependencies_.insert_batch(data.dependencies);
+    diagnostics_.insert_batch(data.diagnostics);
 
     // 4. Update file indexed_at
     Statement finish_file(conn_->handle(), R"SQL(

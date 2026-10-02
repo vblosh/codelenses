@@ -39,6 +39,7 @@ struct FileIndexData {
     std::vector<ReferenceOccurrence> references = {};
     std::vector<SymbolRelation> relations = {};
     std::vector<FileDependency> dependencies = {};
+    std::vector<Diagnostic> diagnostics = {};
 };
 
 struct IndexingCoordinator {

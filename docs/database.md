@@ -41,6 +41,56 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 
 The application must reject a database with a newer schema version than it supports.
 
+### 3.1 Current schema and relationships
+
+The DDL in sections 4 and 5 describes the initial schema. The current application schema is version 5, defined by the migrations registered in `src/db/migration.cpp`:
+
+| Version | Migration | Change |
+| --- | --- | --- |
+| 1 | `001_initial_schema` | Core index, jobs, diagnostics, and FTS5 tables. |
+| 2 | `002_library_indexes` | Workspace kind, library profiles, and library attachments. |
+| 3 | `003_csharp_library_profiles` | Target framework and ordered library source roots. |
+| 4 | `004_inheritance_occurrences` | Adds `inheritance` to occurrence kinds by rebuilding the table. |
+| 5 | `005_linked_workspaces` | Renames profiles to `workspace_index_settings` and roots to `workspace_source_root`; replaces library attachments with directed `workspace_link` records and removes workspace root uniqueness. |
+
+`workspace_source_root.profile_id` retains its historical column name but references `workspace_index_settings.id`. Each workspace can have one settings record and can link to several other workspaces. The initial workspace schema also includes `default_compile_command TEXT` alongside `compile_commands_path`.
+
+The following diagram shows the current logical relationships. Nullable foreign keys allow unresolved targets and records without a file or job. FTS connections are logical external-content relationships, maintained by triggers; they are not foreign keys. SQLite indexes and FTS shadow tables are omitted.
+
+```mermaid
+erDiagram
+    workspace ||--o| workspace_index_settings : configures
+    workspace_index_settings ||--o{ workspace_source_root : orders
+    workspace ||--o{ workspace_link : source
+    workspace ||--o{ workspace_link : target
+    workspace ||--o{ index_job : runs
+    workspace ||--o{ file : contains
+    workspace ||--o{ symbol : owns
+    workspace ||--o{ occurrence : owns
+    workspace ||--o{ reference_occurrence : owns
+    workspace ||--o{ symbol_relation : owns
+    workspace ||--o{ file_dependency : owns
+    workspace ||--o{ diagnostic : owns
+    workspace ||--o{ file_content : owns
+    index_job |o--o{ file : last_index_job
+    index_job |o--o{ diagnostic : reports
+    file ||--o{ symbol : defines
+    file ||--o{ occurrence : locates
+    file ||--o{ reference_occurrence : source
+    file ||--o{ file_dependency : source
+    file |o--o{ file_dependency : target
+    file |o--o{ diagnostic : locates
+    file ||--o| file_content : caches
+    symbol |o--o{ symbol : scope
+    symbol |o--o{ occurrence : resolves
+    symbol |o--o{ reference_occurrence : source
+    symbol |o--o{ reference_occurrence : target
+    symbol ||--o{ symbol_relation : source
+    symbol |o--o{ symbol_relation : target
+    symbol ||--|| symbol_search : indexes
+    file_content ||--|| file_search : indexes
+```
+
 ## 4. Core schema
 
 The following DDL represents the initial schema migration.
@@ -120,7 +170,7 @@ CREATE INDEX file_deleted_idx
     ON file(workspace_id, is_deleted);
 ```
 
-`path` is an internal canonical filesystem path. `relative_path` is the stable API and database path. Deleted files remain as tombstones until the cleanup policy removes them, or they can be deleted immediately if historical diagnostics are not required.
+`path` is an internal canonical filesystem path. `relative_path` is the stable API and database path. Deleted files remain as tombstones until the cleanup policy removes them. Their derived records, including file diagnostics, are removed during deleted-file cleanup.
 
 ### 4.3 Symbols
 
@@ -580,6 +630,7 @@ SET size_bytes = :size_bytes,
 WHERE id = :file_id;
 
 -- Remove derived records before inserting the new extraction.
+DELETE FROM diagnostic WHERE file_id = :file_id;
 DELETE FROM occurrence WHERE file_id = :file_id;
 DELETE FROM reference_occurrence WHERE source_file_id = :file_id;
 DELETE FROM file_dependency WHERE source_file_id = :file_id;
@@ -588,7 +639,7 @@ WHERE source_symbol_id IN (SELECT id FROM symbol WHERE file_id = :file_id)
    OR target_symbol_id IN (SELECT id FROM symbol WHERE file_id = :file_id);
 DELETE FROM symbol WHERE file_id = :file_id;
 
--- Insert symbols, occurrences, references, dependencies, and relations here.
+-- Insert symbols, occurrences, references, dependencies, relations, and diagnostics here.
 
 UPDATE file
 SET indexed_at = CURRENT_TIMESTAMP,
@@ -599,6 +650,8 @@ COMMIT;
 ```
 
 If any statement fails, issue `ROLLBACK`. In production code, use prepared statements and repository methods rather than assembling SQL with source text or paths.
+
+File diagnostics represent the latest indexing attempt. `FileIndexData::diagnostics` is replaced in the same transaction as the extracted index, including clearing previous diagnostics when the new extraction has none. Failed file reads replace the existing file's diagnostics in a separate transaction while retaining its last successful index. Diagnostics without a file remain associated with their workspace or job.
 
 ## 7. Deleted-file cleanup
 
@@ -614,6 +667,12 @@ WHERE workspace_id = :workspace_id
   AND id NOT IN (SELECT id FROM discovered_file_ids);
 
 DELETE FROM occurrence
+WHERE file_id IN (
+    SELECT id FROM file
+    WHERE workspace_id = :workspace_id AND is_deleted = 1
+);
+
+DELETE FROM diagnostic
 WHERE file_id IN (
     SELECT id FROM file
     WHERE workspace_id = :workspace_id AND is_deleted = 1
@@ -785,3 +844,93 @@ The database implementation must test:
 10. Confidence, ambiguity, unresolved, and external resolution states.
 11. UTF-8 byte and line/column range persistence.
 12. FTS trigger consistency after insert, update, and delete.
+
+## 11. Database size investigation
+
+### 11.1 Observed storage
+
+Read-only inspection of `~/codelenses.db` on 2026-10-02 found a schema-version-5 database of **994,758,656 bytes (948.68 MiB)**. There was no WAL sidecar at inspection time; the stored journal mode was `delete`, although application connections configure WAL. Sizes below describe this snapshot, not a fixed storage budget.
+
+| Measurement | Pages (4,096 bytes each) | MiB | Share of file |
+| --- | ---: | ---: | ---: |
+| Total file | 242,861 | 948.68 | 100% |
+| Free pages (`freelist_count`) | 147,623 | 576.65 | 60.8% |
+| Allocated pages | 95,238 | 372.02 | 39.2% |
+
+The main reason the file is large is **previously allocated pages retained after deletions**. `auto_vacuum` is `0` (disabled), so deleting index records makes pages reusable without shrinking the file. Reindexing and migrations that rebuild tables can create this pattern; the snapshot does not identify which operation produced each free page.
+
+```mermaid
+pie showData
+    title codelenses.db physical storage in MiB (2026-10-02)
+    "Free pages available for reuse" : 576.65
+    "References and indexes" : 106.03
+    "Symbols and indexes" : 60.69
+    "Diagnostics and indexes" : 59.10
+    "Occurrences and indexes" : 58.60
+    "Symbol relations and indexes" : 42.73
+    "Symbol FTS5 shadow tables" : 38.48
+    "Other allocated pages" : 6.41
+```
+
+### 11.2 Reclaiming space and limiting growth
+
+To reclaim the existing free pages, stop indexing and close application database connections, then run the following as a separate maintenance operation after taking a backup:
+
+```sh
+sqlite3 "$HOME/codelenses.db" 'VACUUM;'
+```
+
+`VACUUM` rebuilds the database and returns unused pages to the filesystem. Removing the freelist alone would reduce the original snapshot to approximately **372 MiB**; the final size can be smaller because allocated pages also contain unused space. Allow disk space for the rebuild.
+
+Maintenance performed on 2026-10-02 backed up the database, deleted diagnostics whose `file_id` references a tombstone, then ran `VACUUM`. It removed **309,123 diagnostics**, leaving **42,496**, and reduced the file from **948.68 MiB to 288.34 MiB** (302,350,336 bytes). The freelist became empty, no diagnostics remained attached to deleted files, other core table row counts were unchanged, and `PRAGMA quick_check` returned `ok`. The backup is `/tmp/codelenses-before-diagnostic-cleanup-20261002T092921Z.db`; `/tmp` is temporary storage.
+
+Further size reductions require explicit retention or schema decisions:
+
+- Purge deleted-file tombstones when historical diagnostics are no longer needed. With foreign keys enabled, deleting the file records cascades to their diagnostics; deleting rows alone still leaves reusable pages until compaction.
+- File diagnostics now replace the previous attempt's output. Define retention separately for diagnostics without a file and any future job-history archive.
+- Keep toolchain source roots and include/exclude rules bounded to the intended headers.
+- Review indexes against actual query usage before removing them. For example, `file_workspace_path_idx` duplicates the columns of the automatic index created by `UNIQUE(workspace_id, relative_path)`; each occupies about 0.67 MiB in this snapshot.
+- Treat FTS `optimize` as search-index maintenance; it does not replace whole-database compaction.
+
+### 11.3 Reproducing the measurements
+
+Open the database read-only. Run these queries in a read transaction for a consistent view when the application is active; access to an existing WAL and its shared-memory state may also be required.
+
+```sql
+PRAGMA query_only = ON;
+BEGIN;
+
+SELECT
+    p.page_size,
+    n.page_count,
+    f.freelist_count,
+    p.page_size * n.page_count AS total_bytes,
+    p.page_size * f.freelist_count AS free_bytes,
+    p.page_size * (n.page_count - f.freelist_count) AS allocated_bytes
+FROM pragma_page_size AS p,
+     pragma_page_count AS n,
+     pragma_freelist_count AS f;
+
+-- Requires SQLite built with dbstat support; reports tables/indexes separately.
+SELECT name,
+       COUNT(*) AS pages,
+       SUM(pgsize) AS allocated_bytes,
+       SUM(payload) AS payload_bytes,
+       SUM(unused) AS unused_bytes_in_allocated_pages
+FROM dbstat
+GROUP BY name
+ORDER BY allocated_bytes DESC;
+
+SELECT workspace_id, is_deleted, COUNT(*) AS files
+FROM file
+GROUP BY workspace_id, is_deleted;
+
+SELECT f.workspace_id, f.is_deleted, COUNT(*) AS diagnostics
+FROM diagnostic AS d
+JOIN file AS f ON f.id = d.file_id
+GROUP BY f.workspace_id, f.is_deleted;
+
+COMMIT;
+```
+
+Unused bytes inside allocated pages are distinct from whole pages on the freelist; do not add them to allocated storage again. FTS5 shadow tables appear individually in `dbstat`, so group `symbol_search_*` and `file_search_*` when comparing feature costs.

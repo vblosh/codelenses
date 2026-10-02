@@ -318,6 +318,38 @@ TEST_CASE("Diagnostics for malformed and invalid files (D-12)", "[index][pipelin
     }
     REQUIRE(has_parser_diag);
 
+    const auto malformed = env.db->files().get_by_path(ws_id, "src/malformed.c");
+    REQUIRE(malformed.has_value());
+    const auto original_count = env.db->diagnostics().list_by_file(malformed->id).size();
+    REQUIRE(original_count > 0);
+    const auto repeated = pipeline.run_indexing(ws_id, "full", true);
+    REQUIRE(repeated.has_value());
+    REQUIRE(repeated->status == "completed");
+    const auto current_diags = env.db->diagnostics().list_by_file(malformed->id);
+    REQUIRE(current_diags.size() == original_count);
+    for (const auto& diag : current_diags) {
+        CHECK(diag.job_id == repeated->job_id);
+    }
+
+    SECTION("Repairing a file clears its parser diagnostics") {
+        env.write_file("src/malformed.c", "int repaired() { return 0; }\n");
+        const auto repaired = pipeline.run_indexing(ws_id, "full", true);
+        REQUIRE(repaired.has_value());
+        REQUIRE(repaired->status == "completed");
+        CHECK(env.db->diagnostics().list_by_file(malformed->id).empty());
+    }
+
+    SECTION("Deleting a file clears its diagnostics while retaining its tombstone") {
+        env.remove_file("src/malformed.c");
+        const auto deleted = pipeline.run_indexing(ws_id, "incremental", false);
+        REQUIRE(deleted.has_value());
+        REQUIRE(deleted->status == "completed");
+        CHECK(env.db->diagnostics().list_by_file(malformed->id).empty());
+        const auto tombstone = env.db->files().get_by_id(malformed->id);
+        REQUIRE(tombstone.has_value());
+        CHECK(tombstone->is_deleted);
+    }
+
     // Valid file still indexed despite syntax error in malformed file
     auto valid_file = env.db->files().get_by_path(ws_id, "src/valid.c");
     REQUIRE(valid_file.has_value());
@@ -841,5 +873,4 @@ TEST_CASE("Asynclog project indexed without errors", "[indexer][pipeline][asyncl
     CHECK(found_set_reporting);
     CHECK(found_set_filter);
 }
-
 
