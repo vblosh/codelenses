@@ -11,6 +11,7 @@ describe("StateStore", () => {
     expect(state.selectedSymbolId).toBeNull();
     expect(state.expandedFolders.size).toBe(0);
     expect(state.indexStatus).toBe("idle");
+    expect(state.searchType).toBe("symbol");
   });
 
   it("updates state and notifies subscribers", () => {

@@ -263,8 +263,8 @@ export class AppComponent {
         <div class="search-modal-header">
           <input type="text" class="search-modal-input" placeholder="Type to search..." />
           <select class="search-mode-select search-modal-mode" style="background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 12px;">
+            <option value="symbol" selected>Symbol</option>
             <option value="source">Source</option>
-            <option value="symbol">Symbol</option>
           </select>
           <button class="btn-icon close-search-btn" title="Close search (Esc)">✕</button>
         </div>
@@ -478,7 +478,7 @@ export class AppComponent {
     }
   }
 
-  openSearch(initialQuery: string = "", type: "source" | "symbol" = "source"): void {
+  openSearch(initialQuery: string = "", type: "source" | "symbol" = "symbol"): void {
     this.searchModalBackdrop.style.display = "flex";
     this.searchModeSelect.value = type;
     if (initialQuery) {

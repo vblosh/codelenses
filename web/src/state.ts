@@ -22,7 +22,7 @@ export class StateStore {
       activeMobileTab: "explorer",
       activeInspectorTab: "references",
       searchQuery: "",
-      searchType: "source",
+      searchType: "symbol",
       isSearching: false,
       ...initialState,
     };

@@ -100,8 +100,8 @@ export class ToolbarComponent {
             </svg>
             <input type="text" class="search-input" placeholder="Search codebase (/ to focus)..." aria-label="Search" />
             <select class="search-mode-select" title="Search mode">
+              <option value="symbol" selected>Symbol</option>
               <option value="source">Source</option>
-              <option value="symbol">Symbol</option>
             </select>
           </div>
         </div>

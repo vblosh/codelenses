@@ -54,6 +54,13 @@ describe("Frontend components", () => {
       expect(elem.querySelector(".add-workspace-btn")).not.toBeNull();
       expect(elem.querySelector(".manage-links-btn")).not.toBeNull();
       expect(elem.querySelector(".search-input")).not.toBeNull();
+      const searchMode = elem.querySelector<HTMLSelectElement>(".search-mode-select")!;
+      expect(searchMode).not.toBeNull();
+      expect(searchMode.value).toBe("symbol");
+      const searchInput = elem.querySelector<HTMLInputElement>(".search-input")!;
+      searchInput.value = "myQuery";
+      searchInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+      expect(onSearch).toHaveBeenCalledWith("myQuery", "symbol");
       expect(elem.querySelector(".index-status-badge")).not.toBeNull();
 
       toolbar.destroy();
@@ -1736,7 +1743,7 @@ describe("Frontend components", () => {
       });
 
       const app = new AppComponent(container, store);
-      app.openSearch();
+      app.openSearch("", "source");
       const input = document.querySelector(".search-modal-input") as HTMLInputElement;
       input.value = "test";
       await (app as any).performSearch();
@@ -1780,6 +1787,15 @@ describe("Frontend components", () => {
       expect(modal.textContent).toContain(maliciousName);
       expect(modal.textContent).toContain("SDK");
 
+      app.closeSearch();
+    });
+
+    it("defaults search modal selection to symbol", async () => {
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({ workspaces: [], total: 0 });
+      const app = new AppComponent(container, store);
+      app.openSearch();
+      const modeSelect = document.querySelector(".search-modal-mode") as HTMLSelectElement;
+      expect(modeSelect.value).toBe("symbol");
       app.closeSearch();
     });
 
