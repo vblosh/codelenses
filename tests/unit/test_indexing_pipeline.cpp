@@ -345,7 +345,7 @@ TEST_CASE("Concurrency tests for one writer and multiple readers (D-14)",
     // Spawn 4 reader threads
     std::vector<std::thread> readers;
     for (int r = 0; r < 4; ++r) {
-        readers.emplace_back([&, r] {
+        readers.emplace_back([&] {
             // Open a separate SQLite connection in each reader thread (best practice for WAL mode)
             auto reader_db = Database::open(env.db_file.string(), false);
             while (!writer_done.load(std::memory_order_relaxed)) {
