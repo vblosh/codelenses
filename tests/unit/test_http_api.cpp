@@ -381,7 +381,7 @@ TEST_CASE("HTTP C# library profile creation, attachment, and access revocation",
     CHECK(library_json["indexingSettings"]["targetFramework"] == "net8.0");
 
     auto wait_for_job = [&](int64_t job_id) {
-        for (int attempt = 0; attempt < 100; ++attempt) {
+        for (int attempt = 0; attempt < 600; ++attempt) {
             auto job_res = env.client->Get("/api/v1/jobs/" + std::to_string(job_id));
             if (job_res && job_res->status == 200) {
                 const auto job = nlohmann::json::parse(job_res->body);

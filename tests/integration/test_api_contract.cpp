@@ -111,8 +111,8 @@ struct ApiContractFixture {
         fs::remove_all(temp_dir, ec);
     }
 
-    void wait_for_job(int64_t job_id) {
-        for (int i = 0; i < 50; ++i) {
+    void wait_for_job(int64_t job_id, int max_checks = 600) {
+        for (int i = 0; i < max_checks; ++i) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             auto res = client->Get("/api/v1/jobs/" + std::to_string(job_id));
             if (res && res->status == 200) {

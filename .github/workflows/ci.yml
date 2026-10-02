@@ -39,12 +39,17 @@ jobs:
     env:
       CCACHE_DIR: /home/runner/.cache/ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
-      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
+      VCPKG_DEFAULT_BINARY_CACHE: /home/runner/.cache/vcpkg/archives
+      VCPKG_BINARY_SOURCES: "clear;files,/home/runner/.cache/vcpkg/archives,readwrite"
       FETCHCONTENT_BASE_DIR: /home/runner/.cache/fetchcontent
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create cache directories
+        run: |
+          mkdir -p ~/.cache/vcpkg/archives ~/.cache/fetchcontent ~/.cache/ccache
 
       - name: Install system dependencies
         run: |
