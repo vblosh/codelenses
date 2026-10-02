@@ -42,6 +42,7 @@ public:
     // Indexing, Status & Jobs (F-05)
     JobDto trigger_indexing(int64_t workspace_id, const IndexJobRequest& req);
     WorkspaceStatusDto get_workspace_status(int64_t workspace_id);
+    WorkspaceSummaryDto get_workspace_summary(int64_t workspace_id);
     JobDto get_job(int64_t job_id);
     JobDto cancel_job(int64_t job_id);
 

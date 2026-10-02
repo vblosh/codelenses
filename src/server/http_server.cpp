@@ -238,6 +238,14 @@ void HttpServer::register_routes() {
         });
     });
 
+    svr_.Get(R"(/api/v1/workspaces/(\d+)/summary)", [this](const httplib::Request& req,
+                                                           httplib::Response& res) {
+        handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {
+            int64_t id = parse_id(r.matches[1].str(), "workspaceId");
+            return service_.get_workspace_summary(id);
+        });
+    });
+
     svr_.Get(R"(/api/v1/workspaces/(\d+)/compile-commands)", [this](const httplib::Request& req,
                                                                     httplib::Response& res) {
         handle_json(req, res, [&](const httplib::Request& r, const std::string&) -> nlohmann::json {

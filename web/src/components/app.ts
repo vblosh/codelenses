@@ -84,6 +84,13 @@ export class AppComponent {
       onOpenSettings: () => this.settingsModal.open(),
       onAddWorkspace: () => this.addWorkspaceModal.open(),
       onManageLinks: () => this.settingsModal.open(),
+      onShowSummary: () => {
+        if (this.store.getState().workspaceId === null) return;
+        this.store.selectFile(null);
+        void this.codeWindow.showWorkspaceSummary(true);
+        this.store.setActiveMobileTab("code");
+      },
+      onStatus: (status) => this.codeWindow?.updateWorkspaceStatus(status),
     });
     this.container.appendChild(this.toolbar.getElement());
 
@@ -320,6 +327,17 @@ export class AppComponent {
 
     // Store sync for mobile tabs, inspector tabs, diagnostics, and symbol references
     this.store.subscribe((state, changedKeys) => {
+      if (changedKeys.includes("workspaceId") || changedKeys.includes("selectedFileId")) {
+        const codeTab = this.mobileTabsBar.querySelector<HTMLButtonElement>('[data-tab="code"]');
+        if (codeTab) {
+          codeTab.textContent = state.workspaceId !== null && state.selectedFileId === null
+            ? "Summary"
+            : "Code";
+        }
+        if (state.workspaceId !== null) {
+          this.store.setActiveMobileTab("code");
+        }
+      }
       if (changedKeys.includes("activeMobileTab")) {
         this.mainGrid.dataset.mobileActive = state.activeMobileTab;
         const btns = this.mobileTabsBar.querySelectorAll<HTMLButtonElement>(".mobile-tab-btn");
@@ -407,6 +425,7 @@ export class AppComponent {
         promises.push(this.compileCommand.loadCompileCommand(state.selectedFileId));
         promises.push(this.updateBuildBadge(state.selectedFileId));
       } else {
+        promises.push(this.codeWindow.showWorkspaceSummary(true));
         promises.push(this.updateBuildBadge(null));
       }
 

@@ -466,6 +466,26 @@ inline void to_json(nlohmann::json& j, const WorkspaceStatusDto& s) {
     };
 }
 
+struct WorkspaceSummaryDto {
+    WorkspaceDto workspace;
+    WorkspaceStatusDto status;
+    std::vector<FileLanguageCount> languages;
+};
+
+inline void to_json(nlohmann::json& j, const WorkspaceSummaryDto& s) {
+    j = nlohmann::json{
+        {"workspace", s.workspace},
+        {"status", s.status},
+        {"languages", nlohmann::json::array()},
+    };
+    for (const auto& language : s.languages) {
+        j["languages"].push_back({
+            {"language", language.language},
+            {"fileCount", language.file_count},
+        });
+    }
+}
+
 // ==========================================
 // Tree, File Metadata & Range Content (F-06)
 // ==========================================

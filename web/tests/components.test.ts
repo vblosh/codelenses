@@ -41,11 +41,16 @@ describe("Frontend components", () => {
       });
 
       const onSearch = vi.fn();
-      const toolbar = new ToolbarComponent(store, { onSearch });
+      const onShowSummary = vi.fn();
+      const toolbar = new ToolbarComponent(store, { onSearch, onShowSummary });
       const elem = toolbar.getElement();
 
       expect(elem.querySelector(".brand")?.textContent).toContain("CodeLenses");
       expect(elem.querySelector(".workspace-select")).not.toBeNull();
+      const summaryButton = elem.querySelector<HTMLButtonElement>(".workspace-summary-btn")!;
+      expect(summaryButton.disabled).toBe(false);
+      summaryButton.click();
+      expect(onShowSummary).toHaveBeenCalledTimes(1);
       expect(elem.querySelector(".add-workspace-btn")).not.toBeNull();
       expect(elem.querySelector(".manage-links-btn")).not.toBeNull();
       expect(elem.querySelector(".search-input")).not.toBeNull();
@@ -532,7 +537,7 @@ describe("Frontend components", () => {
       closeBtnMain.click();
       expect(store.getState().openTabs.length).toBe(0);
       expect(store.getState().selectedFileId).toBeNull();
-      expect(elem.querySelector(".file-path-text")?.textContent).toBe("No file open");
+      expect(elem.querySelector(".file-path-text")?.textContent).toBe("Workspace summary");
     });
 
     it("instantly locates code a couple of lines above selected symbol without smooth scroll", async () => {
@@ -1776,6 +1781,54 @@ describe("Frontend components", () => {
       expect(modal.textContent).toContain("SDK");
 
       app.closeSearch();
+    });
+
+    it("opens the workspace home in the mobile Summary tab", async () => {
+      store.setWorkspace(null);
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({
+        workspaces: [{ id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" }],
+        total: 1,
+      });
+      vi.spyOn(api, "getWorkspaceStatus").mockResolvedValue({
+        workspaceId: 1,
+        status: "idle",
+        revision: 1,
+        latestJob: null,
+        fileCount: 0,
+        symbolCount: 0,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+      });
+      vi.spyOn(api, "getWorkspaceSummary").mockResolvedValue({
+        workspace: {
+          id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle",
+          createdAt: "", updatedAt: "",
+        },
+        status: {
+          workspaceId: 1, status: "idle", revision: 1, latestJob: null,
+          fileCount: 0, symbolCount: 0,
+          diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+        },
+        languages: [],
+      });
+      vi.spyOn(api, "getTree").mockResolvedValue({ workspaceId: 1, path: "", entries: [] });
+      vi.spyOn(api, "getWorkspaceDiagnostics").mockResolvedValue({
+        workspaceId: 1, diagnostics: [], total: 0,
+      });
+
+      const app = new AppComponent(container, store);
+      await vi.waitFor(() => expect(container.querySelector(".workspace-summary-name")?.textContent)
+        .toBe("ws1"));
+
+      const grid = container.querySelector<HTMLElement>(".main-grid")!;
+      const summaryTab = container.querySelector<HTMLButtonElement>('[data-tab="code"]')!;
+      expect(summaryTab.textContent).toBe("Summary");
+      expect(grid.dataset.mobileActive).toBe("code");
+
+      container.querySelector<HTMLButtonElement>('[data-tab="explorer"]')!.click();
+      summaryTab.click();
+      expect(grid.dataset.mobileActive).toBe("code");
+
+      (app as any).toolbar.destroy();
     });
 
     it("reconciles route and loads tree, status, file, outline, and diagnostics", async () => {

@@ -87,6 +87,17 @@ export interface WorkspaceStatusDto {
   diagnosticCounts: DiagnosticCountsDto;
 }
 
+export interface WorkspaceLanguageCountDto {
+  language: string;
+  fileCount: number;
+}
+
+export interface WorkspaceSummaryDto {
+  workspace: WorkspaceDto;
+  status: WorkspaceStatusDto;
+  languages: WorkspaceLanguageCountDto[];
+}
+
 export interface TreeNodeDto {
   name: string;
   path: string;

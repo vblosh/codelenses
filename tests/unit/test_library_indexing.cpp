@@ -10,6 +10,7 @@
 #include "codelenses/adapters/cpp_adapter.hpp"
 #include "codelenses/adapters/registry.hpp"
 #include "codelenses/db/database.hpp"
+#include "codelenses/db/statement.hpp"
 #include "codelenses/domain/workspace_index_settings.hpp"
 #include "codelenses/filesystem/discovery.hpp"
 #include "codelenses/index/indexer.hpp"
@@ -647,6 +648,74 @@ global using Example.Contracts;
 
     service.unlink_workspace(project.id, library.id);
     CHECK_THROWS_AS(service.get_file(project.id, library_file->id), ApiError);
+}
+
+TEST_CASE("Workspace summaries report active languages and scoped status", "[workspace-summary]") {
+    TempTestDir base("workspace_summary");
+    base.write("project/README.md", "project root");
+    base.write("library/Library.cs", "library root");
+
+    auto db = Database::open_memory();
+    IndexingPipeline pipeline(*db);
+    ApiService service(*db, pipeline);
+    auto create = [&](const std::string& name) {
+        CreateWorkspaceRequest request;
+        request.root_path = (base.path / name).string();
+        request.name = name;
+        return service.create_workspace(request);
+    };
+    const auto project = create("project");
+    const auto library = create("library");
+
+    auto insert_file = [&](int64_t workspace_id, const std::string& root,
+                           const std::string& relative_path, const std::string& language,
+                           bool is_deleted = false) {
+        FileRecord file;
+        file.workspace_id = workspace_id;
+        file.path = (base.path / root / relative_path).string();
+        file.relative_path = relative_path;
+        file.name = relative_path;
+        file.language = language;
+        file.is_deleted = is_deleted;
+        return db->files().insert(file);
+    };
+    insert_file(project.id, "project", "one.c", "c");
+    insert_file(project.id, "project", "two.c", "c");
+    insert_file(project.id, "project", "main.cpp", "cpp");
+    insert_file(project.id, "project", "deleted.c", "c", true);
+    insert_file(library.id, "library", "Library.cs", "csharp");
+
+    service.link_workspace(project.id, library.id);
+    for (const auto* severity : {"error", "warning", "info"}) {
+        Statement diagnostic(db->connection().handle(), R"SQL(
+            INSERT INTO diagnostic (workspace_id, severity, source, code, message)
+            VALUES (?, ?, 'indexer', 'summary', 'summary diagnostic');
+        )SQL");
+        diagnostic.bind_int64(1, project.id);
+        diagnostic.bind_text(2, severity);
+        diagnostic.execute();
+    }
+
+    const auto summary = service.get_workspace_summary(project.id);
+    CHECK(summary.workspace.name == "project");
+    CHECK(summary.status.workspace_id == project.id);
+    CHECK(summary.status.file_count == 3);
+    CHECK(summary.status.symbol_count == 0);
+    CHECK(summary.status.diagnostic_counts.total == 3);
+    CHECK(summary.status.diagnostic_counts.errors == 1);
+    CHECK(summary.status.diagnostic_counts.warnings == 1);
+    CHECK(summary.status.diagnostic_counts.info == 1);
+    CHECK_FALSE(summary.status.latest_job.has_value());
+    REQUIRE(summary.languages.size() == 2);
+    CHECK((summary.languages[0] == FileLanguageCount{.language = "c", .file_count = 2}));
+    CHECK((summary.languages[1] == FileLanguageCount{.language = "cpp", .file_count = 1}));
+
+    const nlohmann::json response = summary;
+    CHECK(response["workspace"]["id"] == project.id);
+    CHECK(response["status"]["diagnosticCounts"]["total"] == 3);
+    CHECK(response["languages"][0]["language"] == "c");
+    CHECK(response["languages"][0]["fileCount"] == 2);
+    CHECK_THROWS_AS(service.get_workspace_summary(9999), ApiError);
 }
 
 TEST_CASE("Direct workspace links preserve visibility and reference isolation",

@@ -2,6 +2,7 @@ import type {
   WorkspaceListResponse,
   WorkspaceDto,
   WorkspaceStatusDto,
+  WorkspaceSummaryDto,
   WorkspaceTreeDto,
   FileMetadataDto,
   FileContentDto,
@@ -145,6 +146,16 @@ export class ApiClient {
     return this.request<WorkspaceStatusDto>(`/api/v1/workspaces/${workspaceId}/status`, {
       signal,
     });
+  }
+
+  async getWorkspaceSummary(
+    workspaceId: number,
+    signal?: AbortSignal
+  ): Promise<WorkspaceSummaryDto> {
+    return this.request<WorkspaceSummaryDto>(
+      `/api/v1/workspaces/${workspaceId}/summary`,
+      { signal }
+    );
   }
 
   async triggerIndexing(

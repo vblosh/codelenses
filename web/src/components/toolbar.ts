@@ -7,6 +7,8 @@ export interface ToolbarCallbacks {
   onOpenSettings?: () => void;
   onAddWorkspace?: () => void;
   onManageLinks?: () => void;
+  onShowSummary?: () => void;
+  onStatus?: (status: WorkspaceStatusDto) => void;
 }
 
 export class ToolbarComponent {
@@ -17,6 +19,7 @@ export class ToolbarComponent {
   private settingsBtn!: HTMLButtonElement;
   private addWsBtn!: HTMLButtonElement;
   private manageLibsBtn!: HTMLButtonElement;
+  private summaryBtn!: HTMLButtonElement;
   private statusBadge!: HTMLElement;
   private statusText!: HTMLElement;
   private indexBtn!: HTMLButtonElement;
@@ -40,6 +43,7 @@ export class ToolbarComponent {
     this.element.className = "app-toolbar";
     this.render();
     this.syncIndexButton();
+    this.syncWorkspaceSummaryButton();
     this.initEvents();
     this.loadWorkspaces();
     this.startPollingStatus();
@@ -63,6 +67,7 @@ export class ToolbarComponent {
           <select class="workspace-select" aria-label="Select Workspace" title="Select Workspace">
             <option value="">Loading workspaces...</option>
           </select>
+          <button class="btn-icon workspace-summary-btn" title="Show workspace summary">Summary</button>
           <button class="btn-icon ws-settings-btn" title="Workspace settings & compilation database">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
@@ -117,6 +122,7 @@ export class ToolbarComponent {
     `;
 
     this.workspaceSelect = this.element.querySelector(".workspace-select")!;
+    this.summaryBtn = this.element.querySelector(".workspace-summary-btn")!;
     this.settingsBtn = this.element.querySelector(".ws-settings-btn")!;
     this.addWsBtn = this.element.querySelector(".add-workspace-btn")!;
     this.manageLibsBtn = this.element.querySelector(".manage-links-btn")!;
@@ -130,6 +136,8 @@ export class ToolbarComponent {
   }
 
   private initEvents(): void {
+    this.summaryBtn.addEventListener("click", () => this.callbacks.onShowSummary?.());
+
     this.settingsBtn.addEventListener("click", () => {
       if (this.callbacks.onOpenSettings) {
         this.callbacks.onOpenSettings();
@@ -189,6 +197,7 @@ export class ToolbarComponent {
           this.workspaceSelect.value = String(state.workspaceId);
         }
         this.syncIndexButton();
+        this.syncWorkspaceSummaryButton();
         this.fetchStatus();
       }
     });
@@ -340,6 +349,7 @@ export class ToolbarComponent {
         return;
       }
       this.loadedStatusWorkspaces.add(wsId);
+      this.callbacks.onStatus?.(statusDto);
       const job = statusDto.latestJob ?? null;
       const jobIsActive = !!job && ["queued", "running", "cancelling"].includes(job.status);
       const workspaceIsIndexing = statusDto.status === "indexing" || statusDto.status === "running";
@@ -443,6 +453,11 @@ export class ToolbarComponent {
     this.indexBtn.disabled = disabled;
     this.indexBtn.title = title;
     this.indexBtn.setAttribute("aria-label", ariaLabel);
+  }
+
+  private syncWorkspaceSummaryButton(): void {
+    if (!this.summaryBtn) return;
+    this.summaryBtn.disabled = this.store.getState().workspaceId === null;
   }
 
   private updateStatusDisplay(status: "idle" | "running" | "failed", text: string): void {

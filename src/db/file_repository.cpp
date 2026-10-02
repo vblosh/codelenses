@@ -171,6 +171,26 @@ int64_t FileRepository::count_by_workspace(int64_t workspace_id) {
     return stmt.step() ? stmt.column_int64(0) : 0;
 }
 
+std::vector<FileLanguageCount> FileRepository::count_by_language(int64_t workspace_id) {
+    Statement stmt(conn_.handle(), R"SQL(
+        SELECT language, COUNT(*) AS file_count
+        FROM file
+        WHERE workspace_id = ? AND is_deleted = 0
+        GROUP BY language
+        ORDER BY file_count DESC, language ASC;
+    )SQL");
+    stmt.bind_int64(1, workspace_id);
+
+    std::vector<FileLanguageCount> results;
+    while (stmt.step()) {
+        results.push_back(FileLanguageCount{
+            .language = stmt.column_text(0),
+            .file_count = stmt.column_int64(1),
+        });
+    }
+    return results;
+}
+
 std::vector<FileStateItem> FileRepository::get_file_states(int64_t workspace_id) {
     Statement stmt(conn_.handle(), R"SQL(
         SELECT id, relative_path, size_bytes, modified_ns, content_hash, is_deleted, language

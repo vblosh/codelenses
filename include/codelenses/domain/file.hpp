@@ -43,4 +43,11 @@ struct FileStateItem {
     bool operator==(const FileStateItem& other) const = default;
 };
 
+struct FileLanguageCount {
+    std::string language = "unknown";
+    int64_t file_count = 0;
+
+    bool operator==(const FileLanguageCount& other) const = default;
+};
+
 } // namespace codelenses

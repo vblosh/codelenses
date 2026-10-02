@@ -45,6 +45,25 @@ describe("ApiClient", () => {
     );
   });
 
+  it("fetches a workspace summary and passes its abort signal", async () => {
+    const signal = new AbortController().signal;
+    const summary = {
+      workspace: { id: 7, name: "test", rootPath: "/test" },
+      status: { workspaceId: 7, fileCount: 2, symbolCount: 5 },
+      languages: [{ language: "cpp", fileCount: 2 }],
+    };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => summary,
+    } as any);
+
+    await expect(client.getWorkspaceSummary(7, signal)).resolves.toEqual(summary);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/workspaces/7/summary",
+      expect.objectContaining({ signal })
+    );
+  });
+
   it("fetches workspace tree with path query param", async () => {
     const mockTree = { workspaceId: 1, path: "src", entries: [] };
     vi.spyOn(global, "fetch").mockResolvedValueOnce({

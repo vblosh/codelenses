@@ -6,12 +6,14 @@ import type {
   OccurrenceDto,
   FileCompileCommandDto,
   SymbolOutlineNodeDto,
+  WorkspaceStatusDto,
 } from "../types";
 import type { StateStore } from "../state";
 import { api } from "../api";
 import { highlightSource } from "../rendering/highlight";
 import { renderSourceLines } from "../rendering/source-lines";
 import { formatByteSize } from "../rendering/ranges";
+import { WorkspaceSummaryComponent } from "./workspace-summary";
 
 export interface CodeWindowCallbacks {
   onSymbolClick?: (symbolId: number, line: number) => void;
@@ -93,6 +95,7 @@ export class CodeWindowComponent {
   private element: HTMLElement;
   private store: StateStore;
   private callbacks: CodeWindowCallbacks;
+  private workspaceSummary!: WorkspaceSummaryComponent;
   private activeHoveredElement: HTMLElement | null = null;
 
   private pathElem!: HTMLElement;
@@ -136,6 +139,7 @@ export class CodeWindowComponent {
     this.element.className = "pane code-window";
     this.element.id = "pane-code";
     this.render();
+    this.workspaceSummary = new WorkspaceSummaryComponent(this.store);
     this.initEvents();
   }
 
@@ -218,8 +222,40 @@ export class CodeWindowComponent {
       }
       if (changedKeys.includes("workspaceId")) {
         this.fileCache.clear();
+        if (!changedKeys.includes("selectedFileId") && state.selectedFileId === null) {
+          void this.showWorkspaceSummary(true);
+        }
       }
     });
+  }
+
+  async showWorkspaceSummary(forceRefresh = true): Promise<void> {
+    const workspaceId = this.store.getState().workspaceId;
+    this.pathElem.textContent = workspaceId === null ? "No workspace selected" : "Workspace summary";
+    this.langBadge.style.display = "none";
+    this.originBadge.style.display = "none";
+    this.compileBadge.style.display = "none";
+    this.navControls.innerHTML = "";
+    this.bannerContainer.innerHTML = "";
+    this.renderTabs();
+
+    if (workspaceId === null) {
+      this.workspaceSummary.hide();
+      this.viewerContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">No workspace selected</div>
+          <div class="empty-state-desc">Select or add a workspace to get started.</div>
+        </div>
+      `;
+      return;
+    }
+
+    this.viewerContainer.replaceChildren(this.workspaceSummary.getElement());
+    await this.workspaceSummary.show(forceRefresh);
+  }
+
+  updateWorkspaceStatus(status: WorkspaceStatusDto): void {
+    this.workspaceSummary.updateStatus(status);
   }
 
   setDiagnostics(diagnostics: DiagnosticItem[]): void {
@@ -235,6 +271,8 @@ export class CodeWindowComponent {
       this.clearFile();
       return;
     }
+
+    this.workspaceSummary.hide();
 
     const requestId = ++this.loadRequestId;
 
@@ -1058,12 +1096,7 @@ export class CodeWindowComponent {
     this.navControls.innerHTML = "";
     this.bannerContainer.innerHTML = "";
     this.renderTabs();
-    this.viewerContainer.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-title">No file selected</div>
-        <div class="empty-state-desc">Select a file from the explorer to view its contents.</div>
-      </div>
-    `;
+    void this.showWorkspaceSummary(true);
   }
 
   private updateOriginBadge(file: FileMetadataDto): void {

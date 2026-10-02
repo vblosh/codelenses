@@ -484,6 +484,260 @@ html, body {
   position: relative;
 }
 
+.workspace-summary[hidden] {
+  display: none;
+}
+
+.workspace-summary {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: var(--bg-primary);
+}
+
+.workspace-summary-content {
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  padding: 32px clamp(16px, 4vw, 44px) 48px;
+}
+
+.workspace-summary-header,
+.workspace-summary-actions,
+.workspace-summary-job-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workspace-summary-eyebrow {
+  margin-bottom: 5px;
+  color: var(--info);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-summary-header h1,
+.workspace-summary-state h1 {
+  font-size: clamp(21px, 3vw, 30px);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.workspace-summary-root {
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.workspace-summary-status {
+  padding: 4px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.workspace-summary-status.status-running {
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #93c5fd;
+}
+
+.workspace-summary-status.status-ready {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.workspace-summary-status.status-failed {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.workspace-summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 26px 0;
+}
+
+.workspace-summary-card,
+.workspace-summary-section {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.workspace-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 16px;
+}
+
+.workspace-summary-card span,
+.workspace-summary-diagnostics dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.workspace-summary-card strong {
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.workspace-summary-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 14px;
+}
+
+.workspace-summary-section {
+  min-width: 0;
+  padding: 16px;
+}
+
+.workspace-summary-section h2 {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.workspace-summary-languages {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.workspace-summary-languages th,
+.workspace-summary-languages td {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.workspace-summary-languages th {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.workspace-summary-languages td:last-child,
+.workspace-summary-languages th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-summary-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.workspace-summary-diagnostics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workspace-summary-diagnostics dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-summary-no-languages,
+.summary-job-empty,
+.workspace-summary-state p {
+  color: var(--text-muted);
+}
+
+.workspace-summary-job {
+  margin-top: 14px;
+}
+
+.workspace-summary-job-heading h2 {
+  margin-bottom: 0;
+}
+
+.summary-revision,
+.summary-job-time {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.summary-job-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: var(--text-secondary);
+}
+
+.workspace-summary-job-error,
+.workspace-summary-error,
+.workspace-summary-load-error {
+  margin-top: 10px;
+  color: #fca5a5;
+  overflow-wrap: anywhere;
+}
+
+.workspace-summary-state {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 56px 24px;
+}
+
+.workspace-summary-state p {
+  margin: 10px 0 16px;
+}
+
+.workspace-summary-inline-retry {
+  margin-left: 8px;
+  border: 0;
+  background: transparent;
+  color: #93c5fd;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.workspace-summary-refresh:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+@media (max-width: 620px) {
+  .workspace-summary-content {
+    padding-top: 22px;
+  }
+
+  .workspace-summary-header,
+  .workspace-summary-actions {
+    align-items: flex-start;
+  }
+
+  .workspace-summary-header {
+    flex-direction: column;
+  }
+
+  .workspace-summary-stats {
+    gap: 8px;
+  }
+
+  .workspace-summary-card {
+    padding: 11px;
+  }
+
+  .workspace-summary-card strong {
+    font-size: 20px;
+  }
+
+  .workspace-summary-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 .code-viewer {
   display: flex;
   flex-direction: column;

@@ -692,6 +692,16 @@ WorkspaceStatusDto ApiService::get_workspace_status(int64_t workspace_id) {
     };
 }
 
+WorkspaceSummaryDto ApiService::get_workspace_summary(int64_t workspace_id) {
+    DatabaseReadScope read_scope(*this);
+    const auto workspace = require_workspace(workspace_id);
+    return WorkspaceSummaryDto{
+        .workspace = workspace_dto(workspace),
+        .status = get_workspace_status(workspace_id),
+        .languages = database().files().count_by_language(workspace_id),
+    };
+}
+
 JobDto ApiService::get_job(int64_t job_id) {
     DatabaseReadScope read_scope(*this);
     if (job_id <= 0) {
