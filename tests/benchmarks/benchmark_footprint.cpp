@@ -20,6 +20,14 @@ using namespace codelenses::server;
 
 namespace {
 
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer)) || \
+    defined(__SANITIZE_THREAD__) || (defined(__has_feature) && __has_feature(thread_sanitizer)) || \
+    defined(__SANITIZE_UNDEFINED__) || (defined(__has_feature) && __has_feature(undefined_behavior_sanitizer))
+constexpr bool is_sanitized_build = true;
+#else
+constexpr bool is_sanitized_build = false;
+#endif
+
 // Helper to query peak resident set size (RSS) in KB
 size_t get_peak_rss_kb() {
     struct rusage usage{};
@@ -178,7 +186,7 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)",
             // MB
             CHECK(db_bytes < 5UL * 1024UL * 1024UL); // Under 5 MB
             CHECK(expansion_ratio < 30.0);       // Ratio bounded accounting for fixed schema tables
-            CHECK(peak_rss_kb < 500UL * 1024UL); // Peak under 500 MB
+            CHECK(peak_rss_kb < (is_sanitized_build ? 1500UL * 1024UL : 500UL * 1024UL)); // Peak under 500 MB (1500 MB with sanitizers)
         }
     }
 
@@ -245,6 +253,6 @@ TEST_CASE("Benchmark: Memory Footprint and Database Size Measurements (I-08)",
         CHECK(st.symbol_count >= 200);
         CHECK(db_bytes < 20UL * 1024UL * 1024UL); // Under 20 MB for 100 files
         CHECK(bytes_per_symbol < 5000.0);         // Under 5 KB per indexed symbol
-        CHECK(peak_rss_kb < 500UL * 1024UL);      // Peak memory under 500 MB
+        CHECK(peak_rss_kb < (is_sanitized_build ? 1500UL * 1024UL : 500UL * 1024UL));      // Peak memory under 500 MB (1500 MB with sanitizers)
     }
 }

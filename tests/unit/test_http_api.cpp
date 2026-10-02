@@ -778,8 +778,31 @@ TEST_CASE("Indexing lifecycle, status, jobs, and file content (F-05, F-06)", "[s
         CHECK(cancel_res->status == 200);
         auto cancel_json = nlohmann::json::parse(cancel_res->body);
         std::string st = cancel_json["status"];
-        CHECK((st == "completed" || st == "canceled"));
+        CHECK((st == "completed" || st == "cancelled"));
     }
+}
+
+TEST_CASE("Queued indexing jobs can be cancelled through the HTTP API",
+          "[server][pipeline][cancellation]") {
+    TestHttpServerEnv env;
+    auto workspace = env.service->create_workspace(
+        CreateWorkspaceRequest{.root_path = env.root.string(),
+                               .name = "Queued cancellation",
+                               .include_patterns = {},
+                               .exclude_patterns = {},
+                               .default_ignores = {}});
+    IndexJob queued_job{.workspace_id = workspace.id,
+                        .job_type = "incremental",
+                        .status = "queued"};
+    const auto job_id = env.db->jobs().create(queued_job);
+
+    auto response = env.client->Post("/api/v1/jobs/" + std::to_string(job_id) + "/cancel", "",
+                                     "application/json");
+    REQUIRE(response != nullptr);
+    REQUIRE(response->status == 200);
+    const auto json = nlohmann::json::parse(response->body);
+    CHECK(json["id"] == job_id);
+    CHECK(json["status"] == "cancelled");
 }
 
 TEST_CASE("HTTP readers stay responsive while the indexing connection is busy",

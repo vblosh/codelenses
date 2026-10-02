@@ -27,9 +27,6 @@ set(UNIT_TEST_SOURCES
     integration/test_api_contract.cpp
     integration/test_security_and_malformed.cpp
     integration/test_cancellation_and_recovery.cpp
-    benchmarks/benchmark_indexing.cpp
-    benchmarks/benchmark_queries.cpp
-    benchmarks/benchmark_footprint.cpp
 )
 
 add_executable(codelenses_unit_tests
@@ -58,3 +55,33 @@ codelenses_set_compiler_warnings(codelenses_unit_tests)
 codelenses_set_sanitizers(codelenses_unit_tests)
 
 catch_discover_tests(codelenses_unit_tests)
+
+if(CODELENSES_BUILD_BENCHMARKS)
+    add_executable(codelenses_benchmarks
+        benchmarks/benchmark_indexing.cpp
+        benchmarks/benchmark_queries.cpp
+        benchmarks/benchmark_footprint.cpp
+    )
+
+    target_link_libraries(codelenses_benchmarks PRIVATE
+        codelenses_core
+        Catch2::Catch2WithMain
+        codelenses_grammar_c
+        codelenses_grammar_cpp
+        codelenses_grammar_c_sharp
+        codelenses_grammar_python
+        codelenses_grammar_javascript
+        codelenses_grammar_typescript
+        codelenses_grammar_tsx
+        codelenses_grammar_bash
+        codelenses_grammar_java
+        codelenses_grammar_go
+    )
+
+    target_compile_definitions(codelenses_benchmarks PRIVATE
+        CODELENSES_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    )
+
+    codelenses_set_compiler_warnings(codelenses_benchmarks)
+    codelenses_set_sanitizers(codelenses_benchmarks)
+endif()

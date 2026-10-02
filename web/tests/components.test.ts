@@ -54,6 +54,155 @@ describe("Frontend components", () => {
       toolbar.destroy();
     });
 
+    it("starts indexing and switches the toolbar action to Cancel", async () => {
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({
+        workspaces: [{ id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" }],
+        total: 1,
+      });
+      const idle = {
+        workspaceId: 1, status: "idle", revision: 1, latestJob: null,
+        fileCount: 0, symbolCount: 0,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+      };
+      const running = {
+        ...idle, status: "indexing",
+        latestJob: {
+          id: 41, workspaceId: 1, jobType: "incremental", status: "running", queuedAt: "",
+          filesTotal: 12, filesProcessed: 1, filesSkipped: 0, errorCount: 0, warningCount: 0,
+        },
+      };
+      vi.spyOn(api, "getWorkspaceStatus")
+        .mockResolvedValueOnce(idle as any)
+        .mockResolvedValue(running as any);
+      const start = vi.spyOn(api, "triggerIndexing").mockResolvedValue({
+        id: 41, workspaceId: 1, jobType: "incremental", status: "queued", queuedAt: "",
+        filesTotal: 12, filesProcessed: 0, filesSkipped: 0, errorCount: 0, warningCount: 0,
+      });
+      const cancel = vi.spyOn(api, "cancelJob");
+
+      const toolbar = new ToolbarComponent(store, { onSearch: vi.fn() });
+      const button = toolbar.getElement().querySelector(".index-btn") as HTMLButtonElement;
+      await vi.waitFor(() => expect(button.textContent).toContain("Index"));
+      button.click();
+
+      await vi.waitFor(() => expect(button.textContent).toContain("Cancel"));
+      expect(button.disabled).toBe(false);
+      expect(button.getAttribute("aria-label")).toBe("Cancel indexing");
+      expect(start).toHaveBeenCalledWith(1, "incremental", false);
+      expect(cancel).not.toHaveBeenCalled();
+      toolbar.destroy();
+    });
+
+    it("cancels the active job and keeps the button pending until polling sees it stop", async () => {
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({
+        workspaces: [{ id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" }],
+        total: 1,
+      });
+      const job = {
+        id: 42, workspaceId: 1, jobType: "full", status: "running", queuedAt: "",
+        filesTotal: 12, filesProcessed: 4, filesSkipped: 0, errorCount: 0, warningCount: 0,
+      };
+      const status = (workspaceStatus: string, jobStatus: string) => ({
+        workspaceId: 1, status: workspaceStatus, revision: 1,
+        latestJob: { ...job, status: jobStatus },
+        fileCount: 4, symbolCount: 8,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+      });
+      let finishCancelStatus!: (value: any) => void;
+      const cancelStatus = new Promise((resolve) => { finishCancelStatus = resolve; });
+      vi.spyOn(api, "getWorkspaceStatus")
+        .mockResolvedValueOnce(status("indexing", "running") as any)
+        .mockReturnValueOnce(cancelStatus as any)
+        .mockResolvedValueOnce(status("idle", "cancelled") as any);
+      let finishCancel!: (value: any) => void;
+      const cancelResponse = new Promise((resolve) => { finishCancel = resolve; });
+      const cancel = vi.spyOn(api, "cancelJob").mockReturnValue(cancelResponse as any);
+      const start = vi.spyOn(api, "triggerIndexing");
+
+      const toolbar = new ToolbarComponent(store, { onSearch: vi.fn() });
+      const button = toolbar.getElement().querySelector(".index-btn") as HTMLButtonElement;
+      await vi.waitFor(() => expect(button.textContent).toContain("Cancel"));
+      button.click();
+
+      await vi.waitFor(() => expect(cancel).toHaveBeenCalledWith(job.id));
+      expect(button.textContent).toContain("Cancelling...");
+      expect(button.disabled).toBe(true);
+      finishCancel({ ...job, status: "running" });
+      await vi.waitFor(() => {
+        expect(api.getWorkspaceStatus).toHaveBeenCalledTimes(2);
+        expect(button.textContent).toContain("Cancelling...");
+      });
+
+      finishCancelStatus(status("indexing", "cancelled"));
+      await vi.waitFor(() => expect((toolbar as any).statusRequest).toBeNull());
+      await toolbar.fetchStatus();
+      await vi.waitFor(() => expect(button.textContent).toContain("Index"));
+      expect(button.disabled).toBe(false);
+      expect(toolbar.getElement().querySelector(".status-text")?.textContent).toBe("Index cancelled");
+      expect(start).not.toHaveBeenCalled();
+      toolbar.destroy();
+    });
+
+    it("restores Cancel when the cancellation request fails", async () => {
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({
+        workspaces: [{ id: 1, name: "ws1", rootPath: "/ws1", revision: 1, status: "idle", createdAt: "", updatedAt: "" }],
+        total: 1,
+      });
+      const running = {
+        workspaceId: 1, status: "indexing", revision: 1,
+        latestJob: {
+          id: 43, workspaceId: 1, jobType: "incremental", status: "running", queuedAt: "",
+          filesTotal: 3, filesProcessed: 1, filesSkipped: 0, errorCount: 0, warningCount: 0,
+        },
+        fileCount: 1, symbolCount: 1,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+      };
+      vi.spyOn(api, "getWorkspaceStatus").mockResolvedValue(running as any);
+      vi.spyOn(api, "cancelJob").mockRejectedValue(new Error("request failed"));
+      const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+      const toolbar = new ToolbarComponent(store, { onSearch: vi.fn() });
+      const button = toolbar.getElement().querySelector(".index-btn") as HTMLButtonElement;
+      await vi.waitFor(() => expect(button.textContent).toContain("Cancel"));
+      button.click();
+
+      await vi.waitFor(() => expect(alert).toHaveBeenCalledWith("Index cancellation failed: request failed"));
+      expect(button.textContent).toContain("Cancel");
+      expect(button.disabled).toBe(false);
+      toolbar.destroy();
+    });
+
+    it("keeps a cancellation response scoped to its workspace", async () => {
+      const workspaces = [1, 2].map((id) => ({
+        id, name: `ws${id}`, rootPath: `/ws${id}`, revision: 1, status: "idle", createdAt: "", updatedAt: "",
+      }));
+      vi.spyOn(api, "getWorkspaces").mockResolvedValue({ workspaces, total: workspaces.length });
+      vi.spyOn(api, "getWorkspaceStatus").mockImplementation(async (workspaceId) => ({
+        workspaceId, status: workspaceId === 1 ? "indexing" : "idle", revision: 1,
+        latestJob: workspaceId === 1 ? {
+          id: 44, workspaceId, jobType: "full", status: "running", queuedAt: "",
+          filesTotal: 5, filesProcessed: 1, filesSkipped: 0, errorCount: 0, warningCount: 0,
+        } : null,
+        fileCount: 0, symbolCount: 0,
+        diagnosticCounts: { total: 0, errors: 0, warnings: 0, info: 0 },
+      }));
+      let finishCancel!: (value: any) => void;
+      vi.spyOn(api, "cancelJob").mockReturnValue(new Promise((resolve) => { finishCancel = resolve; }) as any);
+
+      const toolbar = new ToolbarComponent(store, { onSearch: vi.fn() });
+      const button = toolbar.getElement().querySelector(".index-btn") as HTMLButtonElement;
+      await vi.waitFor(() => expect(button.textContent).toContain("Cancel"));
+      button.click();
+      await vi.waitFor(() => expect(api.cancelJob).toHaveBeenCalledWith(44));
+
+      store.setWorkspace(2);
+      await vi.waitFor(() => expect(button.textContent).toContain("Index"));
+      finishCancel({ id: 44, workspaceId: 1, status: "cancelled" });
+      await vi.waitFor(() => expect(button.textContent).toContain("Index"));
+      expect(store.getState().workspaceId).toBe(2);
+      toolbar.destroy();
+    });
+
     it("cancels status polls for old workspaces and on teardown", async () => {
       vi.spyOn(api, "getWorkspaces").mockResolvedValue({
         workspaces: [

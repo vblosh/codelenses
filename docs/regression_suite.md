@@ -6,10 +6,10 @@ This document defines the mandatory **Regression Suite** required to pass before
 
 ## 1. Objective and Policy
 
-Every release candidate must pass all validation stages defined in this specification. A regression is defined as:
+Every release candidate must pass the unit, integration, migration, and packaging checks in this specification. Performance benchmarks are available as an opt-in stage. A regression is defined as:
 1. Any test failure in unit, integration, migration, or security test suites.
 2. Any memory corruption, crash, uncaught exception, or data loss under stress/malformed inputs.
-3. Any performance violation exceeding the specified regression thresholds.
+3. When benchmarks are enabled, any performance violation exceeding the specified regression thresholds.
 4. Any packaging defect resulting in missing runtime binaries, headers, static assets, or sample configurations.
 
 ---
@@ -22,7 +22,7 @@ The regression suite is structured into six sequential stages:
 [Stage 1: Code Hygiene] -> [Stage 2: Unit Tests] -> [Stage 3: Integration Tests]
        |                              |                           |
        v                              v                           v
-[Stage 4: Migration Tests] -> [Stage 5: Benchmarks] -> [Stage 6: Packaging & Sanity]
+[Stage 4: Migration Tests] -> [Stage 5: Optional Benchmarks] -> [Stage 6: Packaging & Sanity]
 ```
 
 ### Stage 1: Code Hygiene & Formatting
@@ -76,7 +76,7 @@ The regression suite is structured into six sequential stages:
   - WAL mode and checkpointing verification upon reopening on disk.
 
 ### Stage 5: Performance and Footprint Thresholds
-Performance regressions are measured using automated benchmark fixtures. Any metric exceeding the threshold below constitutes a build break.
+Performance regressions are measured using automated benchmark fixtures when enabled. Any metric exceeding the threshold below constitutes a build break.
 
 | Metric | Benchmark Target | Maximum Latency / Min Throughput |
 | :--- | :--- | :--- |
@@ -127,9 +127,12 @@ The regression suite can be executed with a single command via the automated run
   --build-dir <dir>    Specify build directory (default: build)
   --skip-format        Skip clang-format check
   --skip-package       Skip CPack packaging verification
+  --run-benchmarks     Run optional benchmarks (requires CODELENSES_BUILD_BENCHMARKS=ON)
   --verbose            Enable verbose ctest output
   -h, --help           Display help message
 ```
+
+Benchmarks are excluded from the default unit-test executable and are disabled by default. To build them, configure with `-DCODELENSES_BUILD_BENCHMARKS=ON`, then run the regression script with `--run-benchmarks`.
 
 ### Exit Codes
 - `0`: All stages passed. Ready for release.

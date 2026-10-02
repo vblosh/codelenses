@@ -159,6 +159,12 @@ export class ApiClient {
     });
   }
 
+  async cancelJob(jobId: number): Promise<JobDto> {
+    return this.request<JobDto>(`/api/v1/jobs/${jobId}/cancel`, {
+      method: "POST",
+    });
+  }
+
   async searchSource(
     workspaceId: number,
     query: string,

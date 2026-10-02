@@ -18,6 +18,16 @@ using namespace codelenses::index;
 
 namespace {
 
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer)) || \
+    defined(__SANITIZE_THREAD__) || (defined(__has_feature) && __has_feature(thread_sanitizer)) || \
+    defined(__SANITIZE_UNDEFINED__) || (defined(__has_feature) && __has_feature(undefined_behavior_sanitizer))
+constexpr bool is_sanitized_build = true;
+#else
+constexpr bool is_sanitized_build = false;
+#endif
+
+constexpr double timing_scale = is_sanitized_build ? 4.0 : 1.0;
+
 struct IndexingBenchmarkFixture {
     fs::path temp_dir;
     fs::path workspace_root;
@@ -100,8 +110,8 @@ TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance
                   << "  - Total symbols: " << db->symbols().list_by_workspace(ws_id).size() << "\n";
 
         // Regression threshold: Cold indexing must process at least 15 files/second in debug build
-        CHECK(elapsed_ms < 5000.0); // Must finish within 5 seconds
-        CHECK(files_per_sec > 15.0);
+        CHECK(elapsed_ms < 5000.0 * timing_scale); // Must finish within 5 seconds (scaled under sanitizers)
+        CHECK(files_per_sec > (15.0 / timing_scale));
     }
 
     SECTION("2. Incremental Indexing No-Op Thresholds and Speedup Ratio") {
@@ -143,8 +153,8 @@ TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance
 
         // Regression threshold: Incremental no-op should take < 300 ms and be substantially faster
         // than cold
-        CHECK(inc_ms < 300.0);
-        CHECK(speedup >= 1.5);
+        CHECK(inc_ms < 300.0 * timing_scale);
+        CHECK(speedup >= (is_sanitized_build ? 1.1 : 1.5));
     }
 
     SECTION("3. Incremental Indexing with Single File Modified") {
@@ -179,7 +189,7 @@ TEST_CASE("Benchmark: Cold Indexing vs Incremental Indexing Separate Performance
         // Exactly 1 file should be re-processed, 49 skipped
         CHECK(inc_res->files_processed == 1);
         CHECK(inc_res->files_skipped == fixture.num_synthetic_files - 1);
-        CHECK(elapsed_ms < 350.0);
+        CHECK(elapsed_ms < 350.0 * timing_scale);
     }
 
     SECTION("4. Incremental Indexing with File Addition and Deletion") {

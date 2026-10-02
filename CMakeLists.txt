@@ -29,6 +29,7 @@ endif()
 
 # Build options
 option(CODELENSES_BUILD_TESTS "Build test suite" ON)
+option(CODELENSES_BUILD_BENCHMARKS "Build performance benchmark executable" OFF)
 option(CODELENSES_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(CODELENSES_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(CODELENSES_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)

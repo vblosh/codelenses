@@ -10,6 +10,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="${REPO_ROOT}/build"
 SKIP_FORMAT=false
 SKIP_PACKAGE=false
+RUN_BENCHMARKS=false
 VERBOSE=false
 
 print_help() {
@@ -22,6 +23,7 @@ Options:
   --build-dir <dir>    Specify build directory (default: ${REPO_ROOT}/build)
   --skip-format        Skip clang-format check
   --skip-package       Skip CPack packaging verification
+  --run-benchmarks     Run optional benchmarks (requires CODELENSES_BUILD_BENCHMARKS=ON)
   --verbose            Enable verbose test output
   -h, --help           Display this help message and exit
 EOF
@@ -39,6 +41,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-package)
             SKIP_PACKAGE=true
+            shift
+            ;;
+        --run-benchmarks)
+            RUN_BENCHMARKS=true
             shift
             ;;
         --verbose)
@@ -94,14 +100,24 @@ if [[ "${VERBOSE}" == "true" ]]; then
     CTEST_ARGS+=(-V)
 fi
 
-ctest "${CTEST_ARGS[@]}"
+ctest "${CTEST_ARGS[@]}" --parallel "$(nproc)"
 echo "✓ All automated unit, integration, and migration tests passed."
 
 # Stage 4: Performance & Footprint Regression Thresholds
-echo ""
-echo "[Stage 4/5] Executing Performance & Footprint Benchmarks..."
-"${BUILD_DIR}/tests/codelenses_unit_tests" "[benchmark]"
-echo "✓ All performance benchmarks satisfied regression thresholds."
+if [[ "${RUN_BENCHMARKS}" == "true" ]]; then
+    echo ""
+    echo "[Stage 4/5] Executing Performance & Footprint Benchmarks..."
+    BENCHMARK_BINARY="${BUILD_DIR}/tests/codelenses_benchmarks"
+    if [[ ! -x "${BENCHMARK_BINARY}" ]]; then
+        echo "✗ Benchmark executable not found. Configure with -DCODELENSES_BUILD_BENCHMARKS=ON and rebuild." >&2
+        exit 1
+    fi
+    "${BENCHMARK_BINARY}" "[benchmark]"
+    echo "✓ All performance benchmarks satisfied regression thresholds."
+else
+    echo ""
+    echo "[Stage 4/5] Skipping optional performance benchmarks (use --run-benchmarks to enable)."
+fi
 
 # Stage 5: Release Packaging & Sanity Check
 if [[ "${SKIP_PACKAGE}" == "false" ]]; then

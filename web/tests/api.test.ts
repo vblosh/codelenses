@@ -106,6 +106,21 @@ describe("ApiClient", () => {
     );
   });
 
+  it("cancels an indexing job", async () => {
+    const mockJob = { id: 10, workspaceId: 1, jobType: "incremental", status: "cancelled" };
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockJob,
+    } as any);
+
+    const result = await client.cancelJob(10);
+    expect(result.status).toBe("cancelled");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "http://localhost:8080/api/v1/jobs/10/cancel",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
   it("searches source and symbols", async () => {
     const mockHits = { items: [{ fileId: 1, relativePath: "a.cpp", snippet: "match", rank: 1.0 }], total: 1 };
     vi.spyOn(global, "fetch").mockResolvedValueOnce({

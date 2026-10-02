@@ -472,7 +472,7 @@ Result<IndexResult> IndexingPipeline::run_indexing(int64_t workspace_id,
             }
         }
         if (job_id_override.has_value()) {
-            db_.jobs().finish_job(*job_id_override, "canceled", std::nullopt,
+            db_.jobs().finish_job(*job_id_override, "cancelled", std::nullopt,
                                   "indexing job was cancelled");
         }
         return unexpected_result<IndexResult>(ErrorCode::cancelled, "indexing job was cancelled");

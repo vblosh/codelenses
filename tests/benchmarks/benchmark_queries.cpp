@@ -19,6 +19,16 @@ using namespace codelenses::server;
 
 namespace {
 
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer)) || \
+    defined(__SANITIZE_THREAD__) || (defined(__has_feature) && __has_feature(thread_sanitizer)) || \
+    defined(__SANITIZE_UNDEFINED__) || (defined(__has_feature) && __has_feature(undefined_behavior_sanitizer))
+constexpr bool is_sanitized_build = true;
+#else
+constexpr bool is_sanitized_build = false;
+#endif
+
+constexpr double timing_scale = is_sanitized_build ? 4.0 : 1.0;
+
 struct QueryBenchmarkFixture {
     fs::path temp_dir;
     fs::path workspace_root;
@@ -169,8 +179,8 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
                   << " ops/sec)\n";
 
         // Regression threshold: tree query must execute in under 10ms
-        CHECK(root_avg_ms < 10.0);
-        CHECK(nested_avg_ms < 10.0);
+        CHECK(root_avg_ms < 10.0 * timing_scale);
+        CHECK(nested_avg_ms < 10.0 * timing_scale);
     }
 
     SECTION("2. Source Range Retrieval Latency on Large Files (5,000 lines)") {
@@ -209,9 +219,9 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Regression threshold: range retrieval on 5,000 lines must execute under 50ms in debug
         // build
-        CHECK(range_50_ms < 50.0);
-        CHECK(range_500_ms < 50.0);
-        CHECK(full_ms < 50.0);
+        CHECK(range_50_ms < 50.0 * timing_scale);
+        CHECK(range_500_ms < 50.0 * timing_scale);
+        CHECK(full_ms < 50.0 * timing_scale);
     }
 
     SECTION("3. Symbol Search Latency and Throughput (Prefix, Substring, and FTS)") {
@@ -250,9 +260,9 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
                   << "  - Paginated list latency: " << paged_sym_ms << " ms\n";
 
         // Regression threshold: symbol lookups must execute under 60-100ms in debug build
-        CHECK(sym_search_ms < 20.0);
-        CHECK(fts_sym_ms < 60.0);
-        CHECK(paged_sym_ms < 100.0);
+        CHECK(sym_search_ms < 20.0 * timing_scale);
+        CHECK(fts_sym_ms < 60.0 * timing_scale);
+        CHECK(paged_sym_ms < 100.0 * timing_scale);
     }
 
     SECTION("4. Reference, Caller, Callee, and Graph Queries Benchmark") {
@@ -309,10 +319,10 @@ TEST_CASE("Benchmark: Tree Expansion, Source Range, Symbol Search, and Reference
 
         // Regression thresholds: All navigation queries must execute in under 20-30ms in debug
         // build
-        CHECK(detail_ms < 20.0);
-        CHECK(refs_ms < 20.0);
-        CHECK(callers_ms < 20.0);
-        CHECK(callees_ms < 20.0);
-        CHECK(graph_ms < 30.0);
+        CHECK(detail_ms < 20.0 * timing_scale);
+        CHECK(refs_ms < 20.0 * timing_scale);
+        CHECK(callers_ms < 20.0 * timing_scale);
+        CHECK(callees_ms < 20.0 * timing_scale);
+        CHECK(graph_ms < 30.0 * timing_scale);
     }
 }

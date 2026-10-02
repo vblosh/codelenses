@@ -633,7 +633,7 @@ JobDto ApiService::trigger_indexing(int64_t workspace_id, const IndexJobRequest&
             auto current = database().jobs().get_by_id(job_id);
             if (current.has_value() &&
                 (current->status == "queued" || current->status == "running")) {
-                std::string st = (res.error().code == ErrorCode::cancelled) ? "canceled" : "failed";
+                std::string st = (res.error().code == ErrorCode::cancelled) ? "cancelled" : "failed";
                 database().jobs().finish_job(job_id, st, std::nullopt, res.error().message);
             }
         }
@@ -715,7 +715,7 @@ JobDto ApiService::cancel_job(int64_t job_id) {
         }
         auto current = database().jobs().get_by_id(job_id);
         if (current.has_value() && (current->status == "queued" || !cancelled_in_pipeline)) {
-            database().jobs().finish_job(job_id, "canceled", std::nullopt, "Canceled by user");
+            database().jobs().finish_job(job_id, "cancelled", std::nullopt, "Canceled by user");
         }
     }
     return get_job(job_id);

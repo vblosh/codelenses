@@ -1,4 +1,4 @@
-import type { WorkspaceStatusDto } from "../types";
+import type { JobDto, WorkspaceStatusDto } from "../types";
 import type { StateStore } from "../state";
 import { api } from "../api";
 
@@ -22,9 +22,15 @@ export class ToolbarComponent {
   private indexBtn!: HTMLButtonElement;
   private searchInput!: HTMLInputElement;
   private searchModeSelect!: HTMLSelectElement;
+  private indexBtnLabel!: HTMLSpanElement;
+  private indexBtnIcon!: SVGPathElement;
   private statusPollTimer: number | null = null;
   private statusRequest: AbortController | null = null;
   private statusRequestWorkspaceId: number | null = null;
+  private readonly activeJobs = new Map<number, JobDto>();
+  private readonly indexingWorkspaces = new Set<number>();
+  private readonly loadedStatusWorkspaces = new Set<number>();
+  private readonly pendingIndexActions = new Map<number, "starting" | "cancelling">();
   private destroyed = false;
 
   constructor(store: StateStore, callbacks: ToolbarCallbacks) {
@@ -33,6 +39,7 @@ export class ToolbarComponent {
     this.element = document.createElement("header");
     this.element.className = "app-toolbar";
     this.render();
+    this.syncIndexButton();
     this.initEvents();
     this.loadWorkspaces();
     this.startPollingStatus();
@@ -100,11 +107,11 @@ export class ToolbarComponent {
           <span class="status-dot"></span>
           <span class="status-text">Idle</span>
         </div>
-        <button class="btn-icon index-btn" title="Re-index workspace">
+        <button class="btn-icon index-btn" title="Re-index workspace" aria-label="Index workspace">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            <path class="index-btn-icon" d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
           </svg>
-          <span>Index</span>
+          <span class="index-btn-label">Index</span>
         </button>
       </div>
     `;
@@ -116,6 +123,8 @@ export class ToolbarComponent {
     this.statusBadge = this.element.querySelector(".index-status-badge")!;
     this.statusText = this.element.querySelector(".status-text")!;
     this.indexBtn = this.element.querySelector(".index-btn")!;
+    this.indexBtnLabel = this.element.querySelector(".index-btn-label")!;
+    this.indexBtnIcon = this.element.querySelector(".index-btn-icon")!;
     this.searchInput = this.element.querySelector(".search-input")!;
     this.searchModeSelect = this.element.querySelector(".search-mode-select")!;
   }
@@ -146,20 +155,7 @@ export class ToolbarComponent {
       this.fetchStatus();
     });
 
-    this.indexBtn.addEventListener("click", async () => {
-      const wsId = this.store.getState().workspaceId;
-      if (!wsId) return;
-      try {
-        this.indexBtn.disabled = true;
-        this.updateStatusDisplay("running", "Starting index...");
-        await api.triggerIndexing(wsId, "incremental", false);
-        this.fetchStatus();
-      } catch (err: any) {
-        alert(`Indexing trigger failed: ${err.message}`);
-      } finally {
-        this.indexBtn.disabled = false;
-      }
-    });
+    this.indexBtn.addEventListener("click", () => void this.handleIndexButtonClick());
 
     // Search events
     const triggerSearch = () => {
@@ -188,10 +184,11 @@ export class ToolbarComponent {
 
     // Store sync
     this.store.subscribe((state, changedKeys) => {
-      if (changedKeys.includes("workspaceId") && state.workspaceId !== null) {
-        if (this.workspaceSelect.value !== String(state.workspaceId)) {
+      if (changedKeys.includes("workspaceId")) {
+        if (state.workspaceId !== null && this.workspaceSelect.value !== String(state.workspaceId)) {
           this.workspaceSelect.value = String(state.workspaceId);
         }
+        this.syncIndexButton();
         this.fetchStatus();
       }
     });
@@ -207,6 +204,7 @@ export class ToolbarComponent {
         opt.value = "";
         opt.textContent = "No workspaces found";
         this.workspaceSelect.appendChild(opt);
+        this.syncIndexButton();
         return;
       }
 
@@ -233,6 +231,70 @@ export class ToolbarComponent {
       this.fetchStatus();
     } catch (err: any) {
       this.workspaceSelect.innerHTML = `<option value="">Error: ${err.message}</option>`;
+      this.syncIndexButton();
+    }
+  }
+
+  private async handleIndexButtonClick(): Promise<void> {
+    const wsId = this.store.getState().workspaceId;
+    if (!wsId || this.destroyed || this.pendingIndexActions.has(wsId)) return;
+
+    const activeJob = this.activeJobs.get(wsId);
+    if (activeJob && ["queued", "running"].includes(activeJob.status)) {
+      this.pendingIndexActions.set(wsId, "cancelling");
+      if (this.statusRequestWorkspaceId === wsId) {
+        this.statusRequest?.abort();
+        this.statusRequest = null;
+        this.statusRequestWorkspaceId = null;
+      }
+      this.syncIndexButton();
+      this.updateStatusDisplay("running", "Cancelling index...");
+
+      try {
+        await api.cancelJob(activeJob.id);
+      } catch (err: any) {
+        this.pendingIndexActions.delete(wsId);
+        this.syncIndexButton();
+        if (!this.destroyed && this.store.getState().workspaceId === wsId) {
+          alert(`Index cancellation failed: ${err.message}`);
+        }
+        await this.fetchStatus();
+        return;
+      }
+
+      if (!this.destroyed) await this.fetchStatus();
+      return;
+    }
+
+    if (this.indexingWorkspaces.has(wsId) || !this.loadedStatusWorkspaces.has(wsId)) return;
+
+    this.pendingIndexActions.set(wsId, "starting");
+    if (this.statusRequestWorkspaceId === wsId) {
+      this.statusRequest?.abort();
+      this.statusRequest = null;
+      this.statusRequestWorkspaceId = null;
+    }
+    this.syncIndexButton();
+    this.updateStatusDisplay("running", "Starting index...");
+
+    try {
+      const job = await api.triggerIndexing(wsId, "incremental", false);
+      if (this.destroyed) return;
+      if (["queued", "running", "cancelling"].includes(job.status)) {
+        this.activeJobs.set(wsId, job);
+      } else {
+        this.activeJobs.delete(wsId);
+      }
+      this.pendingIndexActions.delete(wsId);
+      this.syncIndexButton();
+      await this.fetchStatus();
+    } catch (err: any) {
+      this.pendingIndexActions.delete(wsId);
+      this.syncIndexButton();
+      if (!this.destroyed && this.store.getState().workspaceId === wsId) {
+        alert(`Indexing trigger failed: ${err.message}`);
+      }
+      await this.fetchStatus();
     }
   }
 
@@ -277,25 +339,56 @@ export class ToolbarComponent {
       ) {
         return;
       }
+      this.loadedStatusWorkspaces.add(wsId);
+      const job = statusDto.latestJob ?? null;
+      const jobIsActive = !!job && ["queued", "running", "cancelling"].includes(job.status);
+      const workspaceIsIndexing = statusDto.status === "indexing" || statusDto.status === "running";
+      if (workspaceIsIndexing) {
+        this.indexingWorkspaces.add(wsId);
+      } else {
+        this.indexingWorkspaces.delete(wsId);
+      }
+      if (job && (jobIsActive || workspaceIsIndexing)) {
+        this.activeJobs.set(wsId, job);
+      } else {
+        this.activeJobs.delete(wsId);
+      }
+      if (this.pendingIndexActions.get(wsId) === "cancelling" && !jobIsActive && !workspaceIsIndexing) {
+        this.pendingIndexActions.delete(wsId);
+      }
+
       let statusKind: "idle" | "running" | "failed" = "idle";
       let text = "Idle";
 
-      if (statusDto.status === "indexing" || statusDto.status === "running") {
+      const pendingAction = this.pendingIndexActions.get(wsId);
+      if (pendingAction === "starting") {
         statusKind = "running";
-        if (statusDto.latestJob) {
-          text = `Indexing (${statusDto.latestJob.filesProcessed}/${statusDto.latestJob.filesTotal || "?"})`;
+        text = "Starting index...";
+      } else if (pendingAction === "cancelling" || job?.status === "cancelling" ||
+                 (workspaceIsIndexing && (job?.status === "cancelled" || job?.status === "canceled"))) {
+        statusKind = "running";
+        text = "Cancelling index...";
+      } else if (workspaceIsIndexing || jobIsActive) {
+        statusKind = "running";
+        if (job) {
+          text = `Indexing (${job.filesProcessed}/${job.filesTotal || "?"})`;
         } else {
           text = "Indexing...";
         }
-      } else if (statusDto.status === "failed") {
+      } else if (statusDto.status === "error" || job?.status === "failed") {
         statusKind = "failed";
         text = "Index failed";
-      } else {
+      } else if (job?.status === "cancelled" || job?.status === "canceled") {
+        text = "Index cancelled";
+      } else if (statusDto.status === "ready") {
         text = `Indexed (${statusDto.fileCount} files)`;
+      } else {
+        text = statusDto.fileCount > 0 ? `Indexed (${statusDto.fileCount} files)` : "Idle";
       }
 
       this.updateStatusDisplay(statusKind, text);
       this.store.setIndexStatus(statusKind);
+      this.syncIndexButton();
     } catch {
       // Quietly ignore intermittent status poll failure
     } finally {
@@ -304,6 +397,51 @@ export class ToolbarComponent {
         this.statusRequestWorkspaceId = null;
       }
     }
+  }
+
+  private syncIndexButton(): void {
+    const wsId = this.store.getState().workspaceId;
+    let label = "Index";
+    let title = "Re-index workspace";
+    let ariaLabel = "Index workspace";
+    let disabled = false;
+    let iconPath = "M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67";
+
+    if (!wsId) {
+      disabled = true;
+      title = "Select a workspace to index";
+      ariaLabel = title;
+    } else {
+      const pending = this.pendingIndexActions.get(wsId);
+      const activeJob = this.activeJobs.get(wsId);
+      if (pending === "starting") {
+        label = "Starting...";
+        disabled = true;
+      } else if (pending === "cancelling" || activeJob?.status === "cancelling") {
+        label = "Cancelling...";
+        disabled = true;
+        title = "Cancelling indexing";
+        ariaLabel = title;
+        iconPath = "M6 6h12v12H6z";
+      } else if (activeJob && ["queued", "running"].includes(activeJob.status)) {
+        label = "Cancel";
+        title = "Cancel indexing";
+        ariaLabel = title;
+        iconPath = "M6 6h12v12H6z";
+      } else if (this.indexingWorkspaces.has(wsId)) {
+        label = "Finishing...";
+        disabled = true;
+      } else if (!this.loadedStatusWorkspaces.has(wsId)) {
+        label = "Checking...";
+        disabled = true;
+      }
+    }
+
+    this.indexBtnLabel.textContent = label;
+    this.indexBtnIcon.setAttribute("d", iconPath);
+    this.indexBtn.disabled = disabled;
+    this.indexBtn.title = title;
+    this.indexBtn.setAttribute("aria-label", ariaLabel);
   }
 
   private updateStatusDisplay(status: "idle" | "running" | "failed", text: string): void {
